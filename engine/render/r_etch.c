@@ -17,27 +17,6 @@ int R_EtchBegin(int w, int h)
     return 1;
 }
 
-/* Count first, then fill the same bounded boundary list without reallocations. */
-static size_t boundary_segments(MotionSegment *segments)
-{
-    size_t count = 0;
-    for (int y = 0; y <= height; y++) {
-        for (int x = 0; x <= width; x++) {
-            if (x < width && surface_at(x, y - 1) != surface_at(x, y)) {
-                if (segments)
-                    segments[count] = (MotionSegment){{x, y}, {x + 1, y}};
-                count++;
-            }
-            if (y < height && surface_at(x - 1, y) != surface_at(x, y)) {
-                if (segments)
-                    segments[count] = (MotionSegment){{x, y}, {x, y + 1}};
-                count++;
-            }
-        }
-    }
-    return count;
-}
-
 int R_EtchBuildMotion(MotionPath *path)
 {
     if (!active) return 0;
