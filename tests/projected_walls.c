@@ -144,3 +144,31 @@ static void resetAndLifecycle(void)
     assert(!R_EtchBuildMotion(&path));
     MotionFree(&path);
 }
+
+static void failedFramesRecover(void)
+{
+    MotionPath path = {0};
+    assert(R_EtchBegin(4, 4)); R_EtchFrameBegin(4, 4);
+    R_EtchWallBegin(); R_EtchWallColumn(0, 0, NAN, 3, 0, 0); R_EtchWallEnd();
+    assert(!R_EtchBuildMotion(&path) && !path.count);
+    assert(R_EtchBegin(4, 4)); R_EtchFrameBegin(4, 4);
+    R_EtchClipPlane(0, 0, INFINITY, 4, 0);
+    assert(!R_EtchBuildMotion(&path));
+    assert(R_EtchBegin(4, 4));
+    R_EtchFrameBegin(321, 4);
+    assert(!R_EtchBuildMotion(&path));
+    assert(R_EtchBegin(4, 4));
+    R_EtchFrameBegin(0, 0);
+    R_EtchFrameBegin(4, 4); /* A new valid frame recovers after a failed reset. */
+    assert(R_EtchBuildMotion(&path));
+    assert(MotionValid(&path) && path.count == 1);
+    MotionFree(&path);
+}
+
+int main(void)
+{
+    rectangle(); slopingWall(); disjointTiers(); slopingClip();
+    offscreenAndClosed(); resetAndLifecycle(); failedFramesRecover();
+    puts("Projected wall outlines and clipping passed");
+    return 0;
+}
