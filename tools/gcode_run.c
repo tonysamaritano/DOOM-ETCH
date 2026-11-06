@@ -17,7 +17,7 @@ int main(int argc,char **argv)
             size_t before=count;
             while (i+1<argc && strncmp(argv[i+1],"--",2)) settings[count++]=argv[++i];
             if (count==before) invalid="--settings";
-        } else invalid=argv[i];
+        } else if (!invalid) invalid=argv[i];
     }
     if (invalid) {
         fprintf(stderr,"Invalid option or missing setting: %s\n",invalid);
