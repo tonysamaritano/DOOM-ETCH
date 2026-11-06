@@ -99,6 +99,8 @@ static void BuildPlayers(void)
         playeringame[i] = true; players[i].health = 81 - i;
         players[i].armorpoints = 27 + i; players[i].ammo[am_clip] = 34 + i;
         players[i].psprites[0].state = &states[7 + i];
+        players[i].message = "transient";
+        players[i].attacker = (mobj_t *)&players[1];
     }
 }
 static void BuildObjects(void)
@@ -108,7 +110,7 @@ static void BuildObjects(void)
         mo->x = (18 + i) * FRACUNIT; mo->health = 81 - i;
         mo->state = &states[23 + i]; mo->type = MT_PLAYER;
         mo->player = &players[i]; players[i].mo = mo;
-        mo->target = mo; mo->z = 6 * FRACUNIT;
+        mo->target = mo; mo->tracer = mo; mo->z = 6 * FRACUNIT;
     }
     ceiling_t *ceiling = Add(sizeof(*ceiling), (actionf_p1)T_MoveCeiling);
     ceiling->sector = &sectors[1]; ceiling->speed = 3 * FRACUNIT;
@@ -140,6 +142,7 @@ static void CheckObjects(void)
         assert(mo->state == &states[23 + i] && mo->info == &mobjinfo[MT_PLAYER]);
         assert(mo->x == (18 + i) * FRACUNIT && mo->z == 6 * FRACUNIT);
         assert(mo->health == 81 - i && mo->target == NULL);
+        assert(mo->tracer == NULL);
         assert(mo->floorz == sectors[0].floorheight);
     }
     ceiling_t *ceiling = (ceiling_t *)th; th = th->next;
