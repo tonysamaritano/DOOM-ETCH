@@ -74,3 +74,17 @@ void I_Quit(void)
     I_ShutdownGraphics();
     exit(EXIT_SUCCESS);
 }
+
+void I_Error(char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    fputs("DOOM: ", stderr);
+    vfprintf(stderr, format, args);
+    fputc('\n', stderr);
+    va_end(args);
+
+    I_ShutdownSound();
+    I_ShutdownGraphics();
+    exit(EXIT_FAILURE);
+}
