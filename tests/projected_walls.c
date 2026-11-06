@@ -116,3 +116,31 @@ static void offscreenAndClosed(void)
     assert(MotionValid(&path) && path.count == 1);
     MotionFree(&path);
 }
+
+static void resetAndLifecycle(void)
+{
+    MotionPath path = {0};
+    R_EtchFrameBegin(4, 4); R_EtchWallBegin(); R_EtchWallEnd();
+    assert(!R_EtchBuildMotion(&path));
+    for (int run = 0; run < 3; ++run) {
+        assert(R_EtchBegin(4, 4));
+        assert(!R_EtchBegin(2, 2));
+        R_EtchFrameBegin(4, 4);
+        R_EtchClipPlane(0, 2, 0, 2, 0);
+        R_EtchWallBegin(); R_EtchWallColumn(0, 0, 0, 4, 0, 0); R_EtchWallEnd();
+        R_EtchFrameBegin(4, 4); /* Clears both old geometry and old foreground clips. */
+        R_EtchWallBegin(); R_EtchWallColumn(0, 0, 0, 1, 0, 0); R_EtchWallEnd();
+        assert(R_EtchBuildMotion(&path));
+        assert(MotionValid(&path) && path.count > 1);
+        MotionPoint *owned = path.points;
+        assert(!R_EtchBuildMotion(&path) && path.points == owned);
+    }
+    assert(R_EtchBegin(4, 4)); R_EtchFrameBegin(4, 4);
+    R_EtchWallBegin();
+    assert(!R_EtchBuildMotion(&path)); /* An unfinished wall cannot publish. */
+    assert(MotionValid(&path));
+    assert(R_EtchBegin(4, 4)); R_EtchFrameBegin(4, 4);
+    R_EtchWallBegin(); R_EtchWallBegin(); R_EtchWallEnd();
+    assert(!R_EtchBuildMotion(&path));
+    MotionFree(&path);
+}
