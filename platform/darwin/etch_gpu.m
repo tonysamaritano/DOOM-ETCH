@@ -148,7 +148,9 @@ void EtchGPUShutdown(void)
     if (renderQueue) dispatch_sync(renderQueue, ^{});
     if (renderGroup) dispatch_group_wait(renderGroup, DISPATCH_TIME_FOREVER);
     os_unfair_lock_lock(&stateLock);
-    current = pending = nil;
+    current = pending = ghost = nil;
+    ghostTime = holdTime = eraseTime = 0; erasing = NO;
+    atomic_store(&eraseRequested, NO);
     planning = clockStarted = NO;
     playhead = previous = 0;
     os_unfair_lock_unlock(&stateLock);
@@ -245,14 +247,17 @@ void EtchGPUTick(double now, BOOL active)
     double dt = clockStarted ? now - previous : 0;
     previous = now; clockStarted = YES;
     BOOL replaced = NO;
-    if (pending && (!current || playhead >= current.duration)) {
+    if (pending && (!current || (erasing && eraseTime >= eraseSeconds))) {
+        ghost = current;
+        ghostTime = current ? fmin(playhead, current.duration) : 0;
         current = pending; pending = nil;
-        playhead = 0; replaced = YES;
+        playhead = holdTime = eraseTime = 0; erasing = NO; replaced = YES;
+    }
+    if (atomic_exchange(&eraseRequested, NO) && current && !erasing) {
+        erasing = YES; eraseTime = holdTime = 0; replaced = YES;
     }
     if (active && current && !replaced && dt >= 0 && dt <= .5)
-        playhead = fmin(current.duration, playhead + dt);
-    if (current && playhead >= current.duration && !planning && !pending)
-        needsPath = YES;
+        EtchGPUAdvance(dt);
     os_unfair_lock_unlock(&stateLock);
 }
 
