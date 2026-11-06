@@ -250,3 +250,14 @@ if(BUILD_TESTING)
         "-framework AppKit" "-framework QuartzCore")
     add_test(NAME machine-file-presentation COMMAND file-presentation-test)
 endif()
+
+if(BUILD_TESTING)
+    add_executable(machine-trace-test tests/machine_trace.c)
+    target_link_libraries(machine-trace-test PRIVATE etch-controller)
+    target_compile_options(machine-trace-test PRIVATE -UNDEBUG)
+    add_test(NAME machine-trace COMMAND machine-trace-test)
+    add_test(NAME machine-trace-cli COMMAND "${CMAKE_COMMAND}"
+        "-DRUNNER=$<TARGET_FILE:etch-gcode-run>"
+        "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/machine-trace"
+        -P "${PROJECT_SOURCE_DIR}/tests/machine_trace_cli.cmake")
+endif()
