@@ -1,0 +1,22 @@
+foreach(argument GAME WAD CONFIG)
+    if(NOT DEFINED ${argument} OR "${${argument}}" STREQUAL "")
+        message(FATAL_ERROR "etch-gpu-controls requires ${argument}")
+    endif()
+endforeach()
+if(IS_DIRECTORY "${WAD}")
+    set(wad_directory "${WAD}")
+else()
+    get_filename_component(wad_directory "${WAD}" DIRECTORY)
+endif()
+function(reject_rate label)
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E env "DOOMWADDIR=${wad_directory}"
+        "${GAME}" --etch-gpu -warp 1 1 -nosound --run-frames 1 -config "${CONFIG}"
+        --etch-gpu-rate ${ARGN}
+        RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 10)
+    if(result EQUAL 0)
+        message(FATAL_ERROR "Invalid GPU rate ${label} was accepted")
+    endif()
+    if(NOT "${output}${errors}" MATCHES "etch-gpu-rate")
+        message(FATAL_ERROR "Rate ${label} did not fail through argument validation: ${output}${errors}")
+    endif()
+endfunction()
