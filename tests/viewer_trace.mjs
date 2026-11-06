@@ -37,6 +37,13 @@ for (const field of [3, 4]) {
   invalid.segments[field] = -1;
   assert.throws(() => validateTrace(invalid));
 }
+for (const invalid of [
+  {...hand, duration: NaN},
+  {...hand, simulated_seconds: Infinity},
+  {...hand, start: [0, NaN]},
+  {...hand, segments: [NaN, ...hand.segments.slice(1)]},
+  {...hand, erases: [[0, Infinity]]},
+]) assert.throws(() => validateTrace(invalid));
 
 const {writeFileSync, readFileSync, mkdirSync} = await import('node:fs');
 const {dirname} = await import('node:path');
