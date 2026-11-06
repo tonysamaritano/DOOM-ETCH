@@ -517,3 +517,37 @@ static void EtchGPUReadStorage(id<MTLCommandQueue> queue)
     readTarget=[queue.device newTextureWithDescriptor:desc];
     readBuffer=[queue.device newBufferWithLength:768*576*4 options:MTLResourceStorageModeShared];
 }
+static void EtchGPUReadRender(id<MTLCommandQueue> queue,EtchGPUFrame *frame,
+    id<MTLRenderPipelineState> background,id<MTLRenderPipelineState> lines,
+    dispatch_semaphore_t gate,dispatch_group_t group,void (^completion)(NSData *))
+{
+    @autoreleasepool {
+        EtchGPUReadStorage(queue);
+        id<MTLTexture> target=readTarget;
+        id<MTLBuffer> buffer=readBuffer;
+        id<MTLCommandBuffer> command=[queue commandBuffer];
+        if (!target || !buffer || !command || !EtchGPUEncode(command,target,frame,background,lines,1.5)) {
+            EtchGPUFail("Cannot encode the rig display readback");
+            EtchGPUFrameDone(gate,group); completion(nil); return;
+        }
+        id<MTLBlitCommandEncoder> copy=[command blitCommandEncoder];
+        if (!copy) {
+            EtchGPUFail("Cannot copy the rig display readback");
+            EtchGPUFrameDone(gate,group); completion(nil); return;
+        }
+        [copy copyFromTexture:target sourceSlice:0 sourceLevel:0 sourceOrigin:MTLOriginMake(0,0,0)
+            sourceSize:MTLSizeMake(768,576,1) toBuffer:buffer destinationOffset:0
+            destinationBytesPerRow:768*4 destinationBytesPerImage:768*576*4];
+        [copy endEncoding];
+        [command addCompletedHandler:^(id<MTLCommandBuffer> finished) {
+            NSData *pixels=nil;
+            if (finished.status==MTLCommandBufferStatusCompleted && target.width && background && lines) {
+                (void)frame.current.buffer; (void)frame.ghost.buffer;
+                pixels=[NSData dataWithBytes:buffer.contents length:768*576*4];
+            } else EtchGPUFail("Rig display readback did not complete");
+            EtchGPUFrameDone(gate,group);
+            completion(pixels);
+        }];
+        [command commit];
+    }
+}
