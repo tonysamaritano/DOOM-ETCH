@@ -9,6 +9,8 @@ NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence);
 - (BOOL)publishPixels:(NSData *)pixels metadata:(NSDictionary *)metadata;
 - (NSData *)take;
 - (BOOL)acknowledge:(uint64_t)sequence;
+/* Bounds visible outstanding render time; hidden intervals never catch up. */
+- (BOOL)acknowledgementHealthyAt:(double)now visible:(BOOL)visible;
 - (void)discardLatest;
 - (void)stop;
 @property(nonatomic,readonly) unsigned presented;
