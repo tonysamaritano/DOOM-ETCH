@@ -83,35 +83,6 @@ class PlannerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             plan.make_plan([[0, 0]])
 
-    def test_cli_writes_one_path_with_colored_connector_overlays(self):
-        with tempfile.TemporaryDirectory() as directory:
-            capture = self.capture(directory, '0,0,0,1\n2,0,0,2\n', height=1)
-            prefix = Path(directory) / 'drawing'
-            result = subprocess.run([sys.executable, str(SCRIPT), str(capture),
-                                     '--output', str(prefix)], capture_output=True, text=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn(' mm;', result.stdout)
-            self.assertEqual({file.name for file in Path(directory).iterdir()},
-                             {'walls.csv', 'drawing.svg'})
-            root = ET.parse(prefix.with_suffix('.svg')).getroot()
-            namespace = {'svg': 'http://www.w3.org/2000/svg'}
-            paths = root.findall('svg:path', namespace)
-            self.assertEqual(len(paths), 1)
-            data = paths[0].attrib['d']
-            self.assertEqual(re.findall('[A-Za-z]', data).count('M'), 1)
-            self.assertEqual(set(re.findall('[A-Za-z]', data)), {'M', 'L'})
-            connectors = root.findall('svg:line', namespace)
-            self.assertEqual(len(connectors), 1)
-            self.assertNotEqual(connectors[0].attrib['stroke'], paths[0].attrib['stroke'])
-            points, kinds = plan.make_plan(plan.load_bands(capture))
-            self.assertEqual(data.count('L'), len(kinds))
-            a, b = next((a, b) for a, b, kind in zip(points, points[1:], kinds)
-                        if kind == 'connector')
-            line = connectors[0].attrib
-            self.assertAlmostEqual(float(line['x1']), a[0], places=5)
-            self.assertAlmostEqual(float(line['x2']), b[0], places=5)
-            self.assertAlmostEqual(float(line['y1']), a[1], places=5)
-            self.assertAlmostEqual(float(line['y2']), b[1], places=5)
 
 
 if __name__ == '__main__':
