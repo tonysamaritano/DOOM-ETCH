@@ -82,3 +82,31 @@ static void automaticHoldAndErase(void)
     assert(holdTime == 0 && eraseTime == 0 && !erasing && !EtchGPUNeedsPath());
     EtchGPUShutdown();
 }
+
+static id<MTLTexture> offscreenTexture(void)
+{
+    MTLTextureDescriptor *descriptor = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:MTLPixelFormatBGRA8Unorm width:320 height:240 mipmapped:NO];
+    descriptor.storageMode = MTLStorageModeShared; descriptor.usage = MTLTextureUsageRenderTarget;
+    id<MTLTexture> texture = [device newTextureWithDescriptor:descriptor]; assert(texture);
+    return texture;
+}
+static unsigned char *renderFrame(EtchGPUFrame *frame)
+{
+    id<MTLTexture> target = offscreenTexture();
+    id<MTLCommandQueue> queue = [device newCommandQueue]; assert(queue);
+    id<MTLCommandBuffer> command = [queue commandBuffer]; assert(command);
+    assert(EtchGPUEncode(command, target, frame, backgroundPipeline, linePipeline, 1));
+    [command commit]; [command waitUntilCompleted];
+    assert(command.status == MTLCommandBufferStatusCompleted);
+    unsigned char *pixels = malloc(320 * 240 * 4); assert(pixels);
+    [target getBytes:pixels bytesPerRow:320 * 4 fromRegion:MTLRegionMake2D(0, 0, 320, 240)
+          mipmapLevel:0];
+    return pixels;
+}
+static double darkening(const unsigned char *background, const unsigned char *ink, int x, int y)
+{
+    size_t index = ((size_t)y * 320 + x) * 4;
+    return ((int)background[index] - ink[index] + (int)background[index + 1] - ink[index + 1]
+            + (int)background[index + 2] - ink[index + 2]) / 3.0;
+}
