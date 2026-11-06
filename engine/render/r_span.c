@@ -4,11 +4,12 @@
 // Emit the transitions that open and close horizontal spans for one plane.
 void R_EmitPlaneSpans(visplane_t *plane)
 {
-    plane->top[plane->maxx + 1] = 0xff;
-    plane->top[plane->minx - 1] = 0xff;
-    int stop = plane->maxx + 1;
-    for (int x = plane->minx; x <= stop; x++) {
-        R_MakeSpans(x, plane->top[x - 1], plane->bottom[x - 1],
-            plane->top[x], plane->bottom[x]);
+    int previousTop = 0xff, previousBottom = 0;
+    for (int x = plane->minx; x <= plane->maxx; x++) {
+        int top = plane->top[x], bottom = plane->bottom[x];
+        R_MakeSpans(x, previousTop, previousBottom, top, bottom);
+        previousTop = top;
+        previousBottom = bottom;
     }
+    R_MakeSpans(plane->maxx + 1, previousTop, previousBottom, 0xff, 0);
 }
