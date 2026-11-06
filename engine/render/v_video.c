@@ -221,6 +221,23 @@ V_DrawPatch
     byte*	source; 
     int		w; 
 	 
+    if (R_EtchHUDCapturing()) {
+        int lump = 0;
+        while (lump < numlumps && lumpcache[lump] != patch) ++lump;
+        if (lump == numlumps) I_Error("HUD patch is not a cached WAD resource");
+        short top[320], bottom[320];
+        for (int column = 0; column < 320; ++column) {
+            top[column] = 167;
+            bottom[column] = 200;
+        }
+        const byte *palette = W_CacheLumpName("PLAYPAL", PU_STATIC);
+        double origin_x = x - SHORT(patch->leftoffset);
+        double origin_y = y - SHORT(patch->topoffset) + (scrn == 4 ? 168 : 0);
+        if (!R_EtchOverlayPatch(lump, patch, W_LumpLength(lump),
+                origin_x, origin_y, 1, 1, 0, 319, top, bottom, palette, 1))
+            I_Error("Cannot capture HUD patch %d", lump);
+        return;
+    }
     y -= SHORT(patch->topoffset); 
     x -= SHORT(patch->leftoffset); 
 #ifdef RANGECHECK 
