@@ -26,3 +26,30 @@ void R_EtchColumn(int x, int top, int bottom, int surface)
     for (int y = top; y <= bottom; y++)
         if (!cells[y * width + x]) cells[y * width + x] = surface;
 }
+
+static int surface_at(int x, int y)
+{
+    if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+    return cells[y * width + x];
+}
+
+/* Count first, then fill the same bounded boundary list without reallocations. */
+static size_t boundary_segments(MotionSegment *segments)
+{
+    size_t count = 0;
+    for (int y = 0; y <= height; y++) {
+        for (int x = 0; x <= width; x++) {
+            if (x < width && surface_at(x, y - 1) != surface_at(x, y)) {
+                if (segments)
+                    segments[count] = (MotionSegment){{x, y}, {x + 1, y}};
+                count++;
+            }
+            if (y < height && surface_at(x - 1, y) != surface_at(x, y)) {
+                if (segments)
+                    segments[count] = (MotionSegment){{x, y}, {x, y + 1}};
+                count++;
+            }
+        }
+    }
+    return count;
+}
