@@ -251,3 +251,28 @@ fail:
     SilRectsFree(&next_fill); SilLinesFree(&next_outline);
     return 0;
 }
+
+typedef struct { double low, high; } Interval;
+static int compare_interval(const void *left, const void *right)
+{
+    const Interval *a = left, *b = right;
+    return a->low < b->low ? -1 : a->low > b->low;
+}
+static int clip_interval(double p, double q, double *low, double *high)
+{
+    if (p == 0) return q >= 0;
+    double t = q / p;
+    if (p < 0) {
+        if (t > *high) return 0;
+        if (t > *low) *low = t;
+    } else {
+        if (t < *low) return 0;
+        if (t < *high) *high = t;
+    }
+    return 1;
+}
+static MotionPoint along(MotionSegment segment, double t)
+{
+    return (MotionPoint){segment.a.x + (segment.b.x - segment.a.x) * t,
+        segment.a.y + (segment.b.y - segment.a.y) * t};
+}
