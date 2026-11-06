@@ -14,7 +14,7 @@ int main(void)
         assert(!EtchPlayNavigation([NSURL URLWithString:@"doomrig://user@local/index.html"],YES,&started));
         assert(!started);
         EtchFrameQueue *queue=[[EtchFrameQueue alloc] initWithLimit:0];
-        NSData *pixels=[NSData dataWithLength:64000+1024];
+        NSData *pixels=[NSMutableData dataWithLength:64000+1024];
         NSDictionary *metadata=@{@"kind":@"indexed",@"mode":@"game",@"width":@320,@"height":@200};
         assert([queue publishPixels:pixels metadata:metadata] && [queue take].length);
         assert([queue acknowledgementHealthyAt:0 visible:YES]);
