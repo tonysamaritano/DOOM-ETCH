@@ -148,3 +148,28 @@ static void failedPlansPreserveOutput(void)
     MotionFree(&saved);
     MotionFree(&path);
 }
+
+static void failedCopyPreservesOutput(void)
+{
+    MotionPath path = {0}, invalid = {0};
+    assert(MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){0, 0}));
+    MotionPoint *points = path.points;
+    unsigned char *kinds = path.kinds;
+    assert(!MotionCopy(&path, &invalid));
+    assert(!MotionCopy(&path, NULL));
+    assert(!MotionCopy(NULL, &path));
+    assert(path.points == points && path.kinds == kinds && path.count == 8);
+    assert(MotionValid(&path) && near(lengthMM(&path), 289.25));
+    MotionFree(&path);
+}
+
+int main(void)
+{
+    disconnectedRoute();
+    duplicateAndStraightEdges();
+    copyAndFree();
+    validation();
+    failedPlansPreserveOutput();
+    failedCopyPreservesOutput();
+    return 0;
+}
