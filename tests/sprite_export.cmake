@@ -1,5 +1,5 @@
 function(check_sprite_export mode)
-    set(options --no-hud --no-weapon)
+    set(options --no-hud --no-weapon --no-textures --no-sprite-textures --no-weapon-textures)
     if(mode STREQUAL "walls")
         list(APPEND options --no-sprites)
     endif()

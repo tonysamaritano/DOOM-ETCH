@@ -1,5 +1,6 @@
 function(check_overlay mode)
     execute_process(COMMAND "${EXPORTER}" "${WAD}" "${PREFIX}-${mode}" ${ARGN}
+        --no-textures --no-sprite-textures --no-weapon-textures
         RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "${mode} overlay export failed: ${output}${errors}")

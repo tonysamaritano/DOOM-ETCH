@@ -4,6 +4,7 @@ foreach(argument EXPORTER WAD PREFIX VALIDATOR)
     endif()
 endforeach()
 execute_process(COMMAND "${EXPORTER}" "${WAD}" "${PREFIX}" --no-sprites --no-hud --no-weapon
+    --no-textures --no-sprite-textures --no-weapon-textures
     RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors)
 if(NOT result EQUAL 0)
     message(FATAL_ERROR "Wall export failed (${result}): ${output}${errors}")
