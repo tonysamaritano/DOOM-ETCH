@@ -131,22 +131,6 @@ def make_plan(cells):
     return physical, result_kinds
 
 
-def write_svg(points, kinds, prefix):
-    destination = Path(str(prefix) + '.svg')
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    coordinates = ' L '.join(f'{x:.6f},{y:.6f}' for x, y in points)
-    lines = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{TRAVEL_WIDTH}mm" '
-             f'height="{TRAVEL_HEIGHT}mm" viewBox="0 0 {TRAVEL_WIDTH} {TRAVEL_HEIGHT}">',
-             '<title>Doom continuous wall drawing</title>',
-             f'<path d="M {coordinates}" fill="none" stroke="#30332f" '
-             'stroke-width="0.15" stroke-linecap="round" stroke-linejoin="round"/>']
-    for a, b, kind in zip(points, points[1:], kinds):
-        if kind == 'connector':
-            lines.append(f'<line x1="{a[0]:.6f}" y1="{a[1]:.6f}" '
-                         f'x2="{b[0]:.6f}" y2="{b[1]:.6f}" '
-                         'stroke="#df792d" stroke-width="0.2"/>')
-    destination.write_text('\n'.join(lines + ['</svg>', '']))
-    return destination
 
 
 
