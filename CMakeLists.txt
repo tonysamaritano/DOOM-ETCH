@@ -81,3 +81,18 @@ if(BUILD_TESTING)
             -P "${PROJECT_SOURCE_DIR}/tests/etch_walls.cmake")
     endif()
 endif()
+
+if(BUILD_TESTING)
+    add_executable(sprite-silhouettes-test tests/sprite_silhouettes.c)
+    target_link_libraries(sprite-silhouettes-test PRIVATE etch-motion)
+    target_compile_options(sprite-silhouettes-test PRIVATE -UNDEBUG)
+    add_test(NAME sprite-silhouettes COMMAND sprite-silhouettes-test)
+    if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+        add_test(NAME etch-sprites COMMAND "${CMAKE_COMMAND}"
+            "-DEXPORTER=$<TARGET_FILE:etch-export>"
+            "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+            "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/etch-sprites"
+            "-DVALIDATOR=$<TARGET_FILE:svg-bounds-test>"
+            -P "${PROJECT_SOURCE_DIR}/tests/sprite_export.cmake")
+    endif()
+endif()
