@@ -1,0 +1,23 @@
+foreach(argument EXPORTER RUNNER COUNTER WAD PREFIX)
+    if(NOT DEFINED ${argument})
+        message(FATAL_ERROR "machine-gcode-e1m1 requires ${argument}")
+    endif()
+endforeach()
+include("${CMAKE_CURRENT_LIST_DIR}/first_frame_helpers.cmake")
+execute_process(COMMAND "${EXPORTER}" "${WAD}" "${PREFIX}"
+    RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 60)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "E1M1 export failed: ${output}${errors}")
+endif()
+execute_process(COMMAND "${RUNNER}" "${PREFIX}.gcode" --machine-readable
+    RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 60)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "E1M1 physical replay failed: ${output}${errors}")
+endif()
+machine_summary("${output}" report)
+file(WRITE "${PREFIX}-report.json" "${report}\n")
+execute_process(COMMAND "${COUNTER}" "${PREFIX}.gcode"
+    RESULT_VARIABLE result OUTPUT_VARIABLE expected ERROR_VARIABLE errors TIMEOUT 15)
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "Independent step counter failed: ${expected}${errors}")
+endif()
