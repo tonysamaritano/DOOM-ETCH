@@ -288,7 +288,10 @@ void R_RenderSegLoop (void)
 	    dc_yh = yh;
 	    dc_texturemid = rw_midtexturemid;
 	    dc_source = R_GetColumn(midtexture,texturecolumn);
-	    R_EtchColumn(rw_x, dc_yl, dc_yh, (int)(linedef - lines) + 1);
+	    R_EtchWallColumn(0, rw_x, (double)topfrac / HEIGHTUNIT,
+	        (double)bottomfrac / HEIGHTUNIT, (double)topstep / HEIGHTUNIT,
+	        (double)bottomstep / HEIGHTUNIT);
+	    projectedTop = projectedBottom = viewheight;
 	    colfunc ();
 	    ceilingclip[rw_x] = viewheight;
 	    floorclip[rw_x] = -1;
