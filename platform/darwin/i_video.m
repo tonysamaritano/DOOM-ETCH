@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#undef true
-#undef false
 #include "doomdef.h"
 #include "d_main.h"
 #include "i_system.h"

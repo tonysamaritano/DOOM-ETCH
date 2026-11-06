@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #import "keyboard.h"
-#undef true
-#undef false
 #include "doomdef.h"
 
 int DoomKeyForEvent(NSEvent *event)
