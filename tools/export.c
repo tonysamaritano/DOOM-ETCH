@@ -51,7 +51,7 @@ static int write_output(const char *prefix, const char *extension, const MotionP
 int main(int argc, char **argv)
 {
     if (argc != 3) {
-        fprintf(stderr, "Usage: %s IWAD walls.csv\n", argv[0]);
+        fprintf(stderr, "Usage: %s IWAD PREFIX\n", argv[0]);
         return 2;
     }
     myargc = argc; myargv = argv;
@@ -59,8 +59,9 @@ int main(int argc, char **argv)
     V_Init();
     Z_Init();
     W_InitMultipleFiles(files);
-    if (W_CheckNumForName("E1M1") < 0 || W_CheckNumForName("MAP01") >= 0)
-        I_Error("Capture requires the shareware doom1.wad");
+    if (W_CheckNumForName("E1M1") < 0 || W_CheckNumForName("E2M1") >= 0
+        || W_CheckNumForName("MAP01") >= 0)
+        I_Error("Export requires the shareware doom1.wad");
     gamemode = shareware;
     playeringame[0] = true;
     consoleplayer = displayplayer = 0;
@@ -75,12 +76,19 @@ int main(int argc, char **argv)
     D_CheckNetGame();
     singletics = true;
     G_InitNew(sk_medium, 1, 1);
-    G_Ticker();
-    gametic++;
-    if (!R_EtchBegin(argv[2], viewwidth, viewheight))
-        I_Error("Cannot open capture: %s", argv[2]);
+    for (int tic = 0; tic < 20; ++tic) {
+        G_Ticker();
+        ++gametic;
+    }
+    if (!R_EtchBegin(viewwidth, viewheight))
+        I_Error("Cannot capture the E1M1 view");
     R_RenderPlayerView(&players[0]);
-    if (!R_EtchEnd()) I_Error("Cannot write capture: %s", argv[2]);
-    printf("Captured %dx%d wall bands to %s\n", viewwidth, viewheight, argv[2]);
+    MotionPath path = {0};
+    if (!R_EtchBuildMotion(&path)) I_Error("Cannot plan the captured walls");
+    if (!write_output(argv[2], "svg", &path)) I_Error("Cannot write %s.svg", argv[2]);
+    if (!write_output(argv[2], "gcode", &path)) I_Error("Cannot write %s.gcode", argv[2]);
+    printf("%zu moves at %.2f x %.2f mm (assumed feed 3600 mm/min)\n",
+           path.count - 1, path.width_mm, path.height_mm);
+    MotionFree(&path);
     return 0;
 }
