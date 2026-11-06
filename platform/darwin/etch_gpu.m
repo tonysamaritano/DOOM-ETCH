@@ -39,6 +39,8 @@ static BOOL instant, paused, replaceRequested, controlClockReset;
 static double drawRate = 1, instantGhostElapsed;
 static const double ghostInterval = 1.0 / 30;
 static uint64_t generation;
+static EtchSnapshot latestSnapshot;
+static uint64_t latestGeneration;
 enum { EtchRate, EtchInstant, EtchAction, EtchInvalidate, CONTROL_CAPACITY = 256 };
 typedef struct { int kind; double value; } EtchGPUControl;
 static EtchGPUControl controls[CONTROL_CAPACITY];
@@ -52,6 +54,12 @@ static atomic_uint frames, uploads;
 static char failure[256];
 static BOOL running, planning, needsPath, clockStarted;
 static double speed, previous, playhead;
+
+static void EtchGPUFreeLatest(void)
+{
+    free(latestSnapshot.segments);
+    latestSnapshot = (EtchSnapshot){0};
+}
 
 static void EtchGPUFail(const char *message)
 {
@@ -152,6 +160,7 @@ void EtchGPUShutdown(void)
 {
     os_unfair_lock_lock(&stateLock);
     running = needsPath = NO;
+    EtchGPUFreeLatest();
     os_unfair_lock_unlock(&stateLock);
     // Draining is allowed during shutdown, never during normal frame submission.
     if (plannerQueue) dispatch_sync(plannerQueue, ^{});
@@ -209,6 +218,7 @@ void EtchGPUInvalidate(void) { EtchGPUQueueControl(EtchInvalidate, 0); }
 static void EtchGPUChangeMode(BOOL enabled)
 {
     instant = enabled; paused = NO; erasing = NO;
+    if (!instant) EtchGPUFreeLatest();
     holdTime = eraseTime = 0; instantGhostElapsed = ghostInterval;
     if (instant && current) playhead = current.duration;
     needsPath = replaceRequested = controlClockReset = YES;
@@ -216,6 +226,7 @@ static void EtchGPUChangeMode(BOOL enabled)
 static void EtchGPUClearPaths(void)
 {
     generation++;
+    EtchGPUFreeLatest();
     current = pending = ghost = nil;
     playhead = ghostTime = holdTime = eraseTime = 0;
     erasing = replaceRequested = NO;
@@ -234,7 +245,7 @@ static void EtchGPUApplyControl(EtchGPUControl control)
         if (key == '+' || key == '=') drawRate = fmin(1024, drawRate * 2);
         if (key == '-' || key == '_') drawRate = fmax(1.0 / 64, drawRate * .5);
         if (key == KEY_F8) EtchGPUChangeMode(!instant);
-        if (key == KEY_F9) paused = !paused;
+        if (key == KEY_F9) { paused = !paused; if (paused) EtchGPUFreeLatest(); }
         if (key == KEY_F7 && current && !instant && !erasing) {
             erasing = YES; eraseTime = holdTime = 0; controlClockReset = YES;
         }
