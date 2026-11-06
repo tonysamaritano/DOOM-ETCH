@@ -415,3 +415,27 @@ static int stroke_add(HatchStrokes *strokes, MotionSegment line, int family, int
     strokes->data[strokes->count++] = (HatchStroke){line, family, row};
     return 1;
 }
+
+static int hatch_tone(const HatchContext *context, double u, double v, double *tone)
+{
+    const Silhouette *shape = context->shape;
+    double fx = fmin(shape->width, 1 / fabs(context->sx));
+    double fy = fmin(shape->height, context->min_spacing_mm / (context->sy * HATCH_MM_Y));
+    double sum = 0;
+    unsigned count = 0;
+    for (int a = 0; a < 4; a++) {
+        for (int b = 0; b < 4; b++) {
+            double x = floor(u + ((a + .5) / 4 - .5) * fx);
+            double y = floor(v + ((b + .5) / 4 - .5) * fy);
+            if (x < 0 || x >= shape->width || y < 0 || y >= shape->height) continue;
+            unsigned index = shape->texels[(size_t)y * shape->width + (size_t)x];
+            if (index == 256) continue;
+            if (context->translation) index = context->translation[index];
+            const unsigned char *rgb = context->palette + 3 * context->light[index];
+            sum += .2126 * rgb[0] + .7152 * rgb[1] + .0722 * rgb[2];
+            count++;
+        }
+    }
+    if (count) *tone = sum / count;
+    return count != 0;
+}
