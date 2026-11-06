@@ -155,7 +155,7 @@ static void expectFailure(void (*operation)(void), const char *message)
     text[used] = 0; close(channel[0]);
     int status; assert(waitpid(child, &status, 0) == child);
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 1 || !strstr(text, message))
-        fprintf(stderr, "Expected controlled engine error %s; got: %s\n", message, text);
+        fprintf(stderr, "Expected controlled engine error %s; status=%d; got: %s\n", message, status, text);
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 1);
     assert(strstr(text, message));
     assert(!strstr(text, "AddressSanitizer") && !strstr(text, "runtime error"));
