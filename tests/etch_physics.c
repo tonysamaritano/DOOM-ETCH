@@ -335,6 +335,9 @@ static void cumulative_clock_rejection(void)
     c.y.speed_mm_s = 1e150; c.y.acceleration_mm_s2 = 1e300;
     EtchDevice *d = EtchCreate(c, (MotionPoint){0, 0});
     MotionPoint p[] = {{0, 0}, {100, 0}, {100, .05}};
+    MotionPoint warm[] = {{0, 0}, {.05, 0}, {0, 0}};
+    assert(d && EtchDeviceSubmitHardware(d, warm, 3));
+    assert(EtchDeviceTick(d, 1e10));
     EtchStatus before = EtchDeviceGetStatus(d);
     unsigned char ink[ETCH_INK_WIDTH * ETCH_INK_HEIGHT];
     memcpy(ink, EtchDeviceInk(d), sizeof ink);
@@ -342,6 +345,8 @@ static void cumulative_clock_rejection(void)
     same_status(before, EtchDeviceGetStatus(d));
     assert(!memcmp(ink, EtchDeviceInk(d), sizeof ink));
     assert(EtchDeviceSubmitHardware(d, p, 2));
+    double reverse_seconds = (100 + .15) / c.x.speed_mm_s;
+    assert(fabs(EtchDeviceGetStatus(d).remaining_s / reverse_seconds - 1) < 1e-14);
     assert(EtchDeviceTick(d, 2e12));
     point(EtchDeviceGetStatus(d).cursor_mm, 100, 0);
     EtchDestroy(d);
