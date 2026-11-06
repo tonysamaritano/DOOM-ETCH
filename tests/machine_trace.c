@@ -48,7 +48,7 @@ static void compare_samples(const char *text, MachineSettings settings, const Et
     for (size_t i = 0; i < trace->erase_count; i++)
         for (int k = 0; k <= 2; k++)
             times[n++] = trace->erases[i].t0 + trace->erases[i].duration * k / 2;
-    times[n++] = trace->clock + 1; assert(n <= capacity);
+    times[n++] = trace->clock; assert(n <= capacity);
     qsort(times, n, sizeof(*times), order);
     MachinePlayback *plain = play_text(text, &settings); double previous = 0;
     for (size_t i = 0; i < n; i++) {
@@ -60,4 +60,27 @@ static void compare_samples(const char *text, MachineSettings settings, const Et
     }
     machine_near(MachinePlaybackSeconds(plain), trace->clock);
     MachinePlaybackDestroy(plain); free(times);
+}
+static void metadata_and_profiles(void)
+{
+    MachineSettings settings; MachineSettingsDefault(&settings); EtchTrace trace = {0};
+    MachinePlayback *p = record(fixture, settings, &trace);
+    assert(trace.count == 5 && trace.erase_count == 2);
+    const size_t lines[] = {6, 7, 9, 11, 12};
+    for (size_t i = 0; i < trace.count; i++) {
+        assert(trace.segments[i].line == lines[i]);
+        assert(trace.segments[i].frame == (i < 3 ? 0u : 1u));
+    }
+    machine_near(trace.segments[0].duration, 143.0 / 75);
+    machine_near(trace.segments[0].length, 100);
+    machine_near(trace.segments[2].peak, 10);
+    assert(trace.segments[4].duration == 0 && trace.segments[4].length == 0);
+    const EtchTraceSegment *reverse = &trace.segments[1];
+    assert(reverse->slack > 0);
+    MotionPoint cursor, motor;
+    assert(EtchTraceSample(&trace, reverse->t0 + .001, &cursor, &motor));
+    machine_point(cursor, reverse->x0, reverse->y0);
+    assert(hypot(motor.x - reverse->motor_x0, motor.y - reverse->motor_y0) > 1e-6);
+    compare_samples(fixture, settings, &trace);
+    MachinePlaybackDestroy(p); EtchTraceFree(&trace);
 }
