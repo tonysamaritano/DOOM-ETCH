@@ -290,8 +290,8 @@ static void EtchGPUFrameDone(dispatch_semaphore_t gate, dispatch_group_t group)
 }
 
 static void EtchGPURender(id<MTLCommandQueue> queue, CAMetalLayer *layer,
-    EtchGPUPath *path, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
-    double clock, double backingScale, dispatch_semaphore_t gate, dispatch_group_t group)
+    EtchGPUFrame *frame, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
+    double backingScale, dispatch_semaphore_t gate, dispatch_group_t group)
 {
     @autoreleasepool {
         // Drawable acquisition can wait for WindowServer, so it stays on this queue.
@@ -302,13 +302,14 @@ static void EtchGPURender(id<MTLCommandQueue> queue, CAMetalLayer *layer,
             EtchGPUFail("Cannot create a GPU drawing command buffer");
             EtchGPUFrameDone(gate, group); return;
         }
-        if (!EtchGPUEncode(command, drawable.texture, path, background, lines, clock, backingScale)) {
+        if (!EtchGPUEncode(command, drawable.texture, frame, background, lines, backingScale)) {
             EtchGPUFrameDone(gate, group); return;
         }
-        NSUInteger count = path.count;
+        NSUInteger count = frame.current.count, ghostCount = frame.ghost.count;
         [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
-            // Holding the bundle here also keeps its buffer alive through completion.
-            if (path && path.count != count) EtchGPUFail("A submitted drawing path was modified");
+            // Both bundles and their copied uniforms remain alive through completion.
+            if (frame.current.count != count || frame.ghost.count != ghostCount)
+                EtchGPUFail("A submitted drawing path was modified");
             if (completed.status == MTLCommandBufferStatusCompleted) atomic_fetch_add(&frames, 1);
             else EtchGPUFail(completed.error.localizedDescription.UTF8String ?: "GPU drawing did not complete");
             EtchGPUFrameDone(gate, group);
@@ -332,15 +333,14 @@ BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingS
     if (!running || failure[0]) {
         os_unfair_lock_unlock(&stateLock); dispatch_semaphore_signal(gate); return NO;
     }
-    EtchGPUPath *path = current;
+    EtchGPUFrame *frame = EtchGPUFrameState();
     id<MTLRenderPipelineState> background = backgroundPipeline, lines = linePipeline;
-    double clock = playhead;
     dispatch_queue_t renderer = renderQueue;
     dispatch_group_t group = renderGroup;
     dispatch_group_enter(group);
     os_unfair_lock_unlock(&stateLock);
     dispatch_async(renderer, ^{
-        EtchGPURender(queue, layer, path, background, lines, clock, backingScale, gate, group);
+        EtchGPURender(queue, layer, frame, background, lines, backingScale, gate, group);
     });
     return YES;
 }
