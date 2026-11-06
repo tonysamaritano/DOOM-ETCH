@@ -32,3 +32,19 @@ export function decodeFrame(buffer) {
   const palette=paletteBytes?new Uint8Array(buffer,offset+pixelBytes,paletteBytes):null;
   return {metadata,pixels,palette};
 }
+export function frameRGBA(frame) {
+  const {metadata:m,pixels,palette}=frame;
+  const rgba=new Uint8Array(m.width*m.height*4);
+  if(m.kind==='bgra') {
+    for(let i=0;i<rgba.length;i+=4) {
+      rgba[i]=pixels[i+2];rgba[i+1]=pixels[i+1];rgba[i+2]=pixels[i];rgba[i+3]=pixels[i+3];
+    }
+  } else {
+    for(let i=0;i<pixels.length;i++) {
+      const color=pixels[i]*4,out=i*4;
+      rgba[out]=palette[color];rgba[out+1]=palette[color+1];
+      rgba[out+2]=palette[color+2];rgba[out+3]=palette[color+3];
+    }
+  }
+  return rgba;
+}
