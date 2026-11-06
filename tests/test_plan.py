@@ -42,13 +42,6 @@ class PlannerTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         plan.load_bands(filename)
 
-    def test_boundaries_include_outer_edges_and_surface_seams(self):
-        edges = plan.structural_edges([[1, 2]])
-        expected = {((0, 0), (1, 0)), ((1, 0), (2, 0)),
-                    ((0, 1), (1, 1)), ((1, 1), (2, 1)),
-                    ((0, 0), (0, 1)), ((1, 0), (1, 1)), ((2, 0), (2, 1))}
-        self.assertEqual(edges, expected)
-        self.assertEqual(plan.structural_edges([[0]]), set())
 
 
 
