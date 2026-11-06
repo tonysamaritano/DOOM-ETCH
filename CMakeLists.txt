@@ -164,3 +164,20 @@ if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS AND DOOM_TEST_WAD_DIRECTORY
         -P "${PROJECT_SOURCE_DIR}/tests/etch_gpu_controls.cmake")
     set_tests_properties(etch-gpu-controls PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
 endif()
+
+if(BUILD_TESTING)
+    add_executable(gcode-export-test tests/gcode_export.c)
+    target_link_libraries(gcode-export-test PRIVATE etch-motion)
+    target_compile_options(gcode-export-test PRIVATE -UNDEBUG)
+    add_test(NAME gcode-export COMMAND gcode-export-test)
+    if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+        add_test(NAME gcode-frames COMMAND "${CMAKE_COMMAND}"
+            "-DEXPORTER=$<TARGET_FILE:etch-export>"
+            "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+            "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/gcode-frames"
+            "-DVALIDATOR=$<TARGET_FILE:svg-bounds-test>"
+            "-DCHECKER=$<TARGET_FILE:gcode-export-test>"
+            -P "${PROJECT_SOURCE_DIR}/tests/gcode_export.cmake")
+        set_tests_properties(gcode-frames PROPERTIES TIMEOUT 120)
+    endif()
+endif()
