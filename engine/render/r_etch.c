@@ -19,9 +19,10 @@ int R_EtchBegin(int w, int h)
 
 void R_EtchColumn(int x, int top, int bottom, int surface)
 {
-    if (!output || x < 0 || x >= width) return;
+    if (!active || x < 0 || x >= width || surface <= 0) return;
     if (top < 0) top = 0;
     if (bottom >= height) bottom = height - 1;
-    if (top <= bottom)
-        fprintf(output, "%d,%d,%d,%d\n", x, top, bottom, surface);
+    // BSP rendering reaches the nearest visible wall first.
+    for (int y = top; y <= bottom; y++)
+        if (!cells[y * width + x]) cells[y * width + x] = surface;
 }
