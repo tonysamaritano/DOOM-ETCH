@@ -96,3 +96,40 @@ static int profile(EtchConfig c, Segment *s, double feed, int px, int py)
     return isfinite(s->duration) && s->duration>0 &&
            isfinite(s->peak) && s->peak>0 && isfinite(s->ramp) && s->ramp>0;
 }
+static int submit(EtchDevice *d,const MotionPoint *p,size_t n,double feed)
+{
+    if (!d || d->status.drawing || d->status.erasing || !p || !n ||
+        n-1>SIZE_MAX/sizeof(Segment)) return 0;
+    MotionPoint first;
+    if (!point(d->config,p[0],&first) || first.x!=d->status.cursor_mm.x ||
+        first.y!=d->status.cursor_mm.y) return 0;
+    Segment *s=n>1 ? calloc(n-1,sizeof(*s)) : NULL;
+    if (n>1 && !s) return 0;
+    MotionPoint cursor=first,motor=d->status.motor_mm;
+    int px=d->direction_x,py=d->direction_y;
+    double total=0;
+    for (size_t i=0;i<n-1;i++) {
+        s[i].start=cursor; s[i].motor_start=motor; s[i].begin=total;
+        if (!point(d->config,p[i+1],&s[i].end) ||
+            !profile(d->config,&s[i],feed,px,py)) { free(s); return 0; }
+        total+=s[i].duration; s[i].finish=total;
+        motor.x+=s[i].unit.x*s[i].travel; motor.y+=s[i].unit.y*s[i].travel;
+        if (!isfinite(total) || !isfinite(motor.x) || !isfinite(motor.y)) {
+            free(s); return 0;
+        }
+        cursor=s[i].end; px=s[i].direction_x; py=s[i].direction_y;
+    }
+    free(d->segments); d->segments=s; d->index=0; d->segment_time=0;
+    d->total=total; d->next_sample=0; d->status.elapsed_s=0;
+    d->status.remaining_s=total; d->status.count=n-1; d->status.completed=0;
+    d->status.drawing=n>1; d->status.motor_velocity_mm_s=(MotionPoint){0,0};
+    return EtchDeviceTick(d,0);
+}
+int EtchDeviceSubmit(EtchDevice *d,const MotionPoint *p,size_t n,double feed)
+{
+    return isfinite(feed) && feed>0 ? submit(d,p,n,feed) : 0;
+}
+int EtchDeviceSubmitHardware(EtchDevice *d,const MotionPoint *p,size_t n)
+{
+    return submit(d,p,n,INFINITY);
+}
