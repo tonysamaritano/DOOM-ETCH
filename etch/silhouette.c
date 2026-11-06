@@ -520,3 +520,37 @@ fail:
     SilLinesFree(&result);
     return 0;
 }
+
+int SilHatchDetail(const Silhouette *shape, const SilRects *visible, double ox, double oy,
+    double sx, double sy, const unsigned char *light, const unsigned char *palette,
+    const unsigned char *translation, int pattern, double min_spacing_mm, SilLines *out)
+{
+    if (!shape_valid(shape) || !shape->texels || !rectangles_valid(visible) || !lines_valid(out)
+        || !light || !palette || !isfinite(ox) || !isfinite(oy) || !isfinite(sx) || !isfinite(sy)
+        || sx == 0 || sy <= 0 || pattern < 0 || pattern >= HATCH_PATTERN_COUNT
+        || !isfinite(min_spacing_mm) || min_spacing_mm <= 0) return 0;
+    for (size_t i = 0; i < (size_t)shape->width * shape->height; i++)
+        if (shape->texels[i] > 256) return 0;
+    HatchContext context = {shape, light, palette, translation, ox, oy, sx, sy, min_spacing_mm};
+    HatchStrokes strokes = {0};
+    int success = 0;
+    for (int family = 0; family < HatchFamilies(pattern); family++) {
+        double slope = HatchSlope(pattern, family);
+        int spacing = hatch_spacing(&context, slope);
+        if (!spacing) goto done;
+        for (size_t i = 0; i < visible->count; i++)
+            if (!hatch_rows(&context, &strokes, visible->data[i], slope, family, spacing)) goto done;
+    }
+    success = publish_hatches(&strokes, out);
+done:
+    free(strokes.data);
+    return success;
+}
+
+int SilHatch(const Silhouette *shape, const SilRects *visible, double ox, double oy,
+    double sx, double sy, const unsigned char *light, const unsigned char *palette,
+    const unsigned char *translation, int pattern, SilLines *out)
+{
+    return SilHatchDetail(shape, visible, ox, oy, sx, sy, light, palette, translation,
+        pattern, HATCH_SPACING_MM, out);
+}
