@@ -174,3 +174,15 @@ int EtchFileMain(int argc,char **argv)
         if (scale) { fputs("--etch-time-scale requires standalone --etch-gcode\n",stderr); return 2; }
         return -1;
     }
+    FileOptions o={0}; o.assignments=calloc((size_t)argc,sizeof(*o.assignments));
+    if (!o.assignments) return 1;
+    if (!options(argc,argv,&o)) {
+        fputs("Invalid or conflicting standalone G-code option\n",stderr);
+        free(o.assignments); return 2;
+    }
+    MachineParseError error={0};
+    MachinePlayback *play=MachineLoad(o.filename,o.assignments,o.count,&error);
+    free(o.assignments);
+    if (!play) { fprintf(stderr,"%s:%zu: %s\n",o.filename,error.line,error.message); return 1; }
+    return present(play,&o);
+}
