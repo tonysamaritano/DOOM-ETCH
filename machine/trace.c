@@ -77,7 +77,11 @@ int EtchTraceSample(const EtchTrace *t,double time,MotionPoint *cursor,MotionPoi
     if (!t || !t->completed || t->failed || !isfinite(time) || time<0 ||
         !isfinite(t->clock) || time>t->clock || (t->count && !t->segments) ||
         !isfinite(t->config.x.step_mm) || t->config.x.step_mm<=0 ||
-        !isfinite(t->config.y.step_mm) || t->config.y.step_mm<=0) return 0;
+        !isfinite(t->config.y.step_mm) || t->config.y.step_mm<=0 ||
+        !isfinite(t->config.width_mm) || t->config.width_mm<=0 ||
+        !isfinite(t->config.height_mm) || t->config.height_mm<=0 ||
+        !isfinite(t->config.width_mm/t->config.x.step_mm) ||
+        !isfinite(t->config.height_mm/t->config.y.step_mm)) return 0;
     MotionPoint c=t->start_mm,m=t->start_mm;
     size_t lo=0,hi=t->count;
     while (lo<hi) {
