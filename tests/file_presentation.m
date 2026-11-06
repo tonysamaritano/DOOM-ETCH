@@ -50,3 +50,33 @@ static void pause_and_interrupt(void)
     assert(control(&p, KEY_F7) && !p.shaking && p.shaken);
     MachinePlaybackDestroy(p.play);
 }
+
+static void replay_and_completed_shake(void)
+{
+    Presentation p = fixture();
+    assert(control(&p, '+') && p.rate == 1024);
+    assert(advance(&p, .2));
+    assert(control(&p, KEY_F9) && control(&p, KEY_F7));
+    assert(control(&p, KEY_F6));
+    assert(p.rate == 1024 && !p.paused && !p.interrupted && !p.shaking && !p.reported);
+    assert(p.reset_clock && p.shake_time == 0);
+    machine_near(MachinePlaybackSeconds(p.play), 0);
+    for (size_t i = 0; i < sizeof p.retained; ++i) {
+        assert(p.retained[i] == 0);
+        assert(EtchDeviceInk(MachinePlaybackDevice(p.play))[i] == 0);
+    }
+    assert(advance(&p, 2)); assert(p.reported && MachinePlaybackDone(p.play));
+    double physical = MachinePlaybackSeconds(p.play);
+    assert(control(&p, KEY_F7) && advance(&p, 2.5));
+    assert(p.shaken && p.reported);
+    machine_near(MachinePlaybackSeconds(p.play), physical);
+    assert(control(&p, KEY_F6) && !p.reported && !p.interrupted && p.rate == 1024);
+    MachinePlaybackDestroy(p.play);
+}
+
+int main(void)
+{
+    @autoreleasepool { pause_and_interrupt(); replay_and_completed_shake(); }
+    puts("Actual file presentation controls passed without UI");
+    return 0;
+}
