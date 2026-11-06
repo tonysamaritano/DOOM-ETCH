@@ -37,6 +37,7 @@ void SilLinesFree(SilLines *lines)
 void SilhouetteFree(Silhouette *shape)
 {
     if (!shape) return;
+    free(shape->texels);
     SilRectsFree(&shape->fill); SilLinesFree(&shape->outline);
     *shape = (Silhouette){0};
 }
