@@ -296,11 +296,26 @@ static void tiny_clock(void)
     EtchDestroy(d);
 }
 
+static void tiny_shake(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    c.erase_seconds = 1e-15;
+    EtchDevice *d = EtchCreate(c, (MotionPoint){0, 0});
+    assert(d && EtchDeviceRequestErase(d));
+    EtchStatus before = EtchDeviceGetStatus(d);
+    assert(before.erasing && before.erase_left_s == c.erase_seconds);
+    assert(EtchDeviceTick(d, 0));
+    same_status(before, EtchDeviceGetStatus(d));
+    assert(EtchDeviceTick(d, c.erase_seconds));
+    assert(EtchDeviceReady(d));
+    EtchDestroy(d);
+}
+
 int main(void)
 {
     defaults(); analytical_profiles(); direction_memory(); quantized_extent();
     transactional(); invalid_idle(); shake_retention(); chunk_invariance();
-    deferred_erase(); persistent_submissions(); tiny_clock();
+    deferred_erase(); persistent_submissions(); tiny_clock(); tiny_shake();
     puts("etch-physics: independent per-axis, ownership, ink and shake checks passed");
     return 0;
 }
