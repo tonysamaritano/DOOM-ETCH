@@ -19,3 +19,12 @@ NSURL *EtchPlayResource(NSURL *root,NSURL *request,NSString **mime)
     if (mime) *mime=type;
     return file;
 }
+BOOL EtchPlayNavigation(NSURL *url,BOOL mainFrame,BOOL *started)
+{
+    if (!started || *started || !mainFrame ||
+        ![url.scheme isEqualToString:@"doomrig"] || ![url.host isEqualToString:@"local"] ||
+        url.user || url.password || url.port || url.query || url.fragment ||
+        ![url.path isEqualToString:@"/index.html"]) return NO;
+    *started=YES;
+    return YES;
+}
