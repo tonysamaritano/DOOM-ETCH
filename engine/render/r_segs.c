@@ -303,6 +303,9 @@ void R_RenderSegLoop (void)
 	    R_EtchWallColumn(0, rw_x, (double)topfrac / HEIGHTUNIT,
 	        (double)bottomfrac / HEIGHTUNIT, (double)topstep / HEIGHTUNIT,
 	        (double)bottomstep / HEIGHTUNIT);
+	    R_EtchWallTexture(0, rw_x, dc_source, dc_colormap, etch_palette,
+	        (double)dc_texturemid / FRACUNIT, (double)rw_scale / FRACUNIT,
+	        (double)rw_scalestep / FRACUNIT, centery, texture_u, texture_u_end);
 	    projectedTop = projectedBottom = viewheight;
 	    colfunc ();
 	    ceilingclip[rw_x] = viewheight;
@@ -335,6 +338,9 @@ void R_RenderSegLoop (void)
 		    R_EtchWallColumn(1, rw_x, (double)topfrac / HEIGHTUNIT,
 		        (double)(pixhigh - pixhighstep) / HEIGHTUNIT,
 		        (double)topstep / HEIGHTUNIT, (double)pixhighstep / HEIGHTUNIT);
+		    R_EtchWallTexture(1, rw_x, dc_source, dc_colormap, etch_palette,
+		        (double)dc_texturemid / FRACUNIT, (double)rw_scale / FRACUNIT,
+		        (double)rw_scalestep / FRACUNIT, centery, texture_u, texture_u_end);
 		    colfunc ();
 		    ceilingclip[rw_x] = mid;
 		}
@@ -377,6 +383,9 @@ void R_RenderSegLoop (void)
 		    R_EtchWallColumn(2, rw_x, (double)(pixlow - pixlowstep) / HEIGHTUNIT,
 		        (double)bottomfrac / HEIGHTUNIT, (double)pixlowstep / HEIGHTUNIT,
 		        (double)bottomstep / HEIGHTUNIT);
+		    R_EtchWallTexture(2, rw_x, dc_source, dc_colormap, etch_palette,
+		        (double)dc_texturemid / FRACUNIT, (double)rw_scale / FRACUNIT,
+		        (double)rw_scalestep / FRACUNIT, centery, texture_u, texture_u_end);
 		    colfunc ();
 		    floorclip[rw_x] = mid;
 		}
