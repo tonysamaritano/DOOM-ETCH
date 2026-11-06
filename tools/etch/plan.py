@@ -83,3 +83,26 @@ def route_edges(edges):
                     points.append(stack[-1])
                     kinds.append('outline')
     return points, kinds
+
+
+def simplify(points, tolerance=SIMPLIFY_PIXELS):
+    """Retain corners farther than tolerance from a candidate straight segment."""
+    keep = {0, len(points) - 1}
+    pending = [(0, len(points) - 1)]
+    while pending:
+        first, last = pending.pop()
+        a, b = points[first], points[last]
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length_squared = dx * dx + dy * dy
+        farthest, distance_squared = None, tolerance * tolerance
+        for index in range(first + 1, last):
+            px, py = points[index][0] - a[0], points[index][1] - a[1]
+            projection = (px * dx + py * dy) / length_squared if length_squared else 0
+            projection = min(1, max(0, projection))
+            distance = (px - projection * dx) ** 2 + (py - projection * dy) ** 2
+            if distance > distance_squared:
+                farthest, distance_squared = index, distance
+        if farthest is not None:
+            keep.add(farthest)
+            pending.extend(((first, farthest), (farthest, last)))
+    return [points[index] for index in sorted(keep)]
