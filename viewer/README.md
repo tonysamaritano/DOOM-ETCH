@@ -25,3 +25,7 @@ DDA mark grid. Their 0.5 mm display width follows the prototype. Historical stro
 0.08 visual opacity per shake, distinct from the physical retained-mark fraction.
 The hidden `#viewer-evidence` DOM record exposes actual asset/trace URLs, errors, physical
 positions, drive angles, belt phase, mapping, canvas dimensions and optics for verification.
+
+At an exact half-step crossing, subtracting a global floating-point time can choose
+an adjacent discrete step. The viewer uses the configured nearest-step arithmetic
+without an extra tolerance; continuous motor travel and the recorded clock stay unchanged.
