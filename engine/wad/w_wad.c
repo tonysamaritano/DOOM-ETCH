@@ -426,7 +426,7 @@ int W_GetNumForName (char* name)
 //
 int W_LumpLength (int lump)
 {
-    if (lump >= numlumps)
+    if (lump < 0 || lump >= numlumps)
 	I_Error ("W_LumpLength: %i >= numlumps",lump);
 
     return lumpinfo[lump].size;
@@ -448,7 +448,7 @@ W_ReadLump
     lumpinfo_t*	l;
     int		handle;
 	
-    if (lump >= numlumps)
+    if (lump < 0 || lump >= numlumps)
 	I_Error ("W_ReadLump: %i >= numlumps",lump);
 
     l = lumpinfo+lump;
