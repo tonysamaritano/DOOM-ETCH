@@ -28,3 +28,21 @@ export async function buildScene(renderer,read) {
   const target=center.clone().addScaledVector(up,-.022),back=normal.clone().addScaledVector(side,.09).add(new THREE.Vector3(0,0,.10)).normalize();
   return createSceneState({renderer,scene,model,area,display,noteURL,camera,bounds,target,back,nodes:gltf.parser.json.nodes.length});
 }
+function rigBounds(model) {
+  const bounds=new THREE.Box3();model.traverse(node=>{
+    if(!node.isMesh)return;
+    for(let parent=node;parent;parent=parent.parent)if(/tabletop/i.test(parent.name))return;
+    node.geometry.computeBoundingBox();bounds.union(node.geometry.boundingBox.clone().applyMatrix4(node.matrixWorld));
+  });return bounds;
+}
+function frameCamera(camera,bounds,target,back,width,height) {
+  camera.aspect=width/height;camera.updateProjectionMatrix();
+  const right=new THREE.Vector3().crossVectors(camera.up,back).normalize();
+  const up=new THREE.Vector3().crossVectors(back,right).normalize();
+  const tan=Math.tan(THREE.MathUtils.degToRad(camera.fov/2));let distance=.25;
+  for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]) {
+    const point=new THREE.Vector3(x,y,z).sub(target),depth=point.dot(back);
+    distance=Math.max(distance,depth+Math.abs(point.dot(right))*1.06/(tan*camera.aspect),depth+Math.abs(point.dot(up))*1.06/tan);
+  }
+  camera.position.copy(target).addScaledVector(back,distance);camera.lookAt(target);
+}
