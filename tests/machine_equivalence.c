@@ -85,9 +85,22 @@ static void raw_ties_and_extents(void)
     equivalent(p, -1);
 }
 
+static void scaled_tie_neighbors(void)
+{
+    const double ties[] = {.025, .075, .125};
+    unsigned char kinds[] = {MOTION_START, MOTION_OUTLINE, MOTION_OUTLINE, MOTION_OUTLINE};
+    for (size_t i = 0; i < 3; ++i) {
+        double lower = nextafter(ties[i], 0), upper = nextafter(ties[i], 1);
+        MotionPoint points[] = {{0, 0}, {3 * lower, 7 * lower},
+            {3 * ties[i], 7 * ties[i]}, {3 * upper, 7 * upper}};
+        MotionPath p = {points, kinds, 4, 3, 7, 1, 1};
+        equivalent(p, -1);
+    }
+}
+
 int main(void)
 {
-    real_size_paths(); raw_ties_and_extents();
+    real_size_paths(); raw_ties_and_extents(); scaled_tie_neighbors();
     puts("machine-equivalence: raw IR and serialized controller agree");
     return 0;
 }
