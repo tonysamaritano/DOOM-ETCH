@@ -24,3 +24,30 @@ function read(name) {
   });
 }
 window.addEventListener('pagehide',()=>{stopped=true;cancelAnimationFrame(animation);request?.abort();});
+async function poll() {
+  if(stopped||failed)return;
+  try {
+    const frame=decodeFrame(await read('frame'));
+    if(stopped||failed)return;
+    if(frame) {
+      const m=frame.metadata;
+      if(m.sequence<=evidence.sequence)throw Error('Repeated or stale delivered sequence');
+      const motion=rig.apply(frame);rig.render();
+      if(failed||stopped)return;
+      Object.assign(evidence,{state:'presenting',sequence:m.sequence,mode:m.mode,kind:m.kind,
+        width:m.width,height:m.height,physical_seconds:m.physical_seconds??null,
+        cursor_mm:m.cursor_mm??null,motor_mm:m.motor_mm??null,travel_mm:m.travel_mm??null,
+        motion,canvas:{width:renderer.domElement.width,height:renderer.domElement.height},scene:rig.evidence()});
+      badge.hidden=m.mode!=='physical';
+      badge.textContent=m.mode==='physical'?'Physical · 1× · '+m.physical_seconds.toFixed(3)+' s':'';
+      status.hidden=true;publish();bridge.postMessage({type:'presented',sequence:m.sequence});
+    }
+    animation=requestAnimationFrame(()=>poll().catch(fail));
+  } catch(error){fail(error);}
+}
+function resize() {
+  if(!rig||failed||stopped)return;
+  try{rig.resize(innerWidth,innerHeight);rig.render();if(!failed){evidence.scene=rig.evidence();publish();}}
+  catch(error){fail(error);}
+}
+window.addEventListener('resize',resize);
