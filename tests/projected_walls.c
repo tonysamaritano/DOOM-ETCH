@@ -60,3 +60,36 @@ static void slopingWall(void)
     outlines(&path, expected, 4);
     MotionFree(&path);
 }
+
+static void disjointTiers(void)
+{
+    const MotionSegment expected[] = {
+        {{0, 0}, {1, 0}}, {{1, 0}, {1, 1}}, {{1, 1}, {0, 1}}, {{0, 1}, {0, 0}},
+        {{0, 3}, {1, 3}}, {{1, 3}, {1, 4}}, {{1, 4}, {0, 4}}, {{0, 4}, {0, 3}}
+    };
+    assert(R_EtchBegin(4, 4)); R_EtchFrameBegin(4, 4);
+    R_EtchWallBegin();
+    R_EtchWallColumn(1, 0, 0, 1, 0, 0);
+    R_EtchWallColumn(2, 0, 3, 4, 0, 0);
+    R_EtchWallEnd();
+    MotionPath path = {0}; assert(R_EtchBuildMotion(&path));
+    outlines(&path, expected, 8);
+    unsigned connectors = 0;
+    for (size_t i = 1; i < path.count; ++i) connectors += path.kinds[i] == MOTION_CONNECTOR;
+    assert(connectors == 1);
+    MotionFree(&path);
+}
+static void slopingClip(void)
+{
+    const MotionSegment expected[] = {
+        {{0, 1}, {1, 1.5}}, {{1, 1.5}, {1, 2.75}},
+        {{1, 2.75}, {0, 3}}, {{0, 3}, {0, 1}}
+    };
+    assert(R_EtchBegin(4, 4)); R_EtchFrameBegin(4, 4);
+    R_EtchClipPlane(0, 1, 0.5, 3, -0.25);
+    R_EtchClipPlane(0, 0, 0, 4, 0); /* Farther geometry cannot widen the opening. */
+    R_EtchWallBegin(); R_EtchWallColumn(0, 0, 0, 4, 0, 0); R_EtchWallEnd();
+    MotionPath path = {0}; assert(R_EtchBuildMotion(&path));
+    outlines(&path, expected, 4);
+    MotionFree(&path);
+}
