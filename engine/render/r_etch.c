@@ -94,3 +94,30 @@ void R_EtchClipPlane(int x, double top, double topstep, double bottom, double bo
         }
     }
 }
+
+void R_EtchWallColumn(int tier, int x, double top, double bottom,
+                      double topstep, double bottomstep)
+{
+    if (!active || failed || !wall_open || tier < 0 || tier >= 3 || x < 0 || x >= width)
+        return;
+    if (!isfinite(top) || !isfinite(bottom) || !isfinite(topstep) || !isfinite(bottomstep)
+        || !isfinite(top + topstep) || !isfinite(bottom + bottomstep)) {
+        failed = 1;
+        return;
+    }
+    double low = clip_top[x], high = clip_bottom[x];
+    if (low >= high) return;
+    double next_low = clamp(low + clip_top_step[x], 0, height);
+    double next_high = clamp(high + clip_bottom_step[x], next_low, height);
+    WallSample sample = {
+        .top = clamp(top, low, high),
+        .bottom = clamp(bottom, low, high),
+        .top_end = clamp(top + topstep, next_low, next_high),
+        .bottom_end = clamp(bottom + bottomstep, next_low, next_high),
+        .valid = 1
+    };
+    sample.bottom = fmax(sample.top, sample.bottom);
+    sample.bottom_end = fmax(sample.top_end, sample.bottom_end);
+    if (sample.bottom <= sample.top && sample.bottom_end <= sample.top_end) return;
+    samples[tier][x] = sample;
+}
