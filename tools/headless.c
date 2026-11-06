@@ -32,3 +32,36 @@ byte *I_ZoneBase(int *bytes)
     *bytes = 32 * 1024 * 1024;
     return I_AllocLow(*bytes);
 }
+
+int I_GetTime(void)
+{
+    static int tick;
+    return tick++;
+}
+
+ticcmd_t *I_BaseTiccmd(void)
+{
+    static ticcmd_t idle;
+    return &idle;
+}
+
+void I_Init(void) {}
+void I_Quit(void) { exit(EXIT_SUCCESS); }
+void I_StartFrame(void) {}
+void I_StartTic(void) {}
+void I_InitGraphics(void) {}
+void I_ShutdownGraphics(void) {}
+void I_SetPalette(byte *palette) { (void)palette; }
+void I_UpdateNoBlit(void) {}
+void I_FinishUpdate(void) {}
+void I_WaitVBL(int count) { (void)count; }
+void I_BeginRead(void) {}
+void I_EndRead(void) {}
+void I_ReadScreen(byte *dest)
+{
+    memcpy(dest, screens[0], SCREENWIDTH * SCREENHEIGHT);
+}
+void I_Tactile(int on, int off, int total)
+{
+    (void)on; (void)off; (void)total;
+}
