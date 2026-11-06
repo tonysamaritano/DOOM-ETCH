@@ -158,3 +158,32 @@ static void tier_edges(int tier)
         }
     }
 }
+
+static void tier_caps(int tier)
+{
+    for (int x = 0; x < width; x++) {
+        WallSample sample = samples[tier][x];
+        if (!sample.valid) continue;
+        if (!x || !samples[tier][x - 1].valid) {
+            add_segment((MotionPoint){x, sample.top}, (MotionPoint){x, sample.bottom});
+        } else {
+            WallSample previous = samples[tier][x - 1];
+            add_segment((MotionPoint){x, previous.top_end}, (MotionPoint){x, sample.top});
+            add_segment((MotionPoint){x, previous.bottom_end}, (MotionPoint){x, sample.bottom});
+        }
+        if (x + 1 == width || !samples[tier][x + 1].valid)
+            add_segment((MotionPoint){x + 1, sample.top_end},
+                (MotionPoint){x + 1, sample.bottom_end});
+    }
+}
+
+void R_EtchWallEnd(void)
+{
+    if (!active || failed) return;
+    if (!wall_open) { failed = 1; return; }
+    for (int tier = 0; tier < 3; tier++) {
+        tier_edges(tier);
+        tier_caps(tier);
+    }
+    wall_open = 0;
+}
