@@ -188,6 +188,20 @@ static EtchGPUPath *EtchGPUBuildPath(EtchSnapshot snapshot, id<MTLDevice> gpu, d
     return bundle;
 }
 
+static void EtchGPUQueueControl(int kind, double value)
+{
+    unsigned write = atomic_load(&controlWrite), read = atomic_load(&controlRead);
+    if (write - read >= CONTROL_CAPACITY) { atomic_store(&controlOverflow, YES); return; }
+    controls[write % CONTROL_CAPACITY] = (EtchGPUControl){kind, value};
+    atomic_store(&controlWrite, write + 1);
+}
+void EtchGPUSetRate(double rate)
+{
+    if (isfinite(rate) && rate > 0) EtchGPUQueueControl(EtchRate, rate);
+}
+void EtchGPUSetInstant(BOOL enabled) { EtchGPUQueueControl(EtchInstant, enabled != NO); }
+void EtchGPUInvalidate(void) { EtchGPUQueueControl(EtchInvalidate, 0); }
+
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
 {
     if (!snapshot || (!snapshot->segments && snapshot->count) || snapshot->count > 400000
