@@ -34,12 +34,16 @@ int main(void)
 {
     const char *names[] = {"doom2f.wad", "doom2.wad", "plutonia.wad",
                            "tnt.wad", "doomu.wad", "doom.wad", "doom1.wad"};
+    const GameMode_t modes[] = {commercial, commercial, commercial,
+                                commercial, retail, registered, shareware};
     char longDirectory[2048];
     memset(longDirectory, 'x', sizeof(longDirectory) - 1);
     longDirectory[sizeof(longDirectory) - 1] = 0;
     for (int i = 0; i < 7; ++i) {
         checkPath("/short", names[i], i * 2);
+        assert(gamemode == modes[i]);
         checkPath(longDirectory, names[i], i * 2 + 1);
+        assert(gamemode == modes[i]);
     }
     return 0;
 }
