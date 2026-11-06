@@ -47,3 +47,9 @@ foreach(pair "default;no-hud" "default;no-weapon" "no-hud;neither" "no-weapon;ne
     endif()
 endforeach()
 message(STATUS "Overlay moves: default=${moves_default}, no-hud=${moves_no-hud}, no-weapon=${moves_no-weapon}, neither=${moves_neither}")
+
+check_overlay(neither-reordered --no-hud --no-weapon --no-hud --no-weapon)
+if(NOT moves_neither-reordered EQUAL moves_neither OR
+        NOT hash_neither-reordered STREQUAL hash_neither)
+    message(FATAL_ERROR "Layer option order or duplication changed the same disabled view")
+endif()
