@@ -42,6 +42,7 @@ rcsid[] = "$Id: r_data.c,v 1.4 1997/02/03 16:47:55 b1 Exp $";
 #include "r_sky.h"
 
 #include <alloca.h>
+#include <stdint.h>
 
 
 #include "r_data.h"
@@ -82,10 +83,10 @@ typedef struct
 typedef struct
 {
     char		name[8];
-    boolean		masked;	
+    int32_t		masked;	
     short		width;
     short		height;
-    void		**columndirectory;	// OBSOLETE
+    int32_t		columndirectory;	// OBSOLETE 32-bit disk field
     short		patchcount;
     mappatch_t	patches[1];
 } maptexture_t;
