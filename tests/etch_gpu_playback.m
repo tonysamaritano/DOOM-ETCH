@@ -212,6 +212,16 @@ static void pauseAndManualErase(void)
     EtchGPUShutdown();
 }
 
+static EtchGPUPath *publishInstantFixture(float y)
+{
+    assert(instant && EtchGPUNeedsPath() && !pending);
+    EtchGPUPath *prior = current;
+    pending = fixturePath(y); needsPath = NO; /* Accepted synthetic planner result. */
+    EtchGPUTick(testClock, YES);
+    assert(current != prior && playhead == current.duration);
+    return prior;
+}
+
 int main(void)
 {
     @autoreleasepool {
