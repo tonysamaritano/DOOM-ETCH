@@ -10,7 +10,7 @@
 #define ETCH_ASSUMED_ERASE_SECONDS 2.5
 #define ETCH_ASSUMED_GHOST_FRACTION 0.03
 /* Assumed verification ink grid, not a framebuffer preview or opacity model. */
-enum { ETCH_INK_WIDTH = 320, ETCH_INK_HEIGHT = 200, ETCH_MAX_POINTS = 400000 };
+enum { ETCH_INK_WIDTH = 320, ETCH_INK_HEIGHT = 200 };
 enum { ETCH_INK_EMPTY, ETCH_INK_FRESH, ETCH_INK_GHOST };
 typedef struct {
     double speed_mm_s, acceleration_mm_s2, backlash_mm, step_mm;
