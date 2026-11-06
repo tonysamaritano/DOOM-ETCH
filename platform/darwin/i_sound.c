@@ -127,3 +127,33 @@ void I_ShutdownSound(void)
     }
     pthread_mutex_unlock(&soundLock);
 }
+
+void I_InitSound(void)
+{
+    if (soundQueue || M_CheckParm("-nosound") || M_CheckParm("-nosfx")) return;
+    AudioStreamBasicDescription format = {0};
+    format.mSampleRate = AUDIO_RATE;
+    format.mFormatID = kAudioFormatLinearPCM;
+    format.mFormatFlags = kLinearPCMFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+    format.mBytesPerPacket = format.mBytesPerFrame = 4;
+    format.mFramesPerPacket = 1;
+    format.mChannelsPerFrame = 2;
+    format.mBitsPerChannel = 16;
+    OSStatus status = AudioQueueNewOutput(&format, fillAudio, NULL, NULL, NULL, 0, &soundQueue);
+    if (status != noErr) goto failed;
+    for (int i = 1; i < NUMSFX; ++i) loadSample(i);
+    pthread_mutex_lock(&soundLock);
+    soundRunning = 1;
+    pthread_mutex_unlock(&soundLock);
+    for (int i = 0; i < 3; ++i) {
+        AudioQueueBufferRef buffer;
+        status = AudioQueueAllocateBuffer(soundQueue, AUDIO_FRAMES * 4, &buffer);
+        if (status != noErr) goto failed;
+        fillAudio(NULL, soundQueue, buffer);
+    }
+    status = AudioQueueStart(soundQueue, NULL);
+    if (status == noErr) return;
+failed:
+    fprintf(stderr, "AudioQueue unavailable (%d); continuing silently\n", (int)status);
+    I_ShutdownSound();
+}
