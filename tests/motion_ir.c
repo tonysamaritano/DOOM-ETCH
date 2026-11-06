@@ -114,6 +114,11 @@ static void validation(void)
     path.kinds[0] = MOTION_OUTLINE; assert(!MotionValid(&path));
     path.kinds[0] = MOTION_START; assert(MotionValid(&path));
     MotionFree(&path);
+    MotionSegment point = {{5, 5}, {5, 5}};
+    assert(MotionPlanSegments(&path, &point, 1, 10, 10, (MotionPoint){10, 10}));
+    assert(MotionValid(&path) && path.count == 1);
+    pointEquals(path.points[0], (MotionPoint){10, 10});
+    MotionFree(&path);
     assert(MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){0, 0}));
     path.kinds[1] = 99; assert(!MotionValid(&path));
     path.kinds[1] = MOTION_START; assert(!MotionValid(&path));
@@ -140,6 +145,8 @@ static void failedPlansPreserveOutput(void)
     assert(!MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){0, 11}));
     assert(!MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){NAN, 0}));
     assert(path.points == points && path.kinds == kinds && path.count == saved.count);
+    assert(path.width == saved.width && path.height == saved.height);
+    assert(path.width_mm == saved.width_mm && path.height_mm == saved.height_mm);
     for (size_t i = 0; i < path.count; ++i) {
         pointEquals(path.points[i], saved.points[i]);
         assert(path.kinds[i] == saved.kinds[i]);
