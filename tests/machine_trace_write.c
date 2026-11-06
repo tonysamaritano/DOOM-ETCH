@@ -24,3 +24,21 @@ int main(void)
     assert(write(fd, "sentinel\n", 9) == 9); assert(!close(fd));
     assert(!MachineTraceWrite(path, &program, &trace, MachinePlaybackSeconds(p), &error));
     assert(error.message[0]); unchanged(path);
+    assert(MachineRun(p)); double seconds = MachinePlaybackSeconds(p);
+    assert(!MachineTraceWrite(path, &program, &trace, seconds + .125, &error));
+    assert(error.message[0]); unchanged(path);
+    assert(!MachineTraceWrite(path, &program, &trace, NAN, &error)); unchanged(path);
+    trace.clock += .125;
+    assert(!MachineTraceWrite(path, &program, &trace, seconds, &error)); unchanged(path);
+    trace.clock -= .125;
+    trace.failed = 1;
+    assert(!MachineTraceWrite(path, &program, &trace, seconds, &error)); unchanged(path);
+    trace.failed = 0;
+    assert(MachineTraceWrite(path, &program, &trace, seconds, &error));
+    FILE *result = fopen(path, "rb"); assert(result); assert(fgetc(result) == '{');
+    assert(!fclose(result)); assert(!unlink(path));
+    MachinePlaybackDestroy(p); EtchTraceFree(&trace);
+    MachineStepProgramFree(&program); MachineProgramFree(&parsed);
+    puts("machine-trace-write: incomplete and inconsistent traces fail without replacing output");
+    return 0;
+}
