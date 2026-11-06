@@ -59,3 +59,18 @@ static size_t validatePath(const char *text)
     assert(points > 1);
     return points - 1;
 }
+
+int main(int argc, char **argv)
+{
+    assert(argc == 2);
+    char *text = readSVG(argv[1]);
+    const char *root = strstr(text, "<svg"); assert(root);
+    const char *box = attribute(root, "viewBox");
+    assert(fabs(number(&box)) < 1e-8 && fabs(number(&box)) < 1e-8);
+    assert(fabs(number(&box) - 170.15) < 1e-8);
+    assert(fabs(number(&box) - 127.6) < 1e-8);
+    size_t moves = validatePath(text);
+    printf("%zu moves within 170.15 x 127.6 mm\n", moves);
+    free(text);
+    return 0;
+}
