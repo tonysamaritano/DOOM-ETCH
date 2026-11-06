@@ -225,3 +225,29 @@ static int project_rectangle(SilRect r, double ox, double oy, double sx, double 
     }
     return 1;
 }
+
+int SilProject(const Silhouette *source, double ox, double oy, double sx, double sy,
+    int first, int last, const short *top, const short *bottom,
+    unsigned width, unsigned height, SilRects *fill, SilLines *outline)
+{
+    if (!fill || !outline || !shape_valid(source) || !top || !bottom
+        || !width || !height || width > MAX_PATCH_EXTENT || height > MAX_PATCH_EXTENT
+        || !isfinite(ox) || !isfinite(oy) || !isfinite(sx) || !isfinite(sy) || sx == 0 || sy <= 0)
+        return 0;
+    if (first < 0) first = 0;
+    if (last >= (int)width) last = (int)width - 1;
+    SilRects next_fill = {0}; SilLines next_outline = {0};
+    if (first <= last) {
+        for (size_t i = 0; i < source->fill.count; i++)
+            if (!project_rectangle(source->fill.data[i], ox, oy, sx, sy,
+                    first, last, top, bottom, height, &next_fill)) goto fail;
+    }
+    // Rebuild contours after clipping so newly exposed boundaries remain closed.
+    if (!SilContours(&next_fill, &next_outline)) goto fail;
+    SilRectsFree(fill); SilLinesFree(outline);
+    *fill = next_fill; *outline = next_outline;
+    return 1;
+fail:
+    SilRectsFree(&next_fill); SilLinesFree(&next_outline);
+    return 0;
+}
