@@ -21,3 +21,23 @@ static int number(char text[128], double value)
     }
     return length > 0;
 }
+
+static double quantized(double units, unsigned source_extent, double extent_mm)
+{
+    double millimeters = (units / source_extent) * extent_mm;
+    double last = floor(extent_mm / step_mm + 1e-9);
+    double steps = fmin(round(millimeters / step_mm), last);
+    return fmin(extent_mm, fmax(0.0, steps * step_mm));
+}
+
+static int position(FILE *stream, const char *command, const MotionPath *path, size_t index)
+{
+    MotionPoint point = path->points[index];
+    double x = quantized(point.x, path->width, path->width_mm);
+    double device_y = quantized(point.y, path->height, path->height_mm);
+    double y = fmax(0.0, path->height_mm - device_y) + 0.0;
+    char xs[128], ys[128], line[128];
+    if (!number(xs, x) || !number(ys, y)) return 0;
+    int length = snprintf(line, sizeof(line), "%s X%s Y%s\n", command, xs, ys);
+    return length > 0 && length <= 81 && fputs(line, stream) >= 0;
+}
