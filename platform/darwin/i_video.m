@@ -142,3 +142,33 @@ static void InitRenderer(void)
     indices = [device newTextureWithDescriptor:texture];
     if (!indices) I_Error("Cannot create indexed framebuffer texture");
 }
+
+void I_InitGraphics(void)
+{
+    presentedFrames = runFrames = 0;
+    ReadFrameLimit();
+    @autoreleasepool {
+        [NSApplication sharedApplication];
+        [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+        InitRenderer();
+        NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
+            NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+        window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 720)
+            styleMask:style backing:NSBackingStoreBuffered defer:NO];
+        window.title = @"doom-etch";
+        window.contentMinSize = NSMakeSize(320, 240);
+        window.releasedWhenClosed = NO;
+        windowDelegate = [DoomWindowDelegate new];
+        window.delegate = windowDelegate;
+        layer = [CAMetalLayer layer];
+        layer.device = device;
+        layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        layer.framebufferOnly = YES;
+        window.contentView.wantsLayer = YES;
+        window.contentView.layer = layer;
+        [window center];
+        [window makeKeyAndOrderFront:nil];
+        [NSApp finishLaunching];
+        [NSApp activateIgnoringOtherApps:YES];
+    }
+}
