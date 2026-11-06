@@ -2,7 +2,8 @@
 #import <Foundation/Foundation.h>
 NSURL *EtchPlayResource(NSURL *root,NSURL *request,NSString **mime)
 {
-    if (![request.scheme isEqualToString:@"doomrig"] || ![request.host isEqualToString:@"local"]) return nil;
+    if (![request.scheme isEqualToString:@"doomrig"] || ![request.host isEqualToString:@"local"] ||
+        request.user || request.password || request.port) return nil;
     NSString *path=request.path.stringByRemovingPercentEncoding;
     if (!path || [path.pathComponents containsObject:@".."]) return nil;
     NSString *relative=[path stringByTrimmingCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"/"]];
