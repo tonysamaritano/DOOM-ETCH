@@ -61,3 +61,24 @@ static void manualEraseFreezesRevealedPrefix(void)
     assert(fading.current == old); /* Copied render state retains its immutable bundle. */
     EtchGPUShutdown(); assert(!current && !pending && !ghost);
 }
+
+static void automaticHoldAndErase(void)
+{
+    startFixture(); playhead = current.duration;
+    advance(.599);
+    assert(!erasing && !EtchGPUNeedsPath());
+    advance(.002);
+    assert(erasing && fabs(eraseTime) < 1e-9);
+    advance(.649);
+    assert(!EtchGPUNeedsPath() && current);
+    advance(.002);
+    assert(EtchGPUNeedsPath() && current);
+    EtchGPUFrame *frame = EtchGPUFrameState();
+    assert(fabs(frame.currentTime - 2) < 1e-9);
+    assert(fabs(frame.currentOpacity - .025) < 1e-6);
+    EtchGPUPath *finished = current; pending = fixturePath(.2f);
+    EtchGPUTick(testClock, YES);
+    assert(ghost == finished && ghostTime == 2 && playhead == 0);
+    assert(holdTime == 0 && eraseTime == 0 && !erasing && !EtchGPUNeedsPath());
+    EtchGPUShutdown();
+}
