@@ -70,3 +70,27 @@ static double clamp(double value, double low, double high)
 {
     return fmin(high, fmax(low, value));
 }
+
+void R_EtchClipPlane(int x, double top, double topstep, double bottom, double bottomstep)
+{
+    if (!active || failed || x < 0 || x >= width) return;
+    if (!isfinite(top) || !isfinite(bottom) || !isfinite(topstep) || !isfinite(bottomstep)
+        || !isfinite(top + topstep) || !isfinite(bottom + bottomstep)) {
+        failed = 1;
+        return;
+    }
+    if (top >= clip_top[x]) {
+        if (top <= clip_bottom[x]) {
+            clip_top[x] = top; clip_top_step[x] = topstep;
+        } else {
+            clip_top[x] = clip_bottom[x]; clip_top_step[x] = clip_bottom_step[x];
+        }
+    }
+    if (bottom <= clip_bottom[x]) {
+        if (bottom >= clip_top[x]) {
+            clip_bottom[x] = bottom; clip_bottom_step[x] = bottomstep;
+        } else {
+            clip_bottom[x] = clip_top[x]; clip_bottom_step[x] = clip_top_step[x];
+        }
+    }
+}
