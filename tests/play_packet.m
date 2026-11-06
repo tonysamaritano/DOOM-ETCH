@@ -57,3 +57,36 @@ static void limit(void)
     }
     assert([q take].length==0 && q.presented==90);[q stop];
 }
+static void validation(void)
+{
+    NSData *data=pixels(17);NSMutableDictionary *m=[game() mutableCopy];
+    assert(!EtchPlayPacket(data,m,0));
+    assert(!EtchPlayPacket(data,m,9007199254740992ULL));
+    assert(!EtchPlayPacket([NSData data],m,1));
+    m[@"physical_seconds"]=@0;
+    assert(!EtchPlayPacket(data,m,1)); // A game image must not claim physical state.
+    [m removeObjectForKey:@"physical_seconds"];
+    m[@"mode"]=@"physical";m[@"cursor_mm"]=@[@10,@20];
+    m[@"motor_mm"]=@[@(-.15),@130];m[@"travel_mm"]=@[@170.15,@127.6];
+    m[@"physical_seconds"]=@1.25;m[@"knob_mm_turn"]=@20;
+    assert(EtchPlayPacket(data,m,1));
+    m[@"motor_mm"]=@[@YES,@0];assert(!EtchPlayPacket(data,m,1));
+    m[@"motor_mm"]=@[@0,@0];m[@"physical_seconds"]=@YES;
+    assert(!EtchPlayPacket(data,m,1));
+    m[@"physical_seconds"]=@1;m[@"cursor_mm"]=@[@171,@0];
+    assert(!EtchPlayPacket(data,m,1));
+    m[@"cursor_mm"]=@[@0,@0];m[@"note"]=[@"x" stringByPaddingToLength:17000
+        withString:@"x" startingAtIndex:0];
+    assert(!EtchPlayPacket(data,m,1));
+}
+int main(int argc,char **argv)
+{
+    @autoreleasepool {
+        ownership();limit();validation();
+        NSData *fixture=EtchPlayPacket(pixels(17),game(),9007199254740991ULL);
+        assert([header(fixture)[@"version"] intValue]==1);
+        if(argc==2)assert([fixture writeToFile:@(argv[1]) atomically:YES]);
+        puts("PASS production packet ownership, ACK limit and validation");
+    }
+    return 0;
+}
