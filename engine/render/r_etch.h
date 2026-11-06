@@ -27,7 +27,8 @@ void R_EtchSprites(int enabled);
 int R_EtchSpritesActive(void);
 int R_EtchSpritePatch(int lump, const void *patch, size_t bytes,
     double origin_x, double origin_y, double scale_x, double scale_y,
-    int first, int last, const short *top, const short *bottom);
+    int first, int last, const short *top, const short *bottom,
+    const unsigned char *light, const unsigned char *palette, const unsigned char *translation);
 void R_EtchResetSprites(void);
 void R_EtchHUD(int enabled);
 void R_EtchWeapon(int enabled);
@@ -39,6 +40,6 @@ int R_EtchHUDCapturing(void);
 int R_EtchOverlayPatch(int lump, const void *patch, size_t bytes,
     double origin_x, double origin_y, double scale_x, double scale_y,
     int first, int last, const short *top, const short *bottom,
-    const unsigned char *palette, int hud);
+    const unsigned char *light, const unsigned char *palette, int hud);
 
 #endif
