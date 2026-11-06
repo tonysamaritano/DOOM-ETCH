@@ -5,6 +5,8 @@
 /* Load a file, then apply explicit calibration assignments transactionally. */
 MachinePlayback *MachineLoad(const char *filename,const char *const *assignments,
                              size_t count,MachineParseError *error);
+MachinePlayback *MachineLoadTraced(const char *filename,const char *const *assignments,
+                                   size_t count,EtchTrace *trace,MachineParseError *error);
 int MachineRun(MachinePlayback *playback);
 /* Full-file physical results only; callers must establish actual completion. */
 int MachineReport(FILE *stream,const MachineStepProgram *program,double seconds,int json);
