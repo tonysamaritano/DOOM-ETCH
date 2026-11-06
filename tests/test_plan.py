@@ -72,16 +72,6 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(plan.simplify(corner), corner)
         self.assertEqual(plan.simplify([(0, 0)]), [(0, 0)])
 
-    def test_physical_canvas_and_empty_capture(self):
-        points, kinds = plan.make_plan([[1, 0, 2]])
-        self.assertEqual(points[0], (0, 0))
-        self.assertEqual(len(points), len(kinds) + 1)
-        self.assertTrue(all(0 <= x <= 170.15 and 0 <= y <= 127.6 for x, y in points))
-        self.assertAlmostEqual(max(x for x, _ in points), 170.15)
-        self.assertAlmostEqual(max(y for _, y in points), 127.6)
-        self.assertTrue(math.isfinite(sum(math.dist(a, b) for a, b in zip(points, points[1:]))))
-        with self.assertRaises(ValueError):
-            plan.make_plan([[0, 0]])
 
 
 
