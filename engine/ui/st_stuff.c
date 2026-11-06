@@ -42,6 +42,7 @@ rcsid[] = "$Id: st_stuff.c,v 1.6 1997/02/03 22:45:13 b1 Exp $";
 #include "st_stuff.h"
 #include "st_lib.h"
 #include "r_local.h"
+#include "r_etch.h"
 
 #include "p_local.h"
 #include "p_inter.h"
@@ -1103,6 +1104,17 @@ void ST_diffDraw(void)
 {
     // update all widgets
     ST_drawWidgets(false);
+}
+
+void ST_EtchDrawer(void)
+{
+    if (!R_EtchHUDBegin()) return;
+    boolean previous = st_statusbaron;
+    st_statusbaron = true;
+    ST_refreshBackground();
+    ST_drawWidgets(true);
+    st_statusbaron = previous;
+    R_EtchHUDEnd();
 }
 
 void ST_Drawer (boolean fullscreen, boolean refresh)
