@@ -34,26 +34,10 @@ int MotionOutputClose(MotionOutput *output, int success)
 /* Publish each completed file by rename, so a failed write preserves its predecessor. */
 int WriteMotionOutput(const char *prefix, const char *extension, const MotionPath *path)
 {
-    char filename[PATH_MAX], temporary[PATH_MAX];
-    int n = snprintf(filename, sizeof(filename), "%s.%s", prefix, extension);
-    if (n < 0 || (size_t)n >= sizeof(filename)) return 0;
-    n = snprintf(temporary, sizeof(temporary), "%s.XXXXXX", filename);
-    if (n < 0 || (size_t)n >= sizeof(temporary)) return 0;
-
-    int fd = mkstemp(temporary);
-    if (fd < 0) return 0;
-    FILE *stream = fdopen(fd, "w");
-    int success = 0;
-    if (stream) {
-        /* Assumed feed: 3,600 mm/min for the simulated machine. */
-        success = extension[0] == 's' ? MotionWriteSVG(stream, path)
-                                     : MotionWriteGCode(stream, path, 3600.0);
-        if (fclose(stream)) success = 0;
-    } else {
-        close(fd);
-    }
-    if (success && rename(temporary, filename) == 0) return 1;
-    unlink(temporary);
-    return 0;
+    MotionOutput output = {0};
+    if (!MotionOutputOpen(&output, prefix, extension)) return 0;
+    /* Assumed feed: 3,600 mm/min. */
+    int success = extension[0] == 's' ? MotionWriteSVG(output.stream, path)
+                                    : MotionWriteGCode(output.stream, path, 3600.0);
+    return MotionOutputClose(&output, success);
 }
-
