@@ -32,7 +32,8 @@ static void pause_and_interrupt(void)
     assert(advance(&p, .1)); machine_near(MachinePlaybackSeconds(p.play), .3);
     unsigned char physical[sizeof p.retained];
     memcpy(physical, EtchDeviceInk(MachinePlaybackDevice(p.play)), sizeof physical);
-    assert(control(&p, KEY_F7) && p.interrupted && p.shaking);
+    p.reset_clock = NO;
+    assert(control(&p, KEY_F7) && p.interrupted && p.shaking && p.reset_clock);
     assert(!memcmp(p.retained, physical, sizeof physical));
     assert(advance(&p, .5)); machine_near(p.shake_time, .5);
     assert(control(&p, KEY_F7)); machine_near(p.shake_time, .5);
