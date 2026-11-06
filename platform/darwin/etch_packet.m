@@ -90,6 +90,7 @@ NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence)
     return YES;
 }
 - (unsigned)presented { return _presented; }
+- (void)discardLatest { _pixels=_metadata=nil; }
 - (void)stop
 {
     _stopped=YES; _pixels=_metadata=nil; _outstanding=0;
