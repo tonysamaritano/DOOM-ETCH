@@ -268,3 +268,5 @@ if(BUILD_TESTING)
     target_compile_options(machine-trace-write-test PRIVATE -UNDEBUG)
     add_test(NAME machine-trace-write COMMAND machine-trace-write-test)
 endif()
+
+include(tests/viewer_trace.cmake)
