@@ -12,7 +12,7 @@ static void unchanged(const char *path)
 int main(void)
 {
     FILE *source = tmpfile(); assert(source);
-    fputs("; ETCH_START X0 Y127.6\nG1 X100 F3600\nM2\n", source); rewind(source);
+    fputs("; ETCH_START X0 Y127.6\nG1 X100 F3600\nG1 X50\nM2\n", source); rewind(source);
     MachineSettings settings; MachineSettingsDefault(&settings);
     MachineProgram parsed = {0}; MachineStepProgram program = {0}; MachineParseError error = {0};
     assert(MachineRead(source, &settings, &parsed, &error)); assert(!fclose(source));
@@ -31,6 +31,12 @@ int main(void)
     trace.clock += .125;
     assert(!MachineTraceWrite(path, &program, &trace, seconds, &error)); unchanged(path);
     trace.clock -= .125;
+    double duration = trace.segments[0].duration;
+    trace.segments[0].duration = duration - .001; // A real gap before the next move.
+    assert(!MachineTraceWrite(path, &program, &trace, seconds, &error)); unchanged(path);
+    trace.segments[0].duration = duration + .001; // A real overlap before the next move.
+    assert(!MachineTraceWrite(path, &program, &trace, seconds, &error)); unchanged(path);
+    trace.segments[0].duration = duration;
     trace.failed = 1;
     assert(!MachineTraceWrite(path, &program, &trace, seconds, &error)); unchanged(path);
     trace.failed = 0;
