@@ -51,3 +51,25 @@ static void bounds(void)
     assert(box[BOXLEFT] == -9 && box[BOXRIGHT] == 12);
     assert(box[BOXTOP] == 4 && box[BOXBOTTOM] == -3);
 }
+
+static void endian(void)
+{
+    const unsigned char disk[] = {0x42, 0x18, 0x75, 0x23};
+    unsigned short word;
+    unsigned int value;
+    memcpy(&word, disk, sizeof(word));
+    memcpy(&value, disk, sizeof(value));
+    assert(SHORT(word) == 0x1842);
+    assert(LONG(value) == 0x23751842);
+}
+
+int main(int argc, char **argv)
+{
+    assert(argc == 2);
+    if (!strcmp(argv[1], "fixed")) fixedPoint();
+    else if (!strcmp(argv[1], "boxes")) bounds();
+    else if (!strcmp(argv[1], "random")) randomStreams();
+    else if (!strcmp(argv[1], "endian")) endian();
+    else return EXIT_FAILURE;
+    return EXIT_SUCCESS;
+}
