@@ -224,3 +224,25 @@ void R_EtchWallEnd(void)
     }
     wall_open = 0;
 }
+
+int R_EtchSpritePatch(int lump, const void *patch, size_t bytes,
+    double origin_x, double origin_y, double scale_x, double scale_y,
+    int first, int last, const short *top, const short *bottom)
+{
+    if (!R_EtchSpritesActive()) return 1;
+    SpriteFrame *frame = sprite_frame(lump, patch, bytes);
+    if (!frame) { failed = 1; return 0; }
+    SilRects fill = {0};
+    SilLines outline = {0};
+    SilLines scene = {walls, wall_count, wall_capacity};
+    int success = SilProject(&frame->shape, origin_x, origin_y, scale_x, scale_y,
+        first, last, top, bottom, (unsigned)width, (unsigned)height, &fill, &outline);
+    if (success) success = SilComposite(&scene, &fill, &outline);
+    walls = scene.data;
+    wall_count = scene.count;
+    wall_capacity = scene.capacity;
+    SilRectsFree(&fill);
+    SilLinesFree(&outline);
+    if (!success || wall_count > MAX_SEGMENTS) { failed = 1; return 0; }
+    return 1;
+}
