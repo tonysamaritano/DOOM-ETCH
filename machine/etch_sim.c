@@ -27,3 +27,38 @@ EtchConfig EtchAssumedDefaults(void)
     return (EtchConfig){axis, axis, MOTION_WIDTH_MM, MOTION_HEIGHT_MM,
                        ETCH_ASSUMED_ERASE_SECONDS, ETCH_ASSUMED_GHOST_FRACTION};
 }
+static int axis_valid(EtchAxisConfig a, double extent)
+{
+    return isfinite(a.speed_mm_s) && a.speed_mm_s > 0 &&
+        isfinite(a.acceleration_mm_s2) && a.acceleration_mm_s2 > 0 &&
+        isfinite(a.backlash_mm) && a.backlash_mm >= 0 &&
+        isfinite(a.step_mm) && a.step_mm > 0 && isfinite(extent) && extent > 0 &&
+        isfinite(extent / a.step_mm) && extent / a.step_mm <= 0x1p52;
+}
+static double quantize(double value, double step, double extent)
+{
+    return fmin(round(value / step), floor(extent / step + 1e-10)) * step;
+}
+static int point(EtchConfig c, MotionPoint input, MotionPoint *out)
+{
+    if (!isfinite(input.x) || !isfinite(input.y) || input.x < 0 || input.y < 0 ||
+        input.x > c.width_mm || input.y > c.height_mm) return 0;
+    *out = (MotionPoint){quantize(input.x,c.x.step_mm,c.width_mm),
+                        quantize(input.y,c.y.step_mm,c.height_mm)};
+    return 1;
+}
+EtchDevice *EtchCreate(EtchConfig c, MotionPoint start)
+{
+    MotionPoint q;
+    if (!axis_valid(c.x,c.width_mm) || !axis_valid(c.y,c.height_mm) ||
+        !isfinite(c.erase_seconds) || c.erase_seconds <= 0 ||
+        !isfinite(c.ghost_fraction) || c.ghost_fraction < 0 || c.ghost_fraction > 1 ||
+        !point(c,start,&q)) return NULL;
+    EtchDevice *d = calloc(1,sizeof(*d));
+    if (d) { d->config=c; d->status.cursor_mm=q; d->status.motor_mm=q; }
+    return d;
+}
+void EtchDestroy(EtchDevice *d)
+{
+    if (d) { free(d->segments); free(d); }
+}
