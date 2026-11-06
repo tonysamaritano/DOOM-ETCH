@@ -40,6 +40,27 @@ static double number(const char **text)
     *text = end;
     return value;
 }
+typedef struct {
+    const char *name;
+    double left, top, right, bottom;
+    size_t strokes;
+} ArtworkRegion;
+/* Native status-bar widget locations: the face and large ammo digits. */
+static ArtworkRegion artwork[] = {
+    {"face", 143, 169, 167, 199, 0}, {"ammo", 12, 171, 44, 187, 0}
+};
+static void countArtwork(double ax, double ay, double bx, double by)
+{
+    ax *= 320 / 170.15; bx *= 320 / 170.15;
+    ay *= 200 / 127.6; by *= 200 / 127.6;
+    double length = hypot(bx - ax, by - ay);
+    if (length <= 0.05 || length >= 8) return;
+    for (size_t i = 0; i < sizeof(artwork) / sizeof(*artwork); ++i) {
+        ArtworkRegion *r = &artwork[i];
+        if (fmin(ax, bx) > r->left && fmax(ax, bx) < r->right &&
+            fmin(ay, by) > r->top && fmax(ay, by) < r->bottom) ++r->strokes;
+    }
+}
 static size_t validatePath(const char *text)
 {
     const char *path = strstr(text, "<path");
