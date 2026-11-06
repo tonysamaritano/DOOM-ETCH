@@ -148,9 +148,19 @@ endif()
 if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
     add_executable(etch-gpu-playback-test tests/etch_gpu_playback.m)
     target_compile_options(etch-gpu-playback-test PRIVATE -fobjc-arc -UNDEBUG)
-    target_include_directories(etch-gpu-playback-test PRIVATE engine/render)
+    target_include_directories(etch-gpu-playback-test PRIVATE engine/render engine/core)
     target_link_libraries(etch-gpu-playback-test PRIVATE etch-motion
         "-framework Foundation" "-framework Metal" "-framework QuartzCore")
     add_test(NAME etch-gpu-playback COMMAND etch-gpu-playback-test)
     set_tests_properties(etch-gpu-playback PROPERTIES TIMEOUT 30)
+endif()
+
+if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS AND DOOM_TEST_WAD_DIRECTORY
+   AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+    add_test(NAME etch-gpu-controls COMMAND "${CMAKE_COMMAND}"
+        "-DGAME=$<TARGET_FILE:doom-metal>"
+        "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+        "-DCONFIG=${CMAKE_CURRENT_BINARY_DIR}/etch-gpu-controls.cfg"
+        -P "${PROJECT_SOURCE_DIR}/tests/etch_gpu_controls.cmake")
+    set_tests_properties(etch-gpu-controls PROPERTIES TIMEOUT 120 RUN_SERIAL TRUE)
 endif()
