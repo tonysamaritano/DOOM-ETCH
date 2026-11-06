@@ -439,3 +439,20 @@ static int hatch_tone(const HatchContext *context, double u, double v, double *t
     if (count) *tone = sum / count;
     return count != 0;
 }
+
+static int hatch_piece(const HatchContext *context, HatchStrokes *strokes,
+    SilRect rectangle, double row, int spacing, double slope, int family, double x, double end)
+{
+    double y0 = context->oy + (row + slope * (x - context->ox) / context->sx) * context->sy;
+    double y1 = context->oy + (row + slope * (end - context->ox) / context->sx) * context->sy;
+    double low, high;
+    if (!HatchClip(y0, y1, rectangle.y0 + .35, rectangle.y0 + .35,
+            rectangle.y1 - .35, rectangle.y1 - .35, &low, &high)) return 1;
+    double x0 = x + (end - x) * low, x1 = x + (end - x) * high;
+    double u = ((x0 + x1) * .5 - context->ox) / context->sx;
+    double v = row + slope * u, tone;
+    if (!hatch_tone(context, u, v, &tone) || tone >= HatchThreshold((int)(row / spacing), family))
+        return 1;
+    MotionSegment line = {{x0, y0 + (y1 - y0) * low}, {x1, y0 + (y1 - y0) * high}};
+    return stroke_add(strokes, line, family, (int)row);
+}
