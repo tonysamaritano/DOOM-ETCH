@@ -52,3 +52,18 @@ int main(void)
     assert(SilFeatures(&shape, palette, &features) && features.count == 1);
     MotionSegment edge = features.data[0];
     assert(edge.a.x == 0 && edge.a.y == 1 && edge.b.x == 3 && edge.b.y == 1);
+    MotionSegment *previous = features.data;
+    assert(!SilFeatures(&shape, NULL, &features));
+    assert(features.data == previous && features.count == 1);
+    shape.texels[0] = 300;
+    assert(!SilFeatures(&shape, palette, &features));
+    assert(features.data == previous && features.count == 1);
+    assert(features.data[0].a.y == 1 && features.data[0].b.x == 3);
+    shape.texels[0] = 0;
+    shape.texels = NULL;
+    assert(!SilFeatures(&shape, palette, &features) && features.data == previous);
+    shape.texels = owned;
+    SilLinesFree(&features); SilhouetteFree(&shape);
+    assert(!shape.texels && !shape.fill.data && !shape.outline.data && !shape.width);
+    return 0;
+}
