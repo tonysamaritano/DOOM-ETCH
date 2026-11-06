@@ -144,3 +144,14 @@ static void captureLifecycle(void)
     MotionFree(&path);
     assert(!R_EtchBuildMotion(NULL));
 }
+
+int main(void)
+{
+    outerCell();
+    adjacentSurfaces();
+    nearWallWins();
+    clippedBands();
+    captureLifecycle();
+    puts("Wall bands: boundaries, seams, clipping and capture lifecycle passed");
+    return 0;
+}
