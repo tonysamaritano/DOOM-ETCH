@@ -28,3 +28,30 @@ assert.equal(second.palette,null);
 assert.deepEqual([...second.pixels.slice(0,4)],[11,22,33,255]);
 assert.deepEqual([...second.pixels.slice(-4)],[77,88,99,255]);
 assert.deepEqual(decodeFrame(packet(physical)).metadata,physical);
+for(const change of [{version:2},{sequence:0},{sequence:-1},{sequence:1.5},
+  {sequence:Number.MAX_SAFE_INTEGER+1},{kind:'rgba'},{width:321},{height:0},
+  {width:'320'},{mode:'other'},{mode:'visual'},{physical_seconds:0}])
+  assert.throws(()=>decodeFrame(packet({...game,...change})),JSON.stringify(change));
+for(const change of [{cursor_mm:[-1,0]},{cursor_mm:[171,0]},
+  {cursor_mm:[0,128]},{cursor_mm:[0]},{motor_mm:[null,0]},
+  {travel_mm:[0,127.6]},{travel_mm:[170.15,-1]},
+  {physical_seconds:-1},{physical_seconds:null},{physical_seconds:'1'},
+  {knob_mm_turn:0},{knob_mm_turn:'20'}])
+  assert.throws(()=>decodeFrame(packet({...physical,...change})),JSON.stringify(change));
+for(const meta of [null,[],true,'frame'])assert.throws(()=>decodeFrame(packet(meta)));
+for(const length of [1,2,3])assert.throws(()=>decodeFrame(new ArrayBuffer(length)));
+const valid=packet(game,indexed);
+assert.throws(()=>decodeFrame(valid.slice(0,-1)));
+const surplus=new Uint8Array(valid.byteLength+1);surplus.set(new Uint8Array(valid));
+assert.throws(()=>decodeFrame(surplus.buffer));
+for(const length of [0,16385,0xffffffff]) {
+  const bad=valid.slice(0);new DataView(bad).setUint32(0,length,true);
+  assert.throws(()=>decodeFrame(bad));
+}
+const malformed=valid.slice(0);new Uint8Array(malformed)[4]=0xff;
+assert.throws(()=>decodeFrame(malformed));
+const reversed=valid.slice(0),size=new DataView(valid).getUint32(0,true);
+new DataView(reversed).setUint32(0,size,false);
+assert.throws(()=>decodeFrame(reversed));
+assert.throws(()=>decodeFrame(new Uint8Array(valid)));
+console.log('PASS live packet colors, state, bounds, lengths and malformed input');
