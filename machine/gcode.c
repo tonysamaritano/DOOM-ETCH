@@ -80,3 +80,31 @@ static int words(const char *row,double values[5],unsigned *seen,unsigned *codes
     }
     return 1;
 }
+static int parse_row(Parser *p,const char *row,size_t line,MachineParseError *e)
+{
+    double v[5]={0}; unsigned seen=0,codes=0;
+    if (!words(row,v,&seen,&codes)) return fail(e,line,"invalid or duplicate command word");
+    if (!seen) return 1;
+    if (p->ended) return fail(e,line,"executable text after end");
+    if (seen & 2) {
+        if (seen!=2 || (v[1]!=0 && v[1]!=2)) return fail(e,line,"unsupported M command");
+        MachineMoveKind kind=v[1]==0 ? MACHINE_MOVE_PAUSE : MACHINE_MOVE_END;
+        if (!append(&p->program,(MachineMove){p->cursor,0,kind,line}))
+            return fail(e,line,"out of memory");
+        p->ended=kind==MACHINE_MOVE_END; return 1;
+    }
+    if (seen & 16) {
+        if (v[4]<=0 || !isfinite(v[4]/60) || v[4]/60<=0)
+            return fail(e,line,"feed must be positive finite mm/min");
+        p->feed=v[4]/60;
+    }
+    if (codes & 3) p->mode=(int)v[0];
+    if (!(seen & 12) && !(codes & 3)) return 1;
+    if (p->mode<0) return fail(e,line,"coordinates require a motion mode");
+    if (p->mode==1 && p->feed<=0) return fail(e,line,"G1 requires a feed");
+    if (seen & 4) p->cursor.x=v[2];
+    if (seen & 8) p->cursor.y=v[3];
+    MachineMove move={p->cursor,p->mode==0 ? 0 : p->feed,
+                     p->mode==0 ? MACHINE_MOVE_RAPID : MACHINE_MOVE_DRAW,line};
+    return append(&p->program,move) ? 1 : fail(e,line,"out of memory");
+}
