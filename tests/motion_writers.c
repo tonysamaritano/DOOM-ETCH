@@ -153,3 +153,37 @@ static ParsedCode parseCode(char *text)
     }
     return code;
 }
+
+static void sameTrace(const MotionPoint *svg, const ParsedCode *code, size_t count)
+{
+    assert(code->sizeSeen == 1 && code->startSeen == 1);
+    assert(code->metric == 1 && code->absolute == 1);
+    assert(fabs(code->feed - 1234.5) < 1e-7);
+    assert(code->count == count);
+    for (size_t i = 0; i < count; ++i) {
+        MotionPoint machine = code->points[i];
+        assertGridPoint(machine);
+        assert(fabs(machine.x - svg[i].x) <= 0.05);
+        assert(fabs(machine.y - (127.6 - svg[i].y)) <= 0.05);
+        if (machine.x == 0) assert(!signbit(machine.x));
+        if (machine.y == 0) assert(!signbit(machine.y));
+    }
+}
+static void emittedFormatsAgree(void)
+{
+    MotionPath path = writerFixture();
+    FILE *svgStream = tmpfile(), *codeStream = tmpfile();
+    assert(svgStream && codeStream);
+    assert(MotionWriteSVG(svgStream, &path));
+    assert(MotionWriteGCode(codeStream, &path, 1234.5));
+    char *svg = readOutput(svgStream), *gcode = readOutput(codeStream);
+    MotionPoint points[16];
+    size_t count = svgPoints(svg, points);
+    physicalPoints(&path, points, count);
+    connectorStyle(svg, points);
+    assert(strstr(gcode, "assum") && strstr(gcode, "0.05"));
+    ParsedCode code = parseCode(gcode);
+    sameTrace(points, &code, count);
+    free(svg); free(gcode);
+    fclose(svgStream); fclose(codeStream);
+}
