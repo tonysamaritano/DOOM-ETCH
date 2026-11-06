@@ -215,3 +215,38 @@ void EtchGPUTick(double now, BOOL active)
         needsPath = YES;
     os_unfair_lock_unlock(&stateLock);
 }
+
+static BOOL EtchGPUEncode(id<MTLCommandBuffer> command, id<MTLTexture> target,
+    EtchGPUPath *path, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
+    double clock, double backingScale)
+{
+    MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
+    pass.colorAttachments[0].texture = target;
+    pass.colorAttachments[0].loadAction = MTLLoadActionClear;
+    pass.colorAttachments[0].storeAction = MTLStoreActionStore;
+    pass.colorAttachments[0].clearColor = MTLClearColorMake(.12, .1, .09, 1);
+    id<MTLRenderCommandEncoder> encoder = [command renderCommandEncoderWithDescriptor:pass];
+    if (!encoder) { EtchGPUFail("Cannot create the GPU drawing encoder"); return NO; }
+    double width = target.width, height = width * .75;
+    if (height > target.height) { height = target.height; width = height * 4 / 3; }
+    [encoder setViewport:(MTLViewport){(target.width - width) / 2,
+        (target.height - height) / 2, width, height, 0, 1}];
+    [encoder setRenderPipelineState:background];
+    [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+    if (path.buffer && path.count) {
+        float uniforms[4] = {(float)width, (float)height, (float)(.65 * backingScale), (float)clock};
+        [encoder setRenderPipelineState:lines];
+        [encoder setVertexBuffer:path.buffer offset:0 atIndex:0];
+        [encoder setVertexBytes:uniforms length:sizeof(uniforms) atIndex:1];
+        [encoder setFragmentBytes:uniforms length:sizeof(uniforms) atIndex:0];
+        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:path.count];
+    }
+    [encoder endEncoding];
+    return YES;
+}
+
+static void EtchGPUFrameDone(dispatch_semaphore_t gate, dispatch_group_t group)
+{
+    dispatch_semaphore_signal(gate);
+    dispatch_group_leave(group);
+}
