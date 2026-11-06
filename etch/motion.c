@@ -57,3 +57,26 @@ int MotionCopy(MotionPath *destination, const MotionPath *source)
     *destination = copy;
     return 1;
 }
+
+/* Sorted endpoints share a vertex. Edge pairs always store the smaller ID first. */
+typedef struct { MotionPoint point; size_t input; } Endpoint;
+typedef struct { size_t a, b; } Edge;
+typedef struct {
+    Endpoint *vertices;
+    Edge *edges;
+    size_t vertex_count, edge_count;
+    size_t *degree, *offset, *adjacent, *cursor, *stack;
+    unsigned char *used;
+} Graph;
+
+static void graph_free(Graph *graph)
+{
+    free(graph->vertices);
+    free(graph->edges);
+    free(graph->degree);
+    free(graph->offset);
+    free(graph->adjacent);
+    free(graph->cursor);
+    free(graph->stack);
+    free(graph->used);
+}
