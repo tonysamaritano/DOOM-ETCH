@@ -77,6 +77,27 @@ static int WriteFrameSVG(const char *prefix, unsigned frame, const MotionPath *p
     return WriteMotionOutput(filename, "svg", path);
 }
 
+static int ExportFrames(const char *prefix, unsigned frames)
+{
+    MotionOutput program = {0};
+    if (!MotionOutputOpen(&program, prefix, "gcode")) return 0;
+    MotionPath path = {0};
+    MotionPoint cursor_mm = {0, 0};
+    int success = 0;
+    for (unsigned frame = 0; frame < frames; frame++) {
+        if (frame) { G_Ticker(); ++gametic; }
+        if (!CaptureFrame(&path, cursor_mm) || !WriteFrameSVG(prefix, frame, &path)) goto done;
+        // Assumed feed is 3600 mm/min; M0 is an unbounded operator pause.
+        if (!MotionWriteGCodeFrame(program.stream, &path, 3600, frame == 0, frame + 1 == frames)) goto done;
+        if (!MotionQuantizePoint(&path, path.points[path.count - 1], &cursor_mm)) goto done;
+        ReportMotion(&path);
+    }
+    success = 1;
+done:
+    MotionFree(&path);
+    return MotionOutputClose(&program, success);
+}
+
 int main(int argc, char **argv)
 {
     unsigned frames = 1;
@@ -137,16 +158,8 @@ int main(int argc, char **argv)
         G_Ticker();
         ++gametic;
     }
-    if (!R_EtchBegin(viewwidth, viewheight))
-        I_Error("Cannot capture the E1M1 view");
-    R_RenderPlayerView(&players[0]);
-    ST_EtchDrawer();
-    MotionPath path = {0};
-    if (!R_EtchBuildMotion(&path)) I_Error("Cannot plan the captured frame");
-    if (!WriteMotionOutput(argv[2], "svg", &path)) I_Error("Cannot write %s.svg", argv[2]);
-    if (!WriteMotionOutput(argv[2], "gcode", &path)) I_Error("Cannot write %s.gcode", argv[2]);
-    ReportMotion(&path);
-    MotionFree(&path);
+    int success = ExportFrames(argv[2], frames);
     R_EtchResetSprites();
+    if (!success) I_Error("Cannot export completed frames to %s", argv[2]);
     return 0;
 }
