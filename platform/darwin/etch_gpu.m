@@ -159,3 +159,41 @@ static EtchGPUPath *EtchGPUBuildPath(EtchSnapshot snapshot, id<MTLDevice> gpu, d
     bundle.count = count; bundle.duration = seconds;
     return bundle;
 }
+
+BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
+{
+    if (!snapshot || (!snapshot->segments && snapshot->count) || snapshot->count > 400000
+        || !snapshot->width || !snapshot->height) return NO;
+    if (!os_unfair_lock_trylock(&stateLock)) return NO;
+    if (!running || !needsPath || planning || pending || failure[0]) {
+        os_unfair_lock_unlock(&stateLock); return NO;
+    }
+    EtchSnapshot transferred = *snapshot;
+    *snapshot = (EtchSnapshot){0};
+    planning = YES; needsPath = NO;
+    id<MTLDevice> gpu = device;
+    double drawingSpeed = speed;
+    dispatch_queue_t queue = plannerQueue;
+    os_unfair_lock_unlock(&stateLock);
+    dispatch_async(queue, ^{
+        @autoreleasepool {
+            EtchGPUPath *bundle = EtchGPUBuildPath(transferred, gpu, drawingSpeed);
+            os_unfair_lock_lock(&stateLock);
+            if (running && bundle) {
+                pending = bundle;
+                atomic_fetch_add(&uploads, 1);
+            }
+            planning = NO;
+            os_unfair_lock_unlock(&stateLock);
+        }
+    });
+    return YES;
+}
+
+BOOL EtchGPUNeedsPath(void)
+{
+    if (!os_unfair_lock_trylock(&stateLock)) return NO;
+    BOOL requested = running && needsPath && !planning && !pending && !failure[0];
+    os_unfair_lock_unlock(&stateLock);
+    return requested;
+}
