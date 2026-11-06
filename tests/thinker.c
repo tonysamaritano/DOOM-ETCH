@@ -33,3 +33,31 @@ static void checkLinks(void)
 int main(void)
 {
     P_InitThinkers();
+    P_RunThinkers();
+    assert(count == 0);
+    Actor *first = spawn(10), *middle = spawn(20), *last = spawn(30);
+    P_RemoveThinker(&first->link);
+    P_RemoveThinker(&middle->link);
+    P_RunThinkers();
+    assert(frees == 2 && count == 1 && order[0] == 30);
+    checkLinks();
+    last->remove = &last->link;
+    count = 0;
+    P_RunThinkers();
+    assert(count == 1 && frees == 2); /* Self-removal is deferred. */
+    P_RunThinkers();
+    assert(frees == 3 && thinkercap.next == &thinkercap);
+    first = spawn(40); middle = spawn(50); last = spawn(60);
+    first->remove = &middle->link;
+    count = 0;
+    P_RunThinkers();
+    assert(frees == 4 && count == 2 && order[0] == 40 && order[1] == 60);
+    checkLinks();
+    first->remove = NULL;
+    P_RemoveThinker(&first->link);
+    P_RemoveThinker(&last->link);
+    P_RunThinkers();
+    assert(frees == 6);
+    checkLinks();
+    return 0;
+}
