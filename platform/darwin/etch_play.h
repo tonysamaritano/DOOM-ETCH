@@ -11,6 +11,7 @@ NSURL *EtchPlayResource(NSURL *root,NSURL *request,NSString **mime);
 - (void)publishIndices:(const unsigned char *)pixels palette:(const unsigned char *)palette
               metadata:(NSDictionary *)metadata;
 - (void)drawEtchWithQueue:(id<MTLCommandQueue>)queue;
+- (void)invalidate;
 - (void)stop;
 @property(nonatomic,readonly) unsigned presented;
 @property(nonatomic,readonly) NSString *failure;
