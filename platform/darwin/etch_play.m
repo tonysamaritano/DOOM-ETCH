@@ -36,7 +36,7 @@ const char *EtchPlayArgumentError(int argc,char **argv)
     NSURL *_assets;
     EtchFrameQueue *_frames;
     NSString *_failure;
-    BOOL _ready,_stopped,_reading;
+    BOOL _ready,_stopped,_reading,_navigationStarted;
     unsigned _generation;
 }
 - (unsigned)presented { return _frames.presented; }
@@ -143,9 +143,8 @@ const char *EtchPlayArgumentError(int argc,char **argv)
 {
     (void)web;
     NSURL *url=action.request.URL;
-    BOOL local=[url.scheme isEqualToString:@"doomrig"] && [url.host isEqualToString:@"local"] &&
-        !url.user && !url.password && !url.port;
-    if (!local && !_stopped) _failure=@"Live rig navigation left the staged local origin";
+    BOOL local=!_stopped && EtchPlayNavigation(url,action.targetFrame.isMainFrame,&_navigationStarted);
+    if (!local && !_stopped) _failure=@"Unexpected live rig navigation or reload";
     decision(local ? WKNavigationActionPolicyAllow : WKNavigationActionPolicyCancel);
 }
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)web
@@ -159,6 +158,11 @@ const char *EtchPlayArgumentError(int argc,char **argv)
 - (void)webView:(WKWebView *)web didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error
 {
     (void)web; (void)navigation; if (!_stopped) _failure=error.localizedDescription;
+}
+- (void)updateVisibility:(BOOL)visible now:(double)now
+{
+    if (!_stopped && ![_frames acknowledgementHealthyAt:now visible:visible])
+        _failure=@"Live rig render acknowledgement timed out";
 }
 - (void)invalidate
 {
