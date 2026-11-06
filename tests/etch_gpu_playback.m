@@ -294,6 +294,31 @@ static void invalidationDiscardsInflightPlan(BOOL invalidGeometry)
     EtchGPUShutdown();
 }
 
+static void instantKeepsLatestSnapshotWhileWorkerBusy(void)
+{
+    startFixture(); EtchGPUSetInstant(YES); EtchGPUTick(testClock, YES);
+    dispatch_semaphore_t entered = dispatch_semaphore_create(0), unblock = dispatch_semaphore_create(0);
+    dispatch_async(plannerQueue, ^{
+        dispatch_semaphore_signal(entered);
+        dispatch_semaphore_wait(unblock, DISPATCH_TIME_FOREVER);
+    });
+    assert(dispatch_semaphore_wait(entered, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) == 0);
+    for (unsigned i = 0; i < 3; i++) {
+        EtchSnapshot snapshot = {calloc(1, sizeof(MotionSegment)), 1, 100, 100};
+        assert(snapshot.segments);
+        snapshot.segments[0] = (MotionSegment){{0, 0}, {20 * (i + 1), 0}};
+        fprintf(stderr, "Instant snapshot %u: worker=%d capture-ready=%d\n", i, planning, EtchGPUNeedsPath());
+        assert(EtchGPUNeedsPath());
+        assert(EtchGPUOfferSnapshot(&snapshot) && !snapshot.segments);
+    }
+    dispatch_semaphore_signal(unblock); dispatch_sync(plannerQueue, ^{});
+    assert(!planning && EtchGPUUploadCount() == 2); // First plus latest; middle was replaced.
+    assert(pending && pending.count == 2);
+    const MotionTimedSegment *records = pending.buffer.contents;
+    assert(fabs(records[0].ends[2] - .6f) < 1e-7);
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
@@ -306,6 +331,7 @@ int main(void)
         rateBoundsAndQueuedOrder(); rateScalesDrawingHoldAndFade(); pauseAndManualErase();
         instantGhostCadenceIgnoresDrawingRate(); modeSwitchesClearPauseAndResetTimedDrawing();
         invalidationDiscardsInflightPlan(NO); invalidationDiscardsInflightPlan(YES);
+        instantKeepsLatestSnapshotWhileWorkerBusy();
         puts("GPU ghost timing, prefix clipping, Metal pixels and resource lifetimes passed");
     }
     return EXIT_SUCCESS;
