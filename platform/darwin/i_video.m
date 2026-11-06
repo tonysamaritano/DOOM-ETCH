@@ -137,6 +137,7 @@ static void ToggleGPULayer(int key)
     }
     if (physicalRig) { sceneGeneration++; MachineLiveErase(live); }
     else EtchGPUInvalidate();
+    [playView invalidate];
 }
 
 static BOOL HandleGPUKey(int key, BOOL pressed)
@@ -148,6 +149,7 @@ static BOOL HandleGPUKey(int key, BOOL pressed)
         || key == '+' || key == '=' || key == '-' || key == '_';
     if (!layerKey && !playbackKey) return NO;
     if (pressed) {
+        if (key==KEY_F7 || key==KEY_F8) [playView invalidate];
         if (layerKey) ToggleGPULayer(key);
         else if (physicalRig) {
             if (key==KEY_F7) { sceneGeneration++; MachineLiveErase(live); }
