@@ -220,6 +220,31 @@ static void EtchGPUClearPaths(void)
     // Keep planning true until the one old worker finishes and discards its result.
 }
 
+static void EtchGPUApplyControl(EtchGPUControl control)
+{
+    if (control.kind == EtchRate) drawRate = fmax(1.0 / 64, fmin(1024, control.value));
+    else if (control.kind == EtchInstant) EtchGPUChangeMode(control.value != 0);
+    else if (control.kind == EtchInvalidate) EtchGPUClearPaths();
+    else {
+        int key = (int)control.value;
+        if (key == '+' || key == '=') drawRate = fmin(1024, drawRate * 2);
+        if (key == '-' || key == '_') drawRate = fmax(1.0 / 64, drawRate * .5);
+        if (key == KEY_F8) EtchGPUChangeMode(!instant);
+        if (key == KEY_F9) paused = !paused;
+        if (key == KEY_F7 && current && !instant && !erasing) {
+            erasing = YES; eraseTime = holdTime = 0; controlClockReset = YES;
+        }
+    }
+}
+static void EtchGPUControls(void)
+{
+    if (atomic_exchange(&controlOverflow, NO) && !failure[0])
+        snprintf(failure, sizeof(failure), "GPU input queue exceeded its 256-action bound");
+    unsigned read = atomic_load(&controlRead), write = atomic_load(&controlWrite);
+    while (read != write) EtchGPUApplyControl(controls[(read++) % CONTROL_CAPACITY]);
+    atomic_store(&controlRead, read);
+}
+
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
 {
     if (!snapshot || (!snapshot->segments && snapshot->count) || snapshot->count > 400000
