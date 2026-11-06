@@ -390,3 +390,20 @@ static void FinishUpdate(const byte *frame)
 }
 
 void I_FinishUpdate(void) { FinishUpdate(screens[0]); }
+
+NSWindow *I_MetalFileOpen(void)
+{
+    fileMode = YES; fileClosed = NO;
+    I_InitGraphics();
+    return window;
+}
+BOOL I_MetalFileClosed(void) { return fileClosed; }
+void I_MetalFileDraw(const unsigned char *ink, double fade)
+{
+    int shades[] = {235, (int)(35 + 200 * fade), (int)(180 + 55 * fade)};
+    for (unsigned i = 0; i < 256; i++) {
+        for (unsigned c = 0; c < 3; c++) colors[i * 4 + c] = (byte)shades[i < 3 ? i : 0];
+        colors[i * 4 + 3] = 255;
+    }
+    FinishUpdate(ink);
+}
