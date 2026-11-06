@@ -90,3 +90,17 @@ static void direction_memory(void)
     point(EtchDeviceGetStatus(d).cursor_mm, 0, 10);
     EtchDestroy(d);
 }
+
+static void quantized_extent(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    c.width_mm = 1.023; c.height_mm = 1.037;
+    EtchDevice *d = EtchCreate(c, (MotionPoint){.0249, .0251});
+    assert(d);
+    point(EtchDeviceGetStatus(d).cursor_mm, 0, .05);
+    MotionPoint p[] = {{0, .05}, {1.023, 1.037}};
+    assert(EtchDeviceSubmitHardware(d, p, 2));
+    assert(EtchDeviceTick(d, 10));
+    point(EtchDeviceGetStatus(d).cursor_mm, 1, 1);
+    EtchDestroy(d);
+}
