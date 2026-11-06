@@ -263,6 +263,29 @@ static void tier_caps(int tier)
     }
 }
 
+static int append_wall_hatch(WallHatch stroke)
+{
+    if (hatch_count == MAX_SEGMENTS) return 0;
+    if (hatch_count == hatch_capacity) {
+        size_t capacity = hatch_capacity ? hatch_capacity * 2 : 256;
+        if (capacity > MAX_SEGMENTS) capacity = MAX_SEGMENTS;
+        WallHatch *next = realloc(wall_hatches, capacity * sizeof(*next));
+        if (!next) return 0;
+        wall_hatches = next; hatch_capacity = capacity;
+    }
+    wall_hatches[hatch_count++] = stroke;
+    return 1;
+}
+
+static int compare_wall_hatch(const void *left, const void *right)
+{
+    const WallHatch *a = left, *b = right;
+    if (a->tier != b->tier) return a->tier < b->tier ? -1 : 1;
+    if (a->family != b->family) return a->family < b->family ? -1 : 1;
+    if (a->row != b->row) return a->row < b->row ? -1 : 1;
+    return a->x < b->x ? -1 : a->x > b->x;
+}
+
 void R_EtchWallEnd(void)
 {
     if (!active || failed) return;
