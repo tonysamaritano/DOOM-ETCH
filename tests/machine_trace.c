@@ -96,9 +96,26 @@ static void nonuniform_steps_and_empty(void)
         MachinePlaybackDestroy(p); EtchTraceFree(&trace);
     }
 }
+static void exact_feed_and_erase_boundaries(void)
+{
+    MachineSettings settings; MachineSettingsDefault(&settings); EtchTrace trace = {0};
+    MachinePlayback *recorded = record(fixture, settings, &trace);
+    MachinePlayback *plain = play_text(fixture, &settings);
+    while (!MachinePlaybackDone(plain)) {
+        EtchStatus status = EtchDeviceGetStatus(MachinePlaybackDevice(plain));
+        double left = status.erasing ? status.erase_left_s : status.remaining_s;
+        assert(MachinePlaybackTick(plain, left));
+        status = EtchDeviceGetStatus(MachinePlaybackDevice(plain));
+        MotionPoint cursor, motor;
+        assert(EtchTraceSample(&trace, MachinePlaybackSeconds(plain), &cursor, &motor));
+        near_sample(cursor, status.cursor_mm); near_sample(motor, status.motor_mm);
+    }
+    machine_near(MachinePlaybackSeconds(plain), trace.clock);
+    MachinePlaybackDestroy(plain); MachinePlaybackDestroy(recorded); EtchTraceFree(&trace);
+}
 int main(void)
 {
-    metadata_and_profiles(); nonuniform_steps_and_empty();
+    metadata_and_profiles(); nonuniform_steps_and_empty(); exact_feed_and_erase_boundaries();
     puts("machine-trace: independent sampled cursor/motor positions within 1e-5 mm");
     return 0;
 }
