@@ -5,6 +5,7 @@
 #import <WebKit/WebKit.h>
 #include "i_system.h"
 #include <string.h>
+#include <math.h>
 static BOOL argument(int argc,char **argv,const char *name)
 {
     for (int i=1;i<argc;i++) if (!strcmp(argv[i],name)) return YES;
@@ -69,6 +70,7 @@ const char *EtchPlayArgumentError(int argc,char **argv)
               metadata:(NSDictionary *)metadata
 {
     if (_stopped || !pixels || !palette) return;
+    _generation++;
     NSMutableData *data=[NSMutableData dataWithBytes:pixels length:64000];
     [data appendBytes:palette length:1024];
     if (![_frames publishPixels:data metadata:metadata]) _failure=@"Invalid indexed rig frame";
