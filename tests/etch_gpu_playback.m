@@ -261,6 +261,32 @@ static void modeSwitchesClearPauseAndResetTimedDrawing(void)
     EtchGPUShutdown();
 }
 
+static void invalidationDiscardsInflightPlan(BOOL invalidGeometry)
+{
+    startFixture(); EtchGPUSetInstant(YES); EtchGPUTick(testClock, YES);
+    ghost = fixturePath(.15f); ghostTime = 2;
+    dispatch_semaphore_t entered = dispatch_semaphore_create(0);
+    dispatch_semaphore_t unblock = dispatch_semaphore_create(0);
+    dispatch_async(plannerQueue, ^{
+        dispatch_semaphore_signal(entered);
+        dispatch_semaphore_wait(unblock, DISPATCH_TIME_FOREVER);
+    });
+    assert(dispatch_semaphore_wait(entered, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) == 0);
+    EtchSnapshot snapshot = {calloc(1, sizeof(MotionSegment)), 1, 100, 100};
+    assert(snapshot.segments);
+    snapshot.segments[0] = (MotionSegment){{0, 0}, {invalidGeometry ? NAN : 100, 0}};
+    assert(EtchGPUOfferSnapshot(&snapshot) && !snapshot.segments && planning);
+    uint64_t oldGeneration = generation;
+    EtchGPUInvalidate(); EtchGPUTick(testClock, YES);
+    assert(generation == oldGeneration + 1 && !current && !pending && !ghost);
+    assert(planning && !EtchGPUNeedsPath()); /* Bound work until the old worker drains. */
+    dispatch_semaphore_signal(unblock); dispatch_sync(plannerQueue, ^{});
+    assert(!planning && !current && !pending && !ghost && EtchGPUNeedsPath());
+    assert(EtchGPUUploadCount() == 0);
+    const char *error = EtchGPUError(); assert(!error || !*error);
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
