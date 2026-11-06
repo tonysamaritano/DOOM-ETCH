@@ -28,3 +28,43 @@ static byte colors[256 * 4];
 static BOOL held[256];
 static unsigned presentedFrames, runFrames;
 unsigned I_MetalPresentedFrames(void) { return presentedFrames; }
+
+static void PostKey(int key, BOOL down)
+{
+    if (key <= 0 || key > 255) return;
+    held[key] = down;
+    event_t event = {down ? ev_keydown : ev_keyup, key, 0, 0};
+    D_PostEvent(&event);
+}
+@interface DoomWindowDelegate : NSObject <NSWindowDelegate>
+@end
+@implementation DoomWindowDelegate
+- (BOOL)windowShouldClose:(NSWindow *)sender
+{
+    (void)sender;
+    I_Quit();
+    return NO;
+}
+- (void)windowDidResignKey:(NSNotification *)note
+{
+    (void)note;
+    for (int key = 1; key < 256; key++)
+        if (held[key]) PostKey(key, NO);
+}
+@end
+static DoomWindowDelegate *windowDelegate;
+
+static void ReadFrameLimit(void)
+{
+    int option = M_CheckParm("--run-frames");
+    if (!option) return;
+    if (option + 1 >= myargc) I_Error("--run-frames requires a positive integer");
+    const char *text = myargv[option + 1];
+    if (!*text || strspn(text, "0123456789") != strlen(text))
+        I_Error("--run-frames requires a positive integer");
+    errno = 0;
+    unsigned long value = strtoul(text, NULL, 10);
+    if (errno == ERANGE || !value || value > UINT_MAX)
+        I_Error("--run-frames is outside 1..%u", UINT_MAX);
+    runFrames = (unsigned)value;
+}
