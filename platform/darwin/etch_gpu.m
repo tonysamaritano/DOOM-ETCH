@@ -214,6 +214,30 @@ BOOL EtchGPUNeedsPath(void)
     return requested;
 }
 
+void EtchGPUErase(void)
+{
+    // Queue a key request rather than dropping it when the planner holds the lock.
+    atomic_store(&eraseRequested, YES);
+}
+
+static void EtchGPUAdvance(double dt)
+{
+    if (erasing) {
+        eraseTime = fmin(eraseSeconds, eraseTime + dt);
+        if (eraseTime + 1e-9 >= eraseSeconds) {
+            eraseTime = eraseSeconds;
+            if (!planning && !pending) needsPath = YES;
+        }
+    } else if (playhead < current.duration) {
+        playhead = fmin(current.duration, playhead + dt);
+    } else {
+        holdTime += dt;
+        if (holdTime + 1e-9 >= holdSeconds) {
+            erasing = YES; eraseTime = 0;
+        }
+    }
+}
+
 void EtchGPUTick(double now, BOOL active)
 {
     if (!isfinite(now) || !os_unfair_lock_trylock(&stateLock)) return;
