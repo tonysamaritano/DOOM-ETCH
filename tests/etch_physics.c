@@ -311,11 +311,28 @@ static void tiny_shake(void)
     EtchDestroy(d);
 }
 
+static void reversed_endpoint_ink(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    c.width_mm = .2; c.ghost_fraction = 0;
+    EtchDevice *d = EtchCreate(c, (MotionPoint){0, 0});
+    MotionPoint out[] = {{0, 0}, {.2, 0}}, back[] = {{.2, 0}, {0, 0}};
+    assert(d && EtchDeviceSubmitHardware(d, out, 2));
+    assert(EtchDeviceTick(d, 1));
+    assert(EtchDeviceRequestErase(d) && EtchDeviceTick(d, 2.5));
+    assert(marks(d, ETCH_INK_FRESH) == 0);
+    assert(EtchDeviceSubmitHardware(d, back, 2));
+    assert(EtchDeviceTick(d, 1));
+    point(EtchDeviceGetStatus(d).cursor_mm, 0, 0);
+    assert(EtchDeviceInk(d)[0] == ETCH_INK_FRESH);
+    EtchDestroy(d);
+}
+
 int main(void)
 {
     defaults(); analytical_profiles(); direction_memory(); quantized_extent();
     transactional(); invalid_idle(); shake_retention(); chunk_invariance();
-    deferred_erase(); persistent_submissions(); tiny_clock(); tiny_shake();
+    deferred_erase(); persistent_submissions(); tiny_clock(); tiny_shake(); reversed_endpoint_ink();
     puts("etch-physics: independent per-axis, ownership, ink and shake checks passed");
     return 0;
 }
