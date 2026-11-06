@@ -30,3 +30,17 @@ int main(void)
     side.sector = &rooms[1]; segment.sidedef = &side;
     segs = &segment; subsectors = &area; numsubsectors = 1;
     bmapwidth = bmapheight = 4; bmaporgx = bmaporgy = 0;
+    for (int i = 0; i < 2; i++) {
+        walls[i].v1 = &points[0]; walls[i].v2 = &points[1];
+        walls[i].frontsector = &rooms[0];
+    }
+    walls[0].backsector = &rooms[1];
+    walls[1].backsector = &rooms[0]; // same-sector line counts only once
+    P_GroupLines();
+    assert(area.sector == &rooms[1]);
+    assert(rooms[0].linecount == 2 && rooms[1].linecount == 1);
+    assert(rooms[0].lines[0] == &walls[0] && rooms[0].lines[1] == &walls[1]);
+    assert(rooms[1].lines[0] == &walls[0]);
+    assert(rooms[0].soundorg.x == 64 * FRACUNIT);
+    free(table); return 0;
+}
