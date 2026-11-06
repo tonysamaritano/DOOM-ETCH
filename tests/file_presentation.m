@@ -41,5 +41,12 @@ static void pause_and_interrupt(void)
     assert(p.shaken && !p.shaking && !p.reported);
     machine_near(MachinePlaybackSeconds(p.play), .3);
     assert(!memcmp(physical, EtchDeviceInk(MachinePlaybackDevice(p.play)), sizeof physical));
+    size_t marks = 0, ghosts = 0;
+    for (size_t i = 0; i < sizeof physical; ++i) {
+        marks += physical[i] != 0; ghosts += p.retained[i] == ETCH_INK_GHOST;
+        assert(p.retained[i] == 0 || p.retained[i] == ETCH_INK_GHOST);
+    }
+    assert(marks > 0 && ghosts == (size_t)floor(marks * .03));
+    assert(control(&p, KEY_F7) && !p.shaking && p.shaken);
     MachinePlaybackDestroy(p.play);
 }
