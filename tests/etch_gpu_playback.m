@@ -136,3 +136,32 @@ static void ghostPixelsExcludeUndrawnGeometry(void)
     free(background); free(before); free(middle); free(after);
     EtchGPUShutdown();
 }
+
+static void drainRetainsSubmittedResources(void)
+{
+    startFixture(); advance(.5); EtchGPUErase(); EtchGPUTick(testClock, YES); advance(.25);
+    EtchGPUFrame *held = EtchGPUFrameState();
+    id<MTLTexture> target = offscreenTexture();
+    id<MTLCommandQueue> queue = [device newCommandQueue];
+    id<MTLCommandBuffer> command = [queue commandBuffer];
+    assert(EtchGPUEncode(command, target, held, backgroundPipeline, linePipeline, 1));
+    dispatch_group_t group = renderGroup;
+    dispatch_semaphore_t gate = renderGate;
+    assert(dispatch_semaphore_wait(gate, DISPATCH_TIME_NOW) == 0);
+    dispatch_group_enter(group);
+    [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
+        assert(completed.status == MTLCommandBufferStatusCompleted);
+        assert(held.current.buffer && held.current.count == 2);
+        EtchGPUFrameDone(gate, group);
+    }];
+    [command commit]; EtchGPUShutdown(); /* Production drain waits for real submitted Metal work. */
+    assert(command.status == MTLCommandBufferStatusCompleted);
+    assert(!current && !pending && !ghost && !renderQueue && !renderGroup && !device);
+    assert(held.current.buffer && held.currentTime == .5);
+    EtchGPUInit(MTLCreateSystemDefaultDevice(), 1200);
+    EtchSnapshot snapshot = {calloc(1, sizeof(MotionSegment)), 1, 100, 100};
+    assert(snapshot.segments); snapshot.segments[0] = (MotionSegment){{0, 0}, {100, 0}};
+    assert(EtchGPUOfferSnapshot(&snapshot) && !snapshot.segments);
+    EtchGPUShutdown(); /* Also drains a pending background plan without a window. */
+    assert(!planning && !current && !pending && !ghost && !plannerQueue);
+}
