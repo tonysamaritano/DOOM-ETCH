@@ -116,3 +116,40 @@ static void assertGridPoint(MotionPoint point)
     assert(fabs(point.x / 0.05 - round(point.x / 0.05)) < 1e-7);
     assert(fabs(point.y / 0.05 - round(point.y / 0.05)) < 1e-7);
 }
+
+typedef struct {
+    MotionPoint points[16];
+    size_t count;
+    int metric, absolute, sizeSeen, startSeen;
+    double feed;
+} ParsedCode;
+static ParsedCode parseCode(char *text)
+{
+    ParsedCode code = {0};
+    for (char *line = strtok(text, "\r\n"); line; line = strtok(NULL, "\r\n")) {
+        while (isspace((unsigned char)*line)) ++line;
+        if (*line == ';') {
+            if (strstr(line, "ETCH_SIZE")) {
+                assert(fabs(coordinate(line, 'X') - 170.15) < 1e-7);
+                assert(fabs(coordinate(line, 'Y') - 127.6) < 1e-7);
+                ++code.sizeSeen;
+            }
+            if (strstr(line, "ETCH_START")) {
+                code.points[0] = (MotionPoint){coordinate(line, 'X'), coordinate(line, 'Y')};
+                code.count = 1; ++code.startSeen;
+            }
+            continue;
+        }
+        char *feed = strchr(line, 'F');
+        if (feed) code.feed = strtod(feed + 1, NULL);
+        if (*line != 'G') continue;
+        long command = strtol(line + 1, NULL, 10);
+        if (command == 21) ++code.metric;
+        if (command == 90) ++code.absolute;
+        if (command == 1) {
+            assert(code.startSeen && code.count < 16);
+            code.points[code.count++] = (MotionPoint){coordinate(line, 'X'), coordinate(line, 'Y')};
+        } else assert(command == 21 || command == 90 || command == 94 || command == 61);
+    }
+    return code;
+}
