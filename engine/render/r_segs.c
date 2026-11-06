@@ -34,6 +34,7 @@ rcsid[] = "$Id: r_segs.c,v 1.3 1997/01/29 20:10:19 b1 Exp $";
 #include "i_system.h"
 
 #include "doomdef.h"
+#include "r_etch.h"
 #include "doomstat.h"
 
 #include "r_local.h"
@@ -284,6 +285,7 @@ void R_RenderSegLoop (void)
 	    dc_yh = yh;
 	    dc_texturemid = rw_midtexturemid;
 	    dc_source = R_GetColumn(midtexture,texturecolumn);
+	    R_EtchColumn(rw_x, dc_yl, dc_yh, (int)(linedef - lines) + 1);
 	    colfunc ();
 	    ceilingclip[rw_x] = viewheight;
 	    floorclip[rw_x] = -1;
@@ -306,6 +308,7 @@ void R_RenderSegLoop (void)
 		    dc_yh = mid;
 		    dc_texturemid = rw_toptexturemid;
 		    dc_source = R_GetColumn(toptexture,texturecolumn);
+		    R_EtchColumn(rw_x, dc_yl, dc_yh, (int)(linedef - lines) + 1);
 		    colfunc ();
 		    ceilingclip[rw_x] = mid;
 		}
@@ -336,6 +339,7 @@ void R_RenderSegLoop (void)
 		    dc_texturemid = rw_bottomtexturemid;
 		    dc_source = R_GetColumn(bottomtexture,
 					    texturecolumn);
+		    R_EtchColumn(rw_x, dc_yl, dc_yh, (int)(linedef - lines) + 1);
 		    colfunc ();
 		    floorclip[rw_x] = mid;
 		}
