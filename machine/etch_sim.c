@@ -37,7 +37,16 @@ static int axis_valid(EtchAxisConfig a, double extent)
 }
 static double quantize(double value, double step, double extent)
 {
-    return fmin(round(value / step), floor(extent / step + 1e-10)) * step;
+    double reciprocal=1/step;
+    double maximum=isfinite(reciprocal) ? floor(extent*reciprocal) : floor(extent/step);
+    double index=isfinite(reciprocal) ? round(value*reciprocal) : round(value/step);
+    index=fmin(index,maximum);
+    double result=isfinite(reciprocal) ? index/reciprocal : index*step;
+    if (result>extent) {
+        index=fmax(0,index-1);
+        result=isfinite(reciprocal) ? index/reciprocal : index*step;
+    }
+    return result;
 }
 static int point(EtchConfig c, MotionPoint input, MotionPoint *out)
 {
