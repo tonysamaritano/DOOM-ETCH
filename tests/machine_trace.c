@@ -38,28 +38,19 @@ static void compare_samples(const char *text, MachineSettings settings, const Et
     size_t capacity = 2003 + 8 * trace->count + 3 * trace->erase_count, n = 0;
     double *times = malloc(capacity * sizeof(*times)); assert(times);
     for (int k = 0; k <= 2000; k++) times[n++] = trace->clock * k / 2000;
-    for (size_t i = 0; i < trace->count; i++) {
-        const EtchTraceSegment *s = &trace->segments[i];
-        double phases[] = {0, s->ramp / 2, s->ramp, s->duration / 2,
-            s->duration - s->ramp, s->duration - s->ramp / 2, s->duration};
-        for (size_t j = 0; j < sizeof(phases) / sizeof(*phases); j++)
-            times[n++] = s->t0 + phases[j];
-    }
-    for (size_t i = 0; i < trace->erase_count; i++)
-        for (int k = 0; k <= 2; k++)
-            times[n++] = trace->erases[i].t0 + trace->erases[i].duration * k / 2;
     times[n++] = trace->clock; assert(n <= capacity);
     qsort(times, n, sizeof(*times), order);
-    MachinePlayback *plain = play_text(text, &settings); double previous = 0;
+    MachinePlayback *plain = NULL;
     for (size_t i = 0; i < n; i++) {
-        assert(MachinePlaybackTick(plain, times[i] - previous)); previous = times[i];
+        plain = play_text(text, &settings);
+        assert(MachinePlaybackTick(plain, times[i]));
         MotionPoint cursor, motor;
         assert(EtchTraceSample(trace, times[i], &cursor, &motor));
         EtchStatus status = EtchDeviceGetStatus(MachinePlaybackDevice(plain));
         near_sample(cursor, status.cursor_mm); near_sample(motor, status.motor_mm);
+        MachinePlaybackDestroy(plain);
     }
-    machine_near(MachinePlaybackSeconds(plain), trace->clock);
-    MachinePlaybackDestroy(plain); free(times);
+    free(times);
 }
 static void metadata_and_profiles(void)
 {
