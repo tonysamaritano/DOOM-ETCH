@@ -196,3 +196,35 @@ int EtchDeviceRequestErase(EtchDevice *d)
     } else begin_erase(d);
     return 1;
 }
+static void position_at(EtchDevice *d,const Segment *s)
+{
+    double velocity, distance=distance_at(s,d->segment_time,&velocity);
+    double drawn=fmin(s->length,fmax(0,distance-s->slack));
+    MotionPoint cursor={s->start.x+s->unit.x*drawn,s->start.y+s->unit.y*drawn};
+    d->status.cursor_mm=(MotionPoint){quantize(cursor.x,d->config.x.step_mm,d->config.width_mm),
+        quantize(cursor.y,d->config.y.step_mm,d->config.height_mm)};
+    d->status.motor_mm=(MotionPoint){s->motor_start.x+s->unit.x*distance,
+                                    s->motor_start.y+s->unit.y*distance};
+    d->status.motor_velocity_mm_s=(MotionPoint){s->unit.x*velocity,s->unit.y*velocity};
+    ink_progress(d,s,drawn);
+}
+static void complete_segment(EtchDevice *d,const Segment *s)
+{
+    d->status.cursor_mm=s->end;
+    d->status.elapsed_s=s->finish; d->status.completed=++d->index;
+    d->direction_x=s->direction_x; d->direction_y=s->direction_y;
+    d->segment_time=0; d->next_sample=0;
+    if (d->erase_requested || d->index==d->status.count) {
+        d->status.drawing=0; d->status.motor_velocity_mm_s=(MotionPoint){0,0};
+        if (d->erase_requested) begin_erase(d);
+    }
+}
+int EtchDeviceReady(const EtchDevice *d)
+{
+    return d && !d->status.drawing && !d->status.erasing;
+}
+EtchStatus EtchDeviceGetStatus(const EtchDevice *d)
+{
+    return d ? d->status : (EtchStatus){0};
+}
+const unsigned char *EtchDeviceInk(const EtchDevice *d) { return d ? d->ink : NULL; }
