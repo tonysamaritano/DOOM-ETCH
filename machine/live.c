@@ -52,6 +52,12 @@ int MachineLiveSubmit(MachineLive *live,const MotionPath *path,MachineParseError
     if (ok) ok=MachineRead(stream,&settings,&parsed,error);
     if (fclose(stream)) ok=0;
     if (ok) ok=MachineSteppersCompile(&program,&parsed,&settings,error);
+    if (ok) {
+        MotionPoint cursor=EtchDeviceGetStatus(live->device).cursor_mm;
+        if (program.start_steps[0]/settings.steps_per_mm[0]!=cursor.x ||
+            program.start_steps[1]/settings.steps_per_mm[1]!=cursor.y)
+            ok=fail(error,"live G-code required start differs from persistent cursor");
+    }
     size_t count=program.count;
     if (count && program.moves[count-1].kind==MACHINE_MOVE_END) count--;
     if (ok && count) ok=MachineSubmitBatch(live->device,&program,0,count,error);
