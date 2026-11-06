@@ -131,3 +131,27 @@ int MachineGCodeParse(MachineProgram *out,const char *text,
     if (e) *e=(MachineParseError){0};
     return 1;
 }
+int MachineGCodeParseFile(MachineProgram *out,FILE *stream,
+                         const MachineParseOptions *options,MachineParseError *e)
+{
+    if (!out || !stream) return fail(e,0,"missing input stream");
+    char *text=NULL; size_t count=0,capacity=0,line=1; int c;
+    while ((c=fgetc(stream))!=EOF) {
+        if (!c) { free(text); return fail(e,line,"NUL byte in stream"); }
+        if (count+1>=capacity) {
+            size_t next=capacity ? capacity*2 : 4096;
+            if (next<=capacity) { free(text); return fail(e,line,"input too large"); }
+            char *allocation=realloc(text,next);
+            if (!allocation) { free(text); return fail(e,line,"out of memory"); }
+            text=allocation; capacity=next;
+        }
+        text[count++]=(char)c;
+        if (c=='\n') line++;
+    }
+    if (ferror(stream)) { free(text); return fail(e,line,"stream read error"); }
+    if (!text) text=calloc(1,1);
+    if (!text) return fail(e,0,"out of memory");
+    text[count]=0;
+    int ok=MachineGCodeParse(out,text,options,e);
+    free(text); return ok;
+}
