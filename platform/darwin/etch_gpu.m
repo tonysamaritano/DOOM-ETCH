@@ -82,3 +82,42 @@ static NSString *const EtchGPUShader =
     "  float edge=dot(in.uv-.5,in.uv-.5);\n"
     "  return float4(float3(.89,.875,.825)+(grain-.5)*.018-edge*.028,1);\n"
     "}\n";
+
+static BOOL EtchGPUPipelines(void)
+{
+    NSError *error = nil;
+    id<MTLLibrary> library = [device newLibraryWithSource:EtchGPUShader options:nil error:&error];
+    if (!library) { EtchGPUFail(error.localizedDescription.UTF8String ?: "Cannot compile Metal shader"); return NO; }
+    for (int line = 0; line < 2; line++) {
+        MTLRenderPipelineDescriptor *descriptor = [MTLRenderPipelineDescriptor new];
+        descriptor.vertexFunction = [library newFunctionWithName:line ? @"lineVertex" : @"bgVertex"];
+        descriptor.fragmentFunction = [library newFunctionWithName:line ? @"lineFragment" : @"bgFragment"];
+        MTLRenderPipelineColorAttachmentDescriptor *color = descriptor.colorAttachments[0];
+        color.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        color.blendingEnabled = line;
+        color.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+        color.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+        color.sourceAlphaBlendFactor = MTLBlendFactorOne;
+        color.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+        id<MTLRenderPipelineState> pipeline = [device newRenderPipelineStateWithDescriptor:descriptor error:&error];
+        if (!pipeline) { EtchGPUFail(error.localizedDescription.UTF8String ?: "Cannot create Metal pipeline"); return NO; }
+        if (line) linePipeline = pipeline;
+        else backgroundPipeline = pipeline;
+    }
+    return YES;
+}
+
+void EtchGPUInit(id<MTLDevice> gpu, double visual_speed_mm_s)
+{
+    EtchGPUShutdown();
+    failure[0] = 0; atomic_store(&frames, 0); atomic_store(&uploads, 0);
+    if (!gpu || !isfinite(visual_speed_mm_s) || visual_speed_mm_s <= 0) {
+        EtchGPUFail("Metal playback requires a device and a positive finite drawing speed"); return;
+    }
+    device = gpu; speed = visual_speed_mm_s;
+    if (!EtchGPUPipelines()) return;
+    plannerQueue = dispatch_queue_create("doom-etch.planner", DISPATCH_QUEUE_SERIAL);
+    renderQueue = dispatch_queue_create("doom-etch.renderer", DISPATCH_QUEUE_SERIAL);
+    renderGate = dispatch_semaphore_create(1); renderGroup = dispatch_group_create();
+    running = needsPath = YES;
+}
