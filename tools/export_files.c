@@ -20,6 +20,17 @@ int MotionOutputOpen(MotionOutput *output, const char *prefix, const char *exten
     return 1;
 }
 
+int MotionOutputClose(MotionOutput *output, int success)
+{
+    if (!output || !output->stream) return 0;
+    MotionOutput finished = *output;
+    *output = (MotionOutput){0};
+    if (fclose(finished.stream)) success = 0;
+    if (success && rename(finished.temporary, finished.filename) == 0) return 1;
+    unlink(finished.temporary);
+    return 0;
+}
+
 /* Publish each completed file by rename, so a failed write preserves its predecessor. */
 int WriteMotionOutput(const char *prefix, const char *extension, const MotionPath *path)
 {
