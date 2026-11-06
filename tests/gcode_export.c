@@ -169,3 +169,33 @@ static MotionPoint svgStart(const char *filename)
     double y = strtod(data, &end); assert(end != data);
     free(svg); return (MotionPoint){x, y};
 }
+
+static void inspectTwoFrameFiles(const char *prefix)
+{
+    char filename[4096];
+    assert(snprintf(filename, sizeof(filename), "%s.gcode", prefix) < (int)sizeof(filename));
+    FILE *stream = fopen(filename, "r"); assert(stream);
+    CodeReport r = inspectCode(stream); fclose(stream);
+    assert(r.pauses == 1 && r.ends == 1 && r.sizes == 1 && r.starts == 1 && r.feeds == 2);
+    assert(r.moves[0] > 0 && r.moves[1] > 0);
+    assert(near(r.width, 170.15) && near(r.height, 127.6));
+    for (size_t i = 0; i < 4; ++i) assert(r.modes[i] == 1);
+    assert(snprintf(filename, sizeof(filename), "%s-frame001.svg", prefix) < (int)sizeof(filename));
+    MotionPoint start = svgStart(filename);
+    assert(near(start.x, r.boundary.x) && near(start.y, 127.6 - r.boundary.y));
+    assert(snprintf(filename, sizeof(filename), "%s.svg", prefix) < (int)sizeof(filename));
+    start = svgStart(filename);
+    assert(near(start.x, r.start.x) && near(start.y, 127.6 - r.start.y));
+    printf("Combined stream: %zu + %zu moves, one M0, quantized continuity verified\n",
+           r.moves[0], r.moves[1]);
+}
+int main(int argc, char **argv)
+{
+    if (argc == 2) inspectTwoFrameFiles(argv[1]);
+    else {
+        assert(argc == 1);
+        quantization(); failedQuantizationPreservesOutput();
+        combinedFramesAndWrapper(); invalidFrameArguments();
+    }
+    return 0;
+}
