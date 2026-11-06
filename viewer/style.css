@@ -13,3 +13,9 @@ button{font:inherit;border:1px solid var(--line);border-radius:4px;background:wh
 footer{padding:9px 30px 14px;color:var(--muted);font-size:10px}.mapping{float:right}input{accent-color:var(--red)}:focus-visible{outline:2px solid var(--red);outline-offset:4px}input[type=range]{cursor:pointer}
 @media(max-width:720px){header{height:100px;padding:14px 16px;gap:18px}.wordmark{font-size:22px}h1{font-size:15px}.heading p{max-width:47vw;font-size:11px}summary{padding:8px}.transport{padding:12px 16px}.time{gap:6px}.time #time{font-size:25px}.time span{font-size:10px}.mapping{float:none;display:block;margin-top:5px}footer{padding:8px 16px}#stage{height:calc(100dvh - 285px);min-height:340px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+@media(max-width:500px){
+  .heading{min-width:0}h1{font-size:14px}
+  .time{flex-wrap:wrap;gap:3px 7px}.time #time{width:100%;font-size:23px}
+  .actions{align-self:center}.actions button{padding:8px 11px}
+  .measurements{gap:7px 12px}
+}
