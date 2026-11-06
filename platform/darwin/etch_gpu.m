@@ -210,7 +210,7 @@ static void EtchGPUChangeMode(BOOL enabled)
 {
     instant = enabled; paused = NO; erasing = NO;
     holdTime = eraseTime = 0; instantGhostElapsed = ghostInterval;
-    playhead = instant && current ? current.duration : 0;
+    if (instant && current) playhead = current.duration;
     needsPath = replaceRequested = controlClockReset = YES;
 }
 static void EtchGPUClearPaths(void)
@@ -316,6 +316,19 @@ static void EtchGPUAdvance(double dt)
             erasing = YES; eraseTime = 0;
         }
     }
+}
+
+static void EtchGPUInstallPending(void)
+{
+    if (!instant || instantGhostElapsed + 1e-9 >= ghostInterval) {
+        ghost = current;
+        ghostTime = current ? fmin(playhead, current.duration) : 0;
+        if (instant) instantGhostElapsed = fmod(instantGhostElapsed, ghostInterval);
+    }
+    current = pending; pending = nil;
+    playhead = instant ? current.duration : 0;
+    holdTime = eraseTime = 0; erasing = NO;
+    needsPath = replaceRequested = NO;
 }
 
 void EtchGPUTick(double now, BOOL active)
