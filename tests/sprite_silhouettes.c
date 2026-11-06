@@ -218,3 +218,33 @@ static void malformedPatches(void)
     rejectDecode(&shape, bad, bytes); /* 4097 columns exceed the bounded decoder. */
     SilhouetteFree(&shape);
 }
+
+static void failedProjectionPreservesGeometry(void)
+{
+    unsigned char patch[128]; size_t bytes = asymmetricPatch(patch);
+    Silhouette shape = {0}; assert(SilhouetteDecode(&shape, patch, bytes));
+    short top[16], bottom[16];
+    for (int x = 0; x < 16; ++x) { top[x] = -1; bottom[x] = 8; }
+    SilRects fill = {0}; SilLines lines = {0};
+    assert(SilProject(&shape, 5, 1, 2, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    SilRects savedFill = fill; SilLines savedLines = lines;
+    assert(!SilProject(&shape, 0, 0, NAN, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(!SilProject(&shape, 0, 0, 0, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(!SilProject(&shape, 0, 0, 1, -1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(!SilProject(&shape, 0, 0, 1, 1, 0, 15, NULL, bottom, 16, 8, &fill, &lines));
+    assert(fill.data == savedFill.data && fill.count == savedFill.count);
+    assert(lines.data == savedLines.data && lines.count == savedLines.count);
+    assert(fabs(area(&fill) - 8) < 1e-9);
+    SilRectsFree(&fill); SilLinesFree(&lines); SilhouetteFree(&shape);
+}
+static void transparentPatch(void)
+{
+    unsigned char patch[18] = {2, 0, 3, 0};
+    little32(patch + 8, 16); little32(patch + 12, 17);
+    patch[16] = patch[17] = 255;
+    Silhouette shape = {0};
+    assert(SilhouetteDecode(&shape, patch, sizeof(patch)));
+    assert(shape.width == 2 && shape.height == 3);
+    assert(!shape.fill.count && !shape.outline.count);
+    SilhouetteFree(&shape);
+}
