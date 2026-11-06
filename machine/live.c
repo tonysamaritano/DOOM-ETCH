@@ -33,3 +33,40 @@ int MachineLiveNeedsPath(const MachineLive *live)
 void MachineLivePause(MachineLive *live,int paused) { if (live) live->paused=paused!=0; }
 int MachineLivePaused(const MachineLive *live) { return live && live->paused; }
 double MachineLiveSeconds(const MachineLive *live) { return live ? live->seconds : 0; }
+static int fail(MachineParseError *error,const char *message)
+{
+    if (error) { error->line=0; snprintf(error->message,sizeof(error->message),"%s",message); }
+    return 0;
+}
+int MachineLiveSubmit(MachineLive *live,const MotionPath *path,MachineParseError *error)
+{
+    if (!MachineLiveNeedsPath(live) || !MotionValid(path) ||
+        path->width_mm!=live->settings.width_mm || path->height_mm!=live->settings.height_mm)
+        return fail(error,"live device is occupied or travel differs");
+    FILE *stream=tmpfile();
+    if (!stream) return fail(error,"cannot serialize live G-code");
+    int ok=MotionWriteGCode(stream,path,3600);
+    if (ok && fseek(stream,0,SEEK_SET)) ok=0;
+    MachineSettings settings=live->settings;
+    MachineProgram parsed={0}; MachineStepProgram program={0};
+    if (ok) ok=MachineRead(stream,&settings,&parsed,error);
+    if (fclose(stream)) ok=0;
+    if (ok) ok=MachineSteppersCompile(&program,&parsed,&settings,error);
+    size_t count=program.count;
+    if (count && program.moves[count-1].kind==MACHINE_MOVE_END) count--;
+    if (ok && count) ok=MachineSubmitBatch(live->device,&program,0,count,error);
+    if (ok) {
+        live->phase_start=live->seconds;
+        live->needs_path=count==0 || EtchDeviceReady(live->device);
+    }
+    MachineProgramFree(&parsed); MachineStepProgramFree(&program);
+    if (!ok && error && !error->message[0]) fail(error,"cannot submit live G-code");
+    return ok;
+}
+int MachineLiveErase(MachineLive *live)
+{
+    if (!live) return 0;
+    if (EtchDeviceReady(live->device)) live->phase_start=live->seconds;
+    live->needs_path=1;
+    return EtchDeviceRequestErase(live->device);
+}
