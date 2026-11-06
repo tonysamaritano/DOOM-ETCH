@@ -146,3 +146,29 @@ int SilContours(const SilRects *rectangles, SilLines *outline)
     SilLinesFree(outline); *outline = result;
     return 1;
 }
+
+static unsigned read_u16(const unsigned char *p)
+{
+    return p[0] | ((unsigned)p[1] << 8);
+}
+static uint32_t read_u32(const unsigned char *p)
+{
+    return p[0] | ((uint32_t)p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+static int decode_column(Silhouette *shape, const unsigned char *patch,
+                         size_t bytes, unsigned x, size_t at)
+{
+    unsigned last = 0, posts = 0;
+    for (;;) {
+        if (at >= bytes) return 0;
+        if (patch[at] == 255) return 1;
+        if (bytes - at < 4 || ++posts > MAX_PATCH_EXTENT) return 0;
+        unsigned y = patch[at], length = patch[at + 1];
+        if (bytes - at < (size_t)length + 4 || y < last || y + length > shape->height)
+            return 0;
+        if (length && !SilRectAdd(&shape->fill, (SilRect){x, y, x + 1, y + length}))
+            return 0;
+        last = y + length;
+        at += length + 4;
+    }
+}
