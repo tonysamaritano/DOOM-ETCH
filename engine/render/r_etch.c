@@ -4,6 +4,7 @@
 #include <math.h>
 #include "r_etch.h"
 #include "silhouette.h"
+#include "hatch.h"
 
 enum { CAPTURE_WIDTH = 320, CAPTURE_HEIGHT = 200 };
 enum { MAX_SEGMENTS = 400000 };
@@ -29,6 +30,18 @@ typedef struct SpriteFrame {
 static SpriteFrame *sprite_frames;
 static int sprites_enabled = 1;
 static int hud_enabled = 1, weapon_enabled = 1, hud_capture;
+static int wall_textures = 1, sprite_textures = 1, weapon_textures = 1;
+static int hatch_pattern = HATCH_CROSS;
+void R_EtchTextures(int enabled) { wall_textures = enabled != 0; }
+void R_EtchSpriteTextures(int enabled) { sprite_textures = enabled != 0; }
+void R_EtchWeaponTextures(int enabled) { weapon_textures = enabled != 0; }
+int R_EtchTexturesActive(void) { return active && !failed && wall_textures; }
+int R_EtchSpriteTexturesEnabled(void) { return sprite_textures; }
+int R_EtchWeaponTexturesEnabled(void) { return weapon_textures; }
+void R_EtchHatchPattern(int pattern)
+{
+    if (pattern >= 0 && pattern < HATCH_PATTERN_COUNT) hatch_pattern = pattern;
+}
 
 void R_EtchHUD(int enabled) { hud_enabled = enabled != 0; }
 void R_EtchWeapon(int enabled) { weapon_enabled = enabled != 0; }
