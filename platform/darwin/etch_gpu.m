@@ -33,6 +33,8 @@
 static os_unfair_lock stateLock = OS_UNFAIR_LOCK_INIT;
 static id<MTLDevice> device;
 static id<MTLRenderPipelineState> linePipeline, backgroundPipeline;
+static id<MTLTexture> readTarget;
+static id<MTLBuffer> readBuffer;
 static EtchGPUPath *current, *pending, *ghost;
 static double ghostTime, holdTime, eraseTime;
 static BOOL erasing;
@@ -179,7 +181,7 @@ void EtchGPUShutdown(void)
     playhead = previous = 0;
     os_unfair_lock_unlock(&stateLock);
     plannerQueue = renderQueue = nil; renderGate = nil; renderGroup = nil;
-    linePipeline = backgroundPipeline = nil; device = nil;
+    linePipeline = backgroundPipeline = nil; readTarget = nil; readBuffer = nil; device = nil;
 }
 
 static EtchGPUPath *EtchGPUBuildPath(EtchSnapshot snapshot, id<MTLDevice> gpu, double drawingSpeed, const char **message)
