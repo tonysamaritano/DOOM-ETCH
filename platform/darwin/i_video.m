@@ -104,3 +104,41 @@ void I_StartTic(void)
         [NSApp updateWindows];
     }
 }
+
+// A full-screen triangle samples the original indexed image through its palette.
+static NSString *const shaderSource =
+    @"#include <metal_stdlib>\n"
+    "using namespace metal;\n"
+    "struct Vertex { float4 position [[position]]; float2 uv; };\n"
+    "vertex Vertex vertexMain(uint i [[vertex_id]]) {\n"
+    "  float2 p[3] = {float2(-1,-1),float2(3,-1),float2(-1,3)};\n"
+    "  Vertex out; out.position = float4(p[i],0,1);\n"
+    "  out.uv = float2((p[i].x+1)*0.5,(1-p[i].y)*0.5); return out;\n"
+    "}\n"
+    "fragment float4 fragmentMain(Vertex in [[stage_in]],\n"
+    "    texture2d<uint> frame [[texture(0)]], constant uchar4 *pal [[buffer(0)]]) {\n"
+    "  uint2 xy = uint2(clamp(in.uv,float2(0),float2(0.999999))*float2(320,200));\n"
+    "  return float4(pal[frame.read(xy).r])/255.0;\n"
+    "}\n";
+
+static void InitRenderer(void)
+{
+    device = MTLCreateSystemDefaultDevice();
+    if (!device) I_Error("Metal is unavailable on this Mac");
+    queue = [device newCommandQueue];
+    if (!queue) I_Error("Cannot create Metal command queue");
+    NSError *error = nil;
+    id<MTLLibrary> library = [device newLibraryWithSource:shaderSource options:nil error:&error];
+    if (!library) I_Error("Metal shader: %s", error.localizedDescription.UTF8String);
+    MTLRenderPipelineDescriptor *desc = [MTLRenderPipelineDescriptor new];
+    desc.vertexFunction = [library newFunctionWithName:@"vertexMain"];
+    desc.fragmentFunction = [library newFunctionWithName:@"fragmentMain"];
+    desc.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+    pipeline = [device newRenderPipelineStateWithDescriptor:desc error:&error];
+    if (!pipeline) I_Error("Metal pipeline: %s", error.localizedDescription.UTF8String);
+    MTLTextureDescriptor *texture = [MTLTextureDescriptor
+        texture2DDescriptorWithPixelFormat:MTLPixelFormatR8Uint width:320 height:200 mipmapped:NO];
+    texture.usage = MTLTextureUsageShaderRead;
+    indices = [device newTextureWithDescriptor:texture];
+    if (!indices) I_Error("Cannot create indexed framebuffer texture");
+}
