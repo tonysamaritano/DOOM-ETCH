@@ -386,3 +386,32 @@ int SilFeatures(const Silhouette *shape, const unsigned char *palette, SilLines 
     SilLinesFree(outline); *outline = result;
     return 1;
 }
+
+typedef struct {
+    const Silhouette *shape;
+    const unsigned char *light, *palette, *translation;
+    double ox, oy, sx, sy, min_spacing_mm;
+} HatchContext;
+typedef struct { MotionSegment line; int family, row; } HatchStroke;
+typedef struct { HatchStroke *data; size_t count, capacity; } HatchStrokes;
+
+static int hatch_spacing(const HatchContext *context, double slope)
+{
+    double vertical_mm = context->sy * HATCH_MM_Y;
+    double physical_slope = slope == 0 ? 0
+        : slope * vertical_mm / (context->sx * HATCH_MM_X);
+    double needed = context->min_spacing_mm * hypot(1, physical_slope);
+    if (!isfinite(needed) || !(vertical_mm > 0)) return 0;
+    int spacing = 1;
+    while (spacing < 1048576 && spacing * vertical_mm < needed) spacing *= 2;
+    return spacing * vertical_mm >= needed ? spacing : 0;
+}
+
+static int stroke_add(HatchStrokes *strokes, MotionSegment line, int family, int row)
+{
+    HatchStroke *next = reserve(strokes->data, &strokes->capacity, strokes->count, sizeof(*next));
+    if (!next) return 0;
+    strokes->data = next;
+    strokes->data[strokes->count++] = (HatchStroke){line, family, row};
+    return 1;
+}
