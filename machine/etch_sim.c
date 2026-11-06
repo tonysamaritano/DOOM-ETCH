@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-#include "etch_sim.h"
+#include "trace.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -264,5 +264,15 @@ int EtchDeviceTick(EtchDevice *d,double seconds)
             d->status.erase_left_s=d->config.erase_seconds-d->erase_time;
         }
     }
+    return 1;
+}
+
+int EtchDeviceProfile(const EtchDevice *d,size_t index,EtchTraceSegment *out)
+{
+    if (!d || !out || index>=d->status.count || !d->segments) return 0;
+    const Segment *s=&d->segments[index];
+    *out=(EtchTraceSegment){s->begin,s->duration,s->ramp,s->peak,s->acceleration,
+        s->slack,s->length,s->start.x,s->start.y,s->unit.x,s->unit.y,
+        s->motor_start.x,s->motor_start.y,0,0};
     return 1;
 }
