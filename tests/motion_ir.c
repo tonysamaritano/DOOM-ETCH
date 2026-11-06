@@ -170,8 +170,11 @@ static void failedCopyPreservesOutput(void)
     MotionFree(&path);
 }
 
+void MotionWriterTests(void);
+
 int main(void)
 {
+    MotionWriterTests();
     disconnectedRoute();
     duplicateAndStraightEdges();
     copyAndFree();
