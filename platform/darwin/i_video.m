@@ -222,3 +222,35 @@ static void EncodeFrame(id<MTLRenderCommandEncoder> encoder, NSSize size)
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
     [encoder endEncoding];
 }
+
+void I_FinishUpdate(void)
+{
+    if (!window || !window.isVisible || window.isMiniaturized) return;
+    @autoreleasepool {
+        NSSize size = [window.contentView convertRectToBacking:window.contentView.bounds].size;
+        if (size.width < 1 || size.height < 1) return;
+        layer.drawableSize = size;
+        id<CAMetalDrawable> drawable = [layer nextDrawable];
+        if (!drawable) return;
+        [indices replaceRegion:MTLRegionMake2D(0, 0, 320, 200) mipmapLevel:0
+            withBytes:screens[0] bytesPerRow:320];
+        MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
+        pass.colorAttachments[0].texture = drawable.texture;
+        pass.colorAttachments[0].loadAction = MTLLoadActionClear;
+        pass.colorAttachments[0].storeAction = MTLStoreActionStore;
+        pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 1);
+        id<MTLCommandBuffer> command = [queue commandBuffer];
+        if (!command) I_Error("Cannot create Metal command buffer");
+        id<MTLRenderCommandEncoder> encoder = [command renderCommandEncoderWithDescriptor:pass];
+        if (!encoder) I_Error("Cannot create Metal render encoder");
+        EncodeFrame(encoder, size);
+        [command presentDrawable:drawable];
+        [command commit];
+        // The next frame may overwrite this texture only after the GPU finishes.
+        [command waitUntilCompleted];
+        if (command.status != MTLCommandBufferStatusCompleted)
+            I_Error("Metal rendering failed: %s", command.error.localizedDescription.UTF8String);
+        presentedFrames++;
+        if (runFrames && presentedFrames == runFrames) I_Quit();
+    }
+}
