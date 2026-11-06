@@ -53,3 +53,25 @@ static void ownershipAndDirectParity(void)
     free(second.segments);
     MotionFree(&snapshotPath); MotionFree(&direct); MotionFree(&other);
 }
+
+static void occupiedDestinationIsUnchanged(void)
+{
+    MotionSegment guard = {{1, 2}, {3, 4}};
+    EtchSnapshot destination = {&guard, 1, 13, 17};
+    rectangle(1, 3);
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(destination.segments == &guard && destination.count == 1);
+    assert(destination.width == 13 && destination.height == 17);
+    assert(guard.a.x == 1 && guard.b.y == 4);
+    EtchSnapshot empty = {0}; assert(!R_EtchTakeSnapshot(&empty));
+    destination = (EtchSnapshot){.count = 1, .width = 13, .height = 17};
+    rectangle(1, 3);
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(!destination.segments && destination.count == 1 && destination.width == 13);
+    assert(!R_EtchTakeSnapshot(&empty));
+    destination = (EtchSnapshot){.segments = &guard, .width = 13, .height = 17};
+    rectangle(1, 3);
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(destination.segments == &guard && destination.count == 0 && destination.height == 17);
+    assert(!R_EtchTakeSnapshot(&empty));
+}
