@@ -10,16 +10,31 @@ static int fail(MachineParseError *e,const char *message)
 MachinePlayback *MachineLoad(const char *filename,const char *const *assignments,
                              size_t count,MachineParseError *e)
 {
+    return MachineLoadTraced(filename,assignments,count,NULL,e);
+}
+MachinePlayback *MachineLoadTraced(const char *filename,const char *const *assignments,
+                                   size_t count,EtchTrace *trace,MachineParseError *e)
+{
     if (!filename || (count && !assignments)) { fail(e,"missing file or settings"); return NULL; }
+    if (trace && (trace->source || trace->segments || trace->erases || trace->failed || trace->completed)) {
+        fail(e,"trace must be empty"); return NULL;
+    }
     FILE *stream=fopen(filename,"rb");
     if (!stream) { fail(e,"cannot open G-code file"); return NULL; }
+    if (trace) {
+        FILE *copy=EtchTraceSource(stream,trace,e);
+        int closed=fclose(stream);
+        if (!copy) return NULL;
+        if (closed) { fclose(copy); fail(e,"cannot close G-code source"); return NULL; }
+        stream=copy;
+    }
     MachineSettings settings; MachineSettingsDefault(&settings);
     MachineProgram parsed={0}; MachineStepProgram compiled={0};
     int ok=MachineRead(stream,&settings,&parsed,e);
     if (fclose(stream) && ok) ok=fail(e,"cannot close G-code file");
     for (size_t i=0;ok && i<count;i++) ok=MachineSettingsParse(&settings,assignments[i],e);
     if (ok) ok=MachineSteppersCompile(&compiled,&parsed,&settings,e);
-    MachinePlayback *play=ok ? MachinePlaybackCreate(&compiled,e) : NULL;
+    MachinePlayback *play=ok ? MachinePlaybackCreateTraced(&compiled,trace,e) : NULL;
     MachineProgramFree(&parsed); MachineStepProgramFree(&compiled);
     return play;
 }
