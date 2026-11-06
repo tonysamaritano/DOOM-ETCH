@@ -26,7 +26,8 @@ export function quantize(value,steps,extent) {
 export function sampleSegment(trace,index,time) {
   const a=trace.segments.slice(index*15,index*15+15);
   const [t0,duration,ramp,peak,accel,slack,length,x0,y0,ux,uy,mx0,my0,line,frame]=a;
-  const t=Math.max(0,Math.min(duration,time-t0)),travel=length+slack;
+  const complete=time>=t0+duration;
+  const t=complete?duration:Math.max(0,Math.min(duration,time-t0)),travel=length+slack;
   let distance,velocity;
   if(t>=duration){distance=travel;velocity=0;}
   else if(t<ramp){velocity=accel*t;distance=velocity*t/2;}
