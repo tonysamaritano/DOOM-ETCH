@@ -24,9 +24,18 @@ int WriteMotionOutput(const char *prefix, const char *extension, const MotionPat
 
 int main(int argc, char **argv)
 {
-    if (argc < 3 || argc > 4 || (argc == 4 && strcmp(argv[3], "--no-sprites"))) {
-        fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites]\n", argv[0]);
+    if (argc < 3) {
+        fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites] [--no-hud] [--no-weapon]\n", argv[0]);
         return 2;
+    }
+    for (int argument = 3; argument < argc; ++argument) {
+        if (!strcmp(argv[argument], "--no-sprites")) R_EtchSprites(0);
+        else if (!strcmp(argv[argument], "--no-hud")) R_EtchHUD(0);
+        else if (!strcmp(argv[argument], "--no-weapon")) R_EtchWeapon(0);
+        else {
+            fprintf(stderr, "Unknown export option: %s\n", argv[argument]);
+            return 2;
+        }
     }
     myargc = argc; myargv = argv;
     char *files[] = {argv[1], NULL};
@@ -41,7 +50,7 @@ int main(int argc, char **argv)
     consoleplayer = displayplayer = 0;
     M_Init();
     R_Init();
-    R_SetViewSize(11, 0);
+    R_SetViewSize(R_EtchHUDEnabled() ? 10 : 11, 0);
     R_ExecuteSetViewSize();
     P_Init();
     S_Init(8, 8);
@@ -54,12 +63,12 @@ int main(int argc, char **argv)
         G_Ticker();
         ++gametic;
     }
-    R_EtchSprites(argc == 3);
     if (!R_EtchBegin(viewwidth, viewheight))
         I_Error("Cannot capture the E1M1 view");
     R_RenderPlayerView(&players[0]);
+    ST_EtchDrawer();
     MotionPath path = {0};
-    if (!R_EtchBuildMotion(&path)) I_Error("Cannot plan the captured walls");
+    if (!R_EtchBuildMotion(&path)) I_Error("Cannot plan the captured frame");
     if (!WriteMotionOutput(argv[2], "svg", &path)) I_Error("Cannot write %s.svg", argv[2]);
     if (!WriteMotionOutput(argv[2], "gcode", &path)) I_Error("Cannot write %s.gcode", argv[2]);
     printf("%zu moves at %.2f x %.2f mm (assumed feed 3600 mm/min)\n",
