@@ -1,4 +1,4 @@
-foreach(argument GAME RUNNER CONFIG PREFIX)
+foreach(argument GAME RUNNER PREFIX)
     if(NOT DEFINED ${argument})
         message(FATAL_ERROR "machine-gcode-native requires ${argument}")
     endif()
@@ -11,9 +11,11 @@ if(NOT result EQUAL 0)
     message(FATAL_ERROR "Canonical short-file run failed: ${output}${errors}")
 endif()
 machine_summary("${output}" canonical)
+file(MAKE_DIRECTORY "${PREFIX}-home")
 foreach(rate 1 1000)
-    execute_process(COMMAND "${GAME}" --etch-gcode "${PREFIX}.gcode"
-        --etch-time-scale "${rate}" --run-frames 120 -config "${CONFIG}"
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E env "HOME=${PREFIX}-home"
+        "${GAME}" --etch-gcode "${PREFIX}.gcode"
+        --etch-time-scale "${rate}" --run-frames 120
         RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 30)
     file(WRITE "${PREFIX}-rate-${rate}.log" "${output}${errors}")
     if(NOT result EQUAL 0)
