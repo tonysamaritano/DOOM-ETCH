@@ -99,3 +99,27 @@ static MotionPoint physical(const MachineStepProgram *p,const int64_t steps[2])
     return (MotionPoint){steps[0]/p->settings.steps_per_mm[0],
                          steps[1]/p->settings.steps_per_mm[1]};
 }
+int MachineSubmitBatch(EtchDevice *device,const MachineStepProgram *p,size_t first,
+                       size_t count,MachineParseError *e)
+{
+    if (!device || !p || !count || !p->moves || first>p->count || count>p->count-first ||
+        count>=SIZE_MAX/sizeof(MotionPoint) || !MachineSettingsValidate(&p->settings,e))
+        return fail(e,0,"invalid uniform-feed batch");
+    double feed=p->moves[first].feed_mm_s;
+    MotionPoint *points=malloc((count+1)*sizeof(*points));
+    if (!points) return fail(e,0,"out of memory");
+    points[0]=physical(p,first ? p->moves[first-1].target_steps : p->start_steps);
+    for (size_t i=0;i<count;i++) {
+        const MachineStep *step=&p->moves[first+i];
+        if ((step->kind!=MACHINE_MOVE_DRAW && step->kind!=MACHINE_MOVE_RAPID) ||
+            step->feed_mm_s!=feed || !isfinite(feed) || feed<0 ||
+            (step->kind==MACHINE_MOVE_DRAW && feed==0)) {
+            free(points); return fail(e,step->line,"batch requires motion with one feed");
+        }
+        points[i+1]=physical(p,step->target_steps);
+    }
+    int ok=feed>0 ? EtchDeviceSubmit(device,points,count+1,feed) :
+                    EtchDeviceSubmitHardware(device,points,count+1);
+    free(points);
+    return ok ? 1 : fail(e,p->moves[first].line,"device rejected controller batch");
+}
