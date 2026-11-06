@@ -87,3 +87,24 @@ static int lines_valid(const SilLines *lines)
     }
     return 1;
 }
+
+/* Signed edge events cancel shared borders between disjoint opaque rectangles. */
+typedef struct { int axis, delta; double fixed, at; } EdgeEvent;
+static int compare_event(const void *left, const void *right)
+{
+    const EdgeEvent *a = left, *b = right;
+    if (a->axis != b->axis) return a->axis < b->axis ? -1 : 1;
+    if (a->fixed != b->fixed) return a->fixed < b->fixed ? -1 : 1;
+    return a->at < b->at ? -1 : a->at > b->at;
+}
+static void rectangle_events(EdgeEvent *events, SilRect r)
+{
+    events[0] = (EdgeEvent){0, 1, r.y0, r.x0};
+    events[1] = (EdgeEvent){0, -1, r.y0, r.x1};
+    events[2] = (EdgeEvent){0, -1, r.y1, r.x0};
+    events[3] = (EdgeEvent){0, 1, r.y1, r.x1};
+    events[4] = (EdgeEvent){1, 1, r.x0, r.y0};
+    events[5] = (EdgeEvent){1, -1, r.x0, r.y1};
+    events[6] = (EdgeEvent){1, -1, r.x1, r.y0};
+    events[7] = (EdgeEvent){1, 1, r.x1, r.y1};
+}
