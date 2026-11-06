@@ -37,3 +37,13 @@ if(BUILD_TESTING)
     target_link_libraries(play-resources-test PRIVATE "-framework Foundation")
     add_test(NAME machine-play-resources COMMAND play-resources-test)
 endif()
+
+if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
+    add_executable(play-readback-test tests/play_readback.m platform/darwin/etch_gpu.m)
+    target_include_directories(play-readback-test PRIVATE platform/darwin engine/render engine/core)
+    target_compile_options(play-readback-test PRIVATE -fobjc-arc -UNDEBUG)
+    target_link_libraries(play-readback-test PRIVATE etch-motion
+        "-framework Foundation" "-framework Metal" "-framework QuartzCore")
+    add_test(NAME machine-play-readback COMMAND play-readback-test)
+    set_tests_properties(machine-play-readback PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
+endif()
