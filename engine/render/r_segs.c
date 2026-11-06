@@ -342,6 +342,12 @@ void R_RenderSegLoop (void)
 	    if (bottomtexture)
 	    {
 		// bottom wall
+		projectedBottom = (double)pixlow / HEIGHTUNIT;
+		projectedBottomStep = (double)pixlowstep / HEIGHTUNIT;
+		if (projectedBottom > (double)bottomfrac / HEIGHTUNIT) {
+		    projectedBottom = (double)bottomfrac / HEIGHTUNIT;
+		    projectedBottomStep = (double)bottomstep / HEIGHTUNIT;
+		}
 		mid = (pixlow+HEIGHTUNIT-1)>>HEIGHTBITS;
 		pixlow += pixlowstep;
 
@@ -356,7 +362,9 @@ void R_RenderSegLoop (void)
 		    dc_texturemid = rw_bottomtexturemid;
 		    dc_source = R_GetColumn(bottomtexture,
 					    texturecolumn);
-		    R_EtchColumn(rw_x, dc_yl, dc_yh, (int)(linedef - lines) + 1);
+		    R_EtchWallColumn(2, rw_x, (double)(pixlow - pixlowstep) / HEIGHTUNIT,
+		        (double)bottomfrac / HEIGHTUNIT, (double)pixlowstep / HEIGHTUNIT,
+		        (double)bottomstep / HEIGHTUNIT);
 		    colfunc ();
 		    floorclip[rw_x] = mid;
 		}
@@ -366,8 +374,11 @@ void R_RenderSegLoop (void)
 	    else
 	    {
 		// no bottom wall
-		if (markfloor)
+		if (markfloor) {
+		    projectedBottom = (double)bottomfrac / HEIGHTUNIT;
+		    projectedBottomStep = (double)bottomstep / HEIGHTUNIT;
 		    floorclip[rw_x] = yh+1;
+		}
 	    }
 			
 	    if (maskedtexture)
