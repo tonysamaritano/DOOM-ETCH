@@ -5,7 +5,7 @@
 #include "motion.h"
 
 // Capture is optional; ordinary gameplay leaves the surface map inactive.
-int R_EtchBegin(const char *path, int width, int height);
+int R_EtchBegin(int width, int height);
 void R_EtchColumn(int x, int top, int bottom, int surface);
 int R_EtchBuildMotion(MotionPath *path);
 
