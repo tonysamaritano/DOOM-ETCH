@@ -1,6 +1,6 @@
 #include "machine_playback_test.h"
 
-static size_t ink_count(EtchDevice *d, unsigned char kind)
+static size_t ink_count(const EtchDevice *d, unsigned char kind)
 {
     const unsigned char *ink = EtchDeviceInk(d); size_t n = 0;
     for (size_t i = 0; i < ETCH_INK_WIDTH * ETCH_INK_HEIGHT; ++i) n += ink[i] == kind;
@@ -12,7 +12,7 @@ static void shake_clock(void)
     MachineSettings s; MachineSettingsDefault(&s);
     MachinePlayback *p = play_text("; ETCH_START X0 Y127.6\nF3600\n"
         "G1 X100\nM0\nX0\nM2", &s);
-    EtchDevice *d = MachinePlaybackDevice(p);
+    const EtchDevice *d = MachinePlaybackDevice(p);
     double outward = 143.0 / 75;
     assert(MachinePlaybackTick(p, outward));
     size_t fresh = ink_count(d, ETCH_INK_FRESH); assert(fresh > 100);
@@ -57,7 +57,7 @@ static void zero_motion_program(void)
     assert(MachinePlaybackTick(p, 100));
     assert(MachinePlaybackDone(p));
     machine_near(MachinePlaybackSeconds(p), 2.5);
-    EtchDevice *d = MachinePlaybackDevice(p);
+    const EtchDevice *d = MachinePlaybackDevice(p);
     machine_point(EtchDeviceGetStatus(d).cursor_mm, 5, 5);
     assert(ink_count(d, ETCH_INK_FRESH) == 0);
     assert(ink_count(d, ETCH_INK_GHOST) == 0);
