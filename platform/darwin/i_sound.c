@@ -36,3 +36,36 @@ static int limit(int value, int low, int high)
 {
     return value < low ? low : value > high ? high : value;
 }
+
+int I_GetSfxLumpNum(sfxinfo_t *sfx)
+{
+    char name[9];
+    if (sfx->link) sfx = sfx->link;
+    snprintf(name, sizeof(name), "ds%.6s", sfx->name);
+    int lump = W_CheckNumForName(name);
+    return lump >= 0 ? lump : W_CheckNumForName("dspistol");
+}
+
+static void loadSample(int id)
+{
+    int lump = I_GetSfxLumpNum(&S_sfx[id]);
+    if (lump < 0) return;
+    int bytes = W_LumpLength(lump);
+    if (bytes < 8) return;
+    unsigned char *raw = malloc((size_t)bytes);
+    if (!raw) return;
+    W_ReadLump(lump, raw);
+    uint32_t rate = raw[2] | (uint32_t)raw[3] << 8;
+    uint32_t count = raw[4] | (uint32_t)raw[5] << 8 |
+                     (uint32_t)raw[6] << 16 | (uint32_t)raw[7] << 24;
+    if (raw[0] != 3 || raw[1] || !rate || !count ||
+        count > (uint32_t)bytes - 8) {
+        free(raw);
+        return;
+    }
+    /* DMX samples carry sixteen padding bytes at each end. */
+    unsigned offset = count > 32 ? 24 : 8;
+    if (count > 32) count -= 32;
+    memmove(raw, raw + offset, count);
+    samples[id] = (SoundSample){raw, count, rate};
+}
