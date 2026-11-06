@@ -111,3 +111,18 @@ if(BUILD_TESTING)
             -P "${PROJECT_SOURCE_DIR}/tests/etch_overlay.cmake")
     endif()
 endif()
+
+if(BUILD_TESTING)
+    add_executable(hatch-geometry-test tests/hatch_geometry.c)
+    target_link_libraries(hatch-geometry-test PRIVATE etch-motion)
+    target_compile_options(hatch-geometry-test PRIVATE -UNDEBUG)
+    add_test(NAME hatch-geometry COMMAND hatch-geometry-test)
+    if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+        add_test(NAME etch-hatching COMMAND "${CMAKE_COMMAND}"
+            "-DEXPORTER=$<TARGET_FILE:etch-export>"
+            "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+            "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/etch-hatching"
+            "-DVALIDATOR=$<TARGET_FILE:svg-bounds-test>"
+            -P "${PROJECT_SOURCE_DIR}/tests/etch_hatching.cmake")
+    endif()
+endif()
