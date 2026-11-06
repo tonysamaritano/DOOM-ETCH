@@ -248,3 +248,12 @@ static void transparentPatch(void)
     assert(!shape.fill.count && !shape.outline.count);
     SilhouetteFree(&shape);
 }
+
+int main(void)
+{
+    decodeHole(); flippedProjection(); wallClippedProjection();
+    holeRevealsEarlierLine(); overlappingMasks(); painterOrder();
+    malformedPatches(); failedProjectionPreservesGeometry(); transparentPatch();
+    puts("Sprite silhouettes: holes, projection, clipping, overlap and ownership passed");
+    return 0;
+}
