@@ -52,9 +52,6 @@ static void bounds(void)
     assert(box[BOXTOP] == 4 && box[BOXBOTTOM] == -3);
 }
 
-extern unsigned long SwapLONG(unsigned long value);
-extern unsigned short SwapSHORT(unsigned short value);
-
 static void endian(void)
 {
     const unsigned char disk[] = {0x42, 0x18, 0x75, 0x23};
