@@ -57,3 +57,17 @@ static double run(EtchConfig c, MotionPoint end, double feed)
     EtchDestroy(d);
     return duration;
 }
+
+static void analytical_profiles(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    near(run(c, (MotionPoint){100, 0}, 0), 143.0 / 75);
+    near(run(c, (MotionPoint){.1, 0}, 0), .04);
+    near(run(c, (MotionPoint){100, 100}, 0), 143.0 / 75);
+    near(run(c, (MotionPoint){100, 100}, 60), 134 * sqrt(2) / 75);
+    c.y.speed_mm_s = 5; c.y.acceleration_mm_s2 = 10;
+    near(run(c, (MotionPoint){100, 0}, 0), 143.0 / 75);
+    near(run(c, (MotionPoint){0, 10}, 0), 2.5);
+    near(run(c, (MotionPoint){10, 10}, 0),
+         profile(sqrt(200), 5 * sqrt(2), 10 * sqrt(2)));
+}
