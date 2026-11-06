@@ -58,3 +58,36 @@ NSURL *EtchPlayResource(NSURL *root,NSURL *request,NSString **mime)
 }
 - (unsigned)presented { return _frames.presented; }
 - (NSString *)failure { return _failure; }
+- (instancetype)initWithFrame:(NSRect)rect limit:(unsigned)limit
+{
+    if (!(self=[super initWithFrame:rect])) return nil;
+    NSBundle *bundle=NSBundle.mainBundle;
+    NSURL *base=[bundle.bundleURL.pathExtension isEqualToString:@"app"] ?
+        bundle.resourceURL : bundle.executableURL.URLByDeletingLastPathComponent;
+    _assets=[base URLByAppendingPathComponent:@"etch-play" isDirectory:YES];
+    _frames=[[EtchFrameQueue alloc] initWithLimit:limit];
+    WKWebViewConfiguration *config=[WKWebViewConfiguration new];
+    [config setURLSchemeHandler:self forURLScheme:@"doomrig"];
+    [config.userContentController addScriptMessageHandler:self name:@"presentation"];
+    _web=[[WKWebView alloc] initWithFrame:self.bounds configuration:config];
+    _web.autoresizingMask=NSViewWidthSizable | NSViewHeightSizable;
+    _web.navigationDelegate=self;
+    [self addSubview:_web];
+    [_web loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"doomrig://local/index.html"]]];
+    return self;
+}
+- (void)waitForModel
+{
+    NSDate *deadline=[NSDate dateWithTimeIntervalSinceNow:45];
+    while (!_ready && !_failure && !_stopped && deadline.timeIntervalSinceNow>0)
+        [NSRunLoop.currentRunLoop runUntilDate:[NSDate dateWithTimeIntervalSinceNow:.01]];
+    if (!_ready) I_Error("Cannot load the live rig: %s",(_failure ?: @"WebKit model startup timed out").UTF8String);
+}
+- (void)publishIndices:(const unsigned char *)pixels palette:(const unsigned char *)palette
+              metadata:(NSDictionary *)metadata
+{
+    if (_stopped || !pixels || !palette) return;
+    NSMutableData *data=[NSMutableData dataWithBytes:pixels length:64000];
+    [data appendBytes:palette length:1024];
+    if (![_frames publishPixels:data metadata:metadata]) _failure=@"Invalid indexed rig frame";
+}
