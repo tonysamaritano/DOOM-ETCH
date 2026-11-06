@@ -26,3 +26,24 @@ static void endpoint(Counts *c, double x, double y)
     }
     ++c->moves;
 }
+
+int main(int argc, char **argv)
+{
+    assert(argc == 2); FILE *f = fopen(argv[1], "r"); assert(f);
+    Counts c = {0}; char line[256]; int start = 0;
+    while (fgets(line, sizeof line, f)) {
+        double x, y;
+        if (sscanf(line, "; ETCH_START X%lf Y%lf", &x, &y) == 2) {
+            assert(!start++ && !c.moves);
+            c.last[0] = llround(x * 20); c.last[1] = llround(y * 20);
+        } else if (sscanf(line, "G1 X%lf Y%lf", &x, &y) == 2) {
+            assert(start); endpoint(&c, x, y);
+        } else if (!strncmp(line, "M0", 2)) ++c.erasures;
+    }
+    assert(!ferror(f) && start && c.moves); fclose(f);
+    printf("{\"moves\":%" PRIu64 ",\"erasures\":%" PRIu64
+        ",\"steps_x\":%" PRIu64 ",\"steps_y\":%" PRIu64
+        ",\"reversals_x\":%" PRIu64 ",\"reversals_y\":%" PRIu64 "}\n",
+        c.moves, c.erasures, c.steps[0], c.steps[1], c.reversals[0], c.reversals[1]);
+    return 0;
+}
