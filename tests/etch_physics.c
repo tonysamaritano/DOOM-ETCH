@@ -113,6 +113,12 @@ static void quantized_extent(void)
     assert(EtchDeviceTick(d, 10));
     point(EtchDeviceGetStatus(d).cursor_mm, 1, 1);
     EtchDestroy(d);
+    c.width_mm = nextafter(1.0, 0.0);
+    d = EtchCreate(c, (MotionPoint){c.width_mm, 0});
+    assert(d);
+    point(EtchDeviceGetStatus(d).cursor_mm, .95, 0);
+    assert(EtchDeviceGetStatus(d).cursor_mm.x <= c.width_mm);
+    EtchDestroy(d);
 }
 
 static void same_status(EtchStatus a, EtchStatus b)
