@@ -3,11 +3,14 @@
 Start the read-only local server from the repository:
 
 ```sh
-python3 viewer/capture_server.py --three /absolute/path/to/three-0.163.0/package
+python3 viewer/capture_server.py
 ```
 
-The dependency directory must be the complete three.js **0.163.0** package.
-It is served through the import map; no bundler, HDRI or remote textures are used.
+The required browser modules from three.js **0.163.0** and its MIT license are
+vendored in `viewer/vendor/three/`. This is a browser module subset, not an npm
+development installation. The import map uses those local files by default;
+`--three /absolute/package/path` can override them with the same version.
+No bundler, HDRI or remote textures are used.
 Build the test preset and put shareware `doom1.wad` in ignored `test-data/`, then run:
 
 ```sh
