@@ -36,15 +36,19 @@ int main(int argc,char **argv)
         fputs("Trace output must not alias the G-code source\n",stderr); free(settings); return 2;
     }
     MachineParseError error={0};
-    MachinePlayback *play=MachineLoad(argv[1],settings,count,&error);
+    EtchTrace trace={0};
+    MachinePlayback *play=MachineLoadTraced(argv[1],settings,count,tracefile ? &trace : NULL,&error);
     free(settings);
-    if (!play) { fprintf(stderr,"%s:%zu: %s\n",argv[1],error.line,error.message); return 1; }
-    int ok=MachineRun(play);
-    if (ok) ok=MachineReport(stdout,MachinePlaybackProgram(play),MachinePlaybackSeconds(play),json);
-    else {
-        const MachineParseError *failure=MachinePlaybackError(play);
-        fprintf(stderr,"%s:%zu: %s\n",argv[1],failure->line,failure->message);
+    if (!play) {
+        fprintf(stderr,"%s:%zu: %s\n",argv[1],error.line,error.message);
+        EtchTraceFree(&trace); return 1;
     }
-    MachinePlaybackDestroy(play);
+    int ok=MachineRun(play);
+    if (!ok) error=*MachinePlaybackError(play);
+    if (ok && tracefile) ok=MachineTraceWrite(tracefile,MachinePlaybackProgram(play),&trace,
+                                             MachinePlaybackSeconds(play),&error);
+    if (ok) ok=MachineReport(stdout,MachinePlaybackProgram(play),MachinePlaybackSeconds(play),json);
+    else fprintf(stderr,"%s:%zu: %s\n",argv[1],error.line,error.message);
+    MachinePlaybackDestroy(play); EtchTraceFree(&trace);
     return ok ? 0 : 1;
 }
