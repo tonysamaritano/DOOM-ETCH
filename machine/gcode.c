@@ -32,3 +32,39 @@ typedef struct {
     double feed;
     int mode,ended;
 } Parser;
+/* Explicit decimal grammar excludes exponents, NaN and infinity. */
+static int number(const char **cursor,double *value)
+{
+    const char *start=*cursor,*p=start;
+    if (*p=='+' || *p=='-') p++;
+    int digits=0;
+    while (isdigit((unsigned char)*p)) { p++; digits=1; }
+    if (*p=='.') {
+        p++;
+        while (isdigit((unsigned char)*p)) { p++; digits=1; }
+    }
+    if (!digits) return 0;
+    char *end;
+    *value=strtod(start,&end);
+    if (end!=p || !isfinite(*value)) return 0;
+    *cursor=p;
+    return 1;
+}
+static int words(const char *row,double values[5],unsigned *seen)
+{
+    for (const char *p=row;*p;) {
+        if (*p==' ' || *p=='\t') { p++; continue; }
+        if (*p==';') break;
+        if (*p=='(') {
+            for (p++;*p && *p!=')';p++) if (*p=='(') return 0;
+            if (!*p) return 0;
+            p++; continue;
+        }
+        const char *word=strchr("GMXYF",*p);
+        if (!word) return 0;
+        unsigned index=(unsigned)(word-"GMXYF"); p++;
+        if ((*seen & (1u<<index)) || !number(&p,&values[index])) return 0;
+        *seen|=1u<<index;
+    }
+    return 1;
+}
