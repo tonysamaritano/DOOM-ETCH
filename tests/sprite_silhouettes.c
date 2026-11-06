@@ -118,3 +118,27 @@ static void flippedProjection(void)
     assert(!filled(&fill, 6, 3) && filled(&fill, 8, 3));
     SilRectsFree(&fill); SilLinesFree(&lines); SilhouetteFree(&shape);
 }
+
+static void wallClippedProjection(void)
+{
+    unsigned char patch[128]; size_t bytes = asymmetricPatch(patch);
+    Silhouette shape = {0}; assert(SilhouetteDecode(&shape, patch, bytes));
+    short top[16], bottom[16];
+    for (int x = 0; x < 16; ++x) { top[x] = 1; bottom[x] = 3; }
+    SilRects fill = {0}; SilLines lines = {0};
+    assert(SilProject(&shape, 5, 1, 2, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    const MotionSegment rectangle[] = {
+        {{5, 2}, {7, 2}}, {{7, 2}, {7, 3}}, {{7, 3}, {5, 3}}, {{5, 3}, {5, 2}}
+    };
+    assert(fabs(area(&fill) - 2) < 1e-9);
+    expectedContour(&lines, rectangle, 4);
+    top[5] = 2; /* First projected column is fully hidden, second remains. */
+    assert(SilProject(&shape, 5, 1, 2, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(fabs(area(&fill) - 1) < 1e-9);
+    assert(filled(&fill, 6.5, 2.5) && !filled(&fill, 5.5, 2.5));
+    assert(SilProject(&shape, 5, 1, 2, 1, 7, 7, top, bottom, 16, 8, &fill, &lines));
+    assert(!fill.count && !lines.count); /* Inclusive X range lies in transparent cut. */
+    assert(SilProject(&shape, -100, 1, 1, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(!fill.count && !lines.count);
+    SilRectsFree(&fill); SilLinesFree(&lines); SilhouetteFree(&shape);
+}
