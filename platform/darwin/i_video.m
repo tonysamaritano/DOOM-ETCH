@@ -7,6 +7,7 @@
 #import <QuartzCore/CAMediaTiming.h>
 #include <errno.h>
 #include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -74,6 +75,21 @@ static void ReadFrameLimit(void)
     if (errno == ERANGE || !value || value > UINT_MAX)
         I_Error("--run-frames is outside 1..%u", UINT_MAX);
     runFrames = (unsigned)value;
+}
+
+static double ReadGPURate(void)
+{
+    int option = M_CheckParm("--etch-gpu-rate");
+    if (!option) return 1;
+    if (option + 1 >= myargc) I_Error("--etch-gpu-rate requires a number in 1/64..1024");
+    const char *text = myargv[option + 1];
+    char *end = NULL;
+    errno = 0;
+    double value = strtod(text, &end);
+    if (!*text || end == text || *end || errno == ERANGE || !isfinite(value)
+        || value < 1.0 / 64 || value > 1024)
+        I_Error("--etch-gpu-rate must be a finite number in 1/64..1024");
+    return value;
 }
 
 void I_StartFrame(void)
