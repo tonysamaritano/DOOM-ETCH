@@ -43,3 +43,28 @@ static void disconnectedRoute(void)
     printf("fixture: %zu moves, %.9f mm\n", path.count - 1, lengthMM(&path));
     MotionFree(&path);
 }
+
+static void duplicateAndStraightEdges(void)
+{
+    MotionSegment repeated[5];
+    memcpy(repeated, fixture, sizeof(fixture));
+    repeated[3] = (MotionSegment){{2, 0}, {0, 0}};
+    repeated[4] = (MotionSegment){{5, 5}, {5, 5}};
+    MotionPath baseline = {0}, duplicate = {0};
+    assert(MotionPlanSegments(&baseline, fixture, 3, 10, 10, (MotionPoint){0, 0}));
+    assert(MotionPlanSegments(&duplicate, repeated, 5, 10, 10, (MotionPoint){0, 0}));
+    assert(baseline.count == duplicate.count);
+    for (size_t i = 0; i < baseline.count; ++i) {
+        pointEquals(duplicate.points[i], baseline.points[i]);
+        assert(duplicate.kinds[i] == baseline.kinds[i]);
+    }
+    MotionSegment straight[] = {{{0, 0}, {2, 0}}, {{2, 0}, {4, 0}}};
+    assert(MotionPlanSegments(&duplicate, straight, 2, 10, 10, (MotionPoint){0, 0}));
+    assert(duplicate.count == 3);
+    pointEquals(duplicate.points[0], (MotionPoint){0, 0});
+    pointEquals(duplicate.points[1], (MotionPoint){4, 0});
+    pointEquals(duplicate.points[2], (MotionPoint){0, 0});
+    assert(duplicate.kinds[1] == MOTION_OUTLINE && duplicate.kinds[2] == MOTION_OUTLINE);
+    MotionFree(&baseline);
+    MotionFree(&duplicate);
+}
