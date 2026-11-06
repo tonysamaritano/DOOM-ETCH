@@ -10,4 +10,13 @@ if(BUILD_TESTING)
     target_link_options(level-lines-test PRIVATE -Wl,-dead_strip)
     add_test(NAME level-lines COMMAND level-lines-test)
     set_tests_properties(level-lines PROPERTIES TIMEOUT 10)
+    add_executable(plane-spans-test ${CMAKE_CURRENT_LIST_DIR}/plane_spans.c
+        ${PROJECT_SOURCE_DIR}/engine/render/r_span.c)
+    target_include_directories(plane-spans-test PRIVATE
+        ${PROJECT_SOURCE_DIR}/engine/core ${PROJECT_SOURCE_DIR}/engine/game
+        ${PROJECT_SOURCE_DIR}/engine/render ${PROJECT_SOURCE_DIR}/engine/ui
+        ${PROJECT_SOURCE_DIR}/engine/sound ${PROJECT_SOURCE_DIR}/engine/wad)
+    target_compile_options(plane-spans-test PRIVATE -UNDEBUG)
+    add_test(NAME plane-spans COMMAND plane-spans-test)
+    set_tests_properties(plane-spans PROPERTIES TIMEOUT 10)
 endif()
