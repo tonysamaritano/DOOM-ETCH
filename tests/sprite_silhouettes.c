@@ -197,3 +197,24 @@ static void rejectDecode(Silhouette *shape, const void *patch, size_t bytes)
     assert(shape->fill.count == saved.fill.count && shape->outline.count == saved.outline.count);
     assert(shape->width == 3 && shape->height == 3 && fabs(area(&shape->fill) - 8) < 1e-9);
 }
+
+static void malformedPatches(void)
+{
+    unsigned char patch[128], bad[128]; size_t bytes = ringPatch(patch);
+    Silhouette shape = {0}; assert(SilhouetteDecode(&shape, patch, bytes));
+    rejectDecode(&shape, NULL, bytes);
+    rejectDecode(&shape, patch, 7);
+    rejectDecode(&shape, patch, bytes - 1); /* Missing final column terminator. */
+    memcpy(bad, patch, sizeof(bad)); little32(bad + 8, UINT32_MAX);
+    rejectDecode(&shape, bad, bytes);
+    memcpy(bad, patch, sizeof(bad)); little32(bad + 8, 0);
+    rejectDecode(&shape, bad, bytes); /* A column offset cannot point into the header. */
+    memcpy(bad, patch, sizeof(bad)); bad[21] = 4;
+    rejectDecode(&shape, bad, bytes); /* Post reaches below declared patch height. */
+    rejectDecode(&shape, patch, 24); /* Header exists, first post payload is truncated. */
+    memcpy(bad, patch, sizeof(bad)); bad[0] = 0;
+    rejectDecode(&shape, bad, bytes);
+    memcpy(bad, patch, sizeof(bad)); bad[0] = 1; bad[1] = 16;
+    rejectDecode(&shape, bad, bytes); /* 4097 columns exceed the bounded decoder. */
+    SilhouetteFree(&shape);
+}
