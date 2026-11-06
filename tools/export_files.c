@@ -2,7 +2,23 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <limits.h>
-#include "motion.h"
+#include "export_files.h"
+
+int MotionOutputOpen(MotionOutput *output, const char *prefix, const char *extension)
+{
+    if (!output || output->stream || !prefix || !extension) return 0;
+    MotionOutput next = {0};
+    int length = snprintf(next.filename, sizeof(next.filename), "%s.%s", prefix, extension);
+    if (length < 0 || (size_t)length >= sizeof(next.filename)) return 0;
+    length = snprintf(next.temporary, sizeof(next.temporary), "%s.XXXXXX", next.filename);
+    if (length < 0 || (size_t)length >= sizeof(next.temporary)) return 0;
+    int fd = mkstemp(next.temporary);
+    if (fd < 0) return 0;
+    next.stream = fdopen(fd, "w");
+    if (!next.stream) { close(fd); unlink(next.temporary); return 0; }
+    *output = next;
+    return 1;
+}
 
 /* Publish each completed file by rename, so a failed write preserves its predecessor. */
 int WriteMotionOutput(const char *prefix, const char *extension, const MotionPath *path)
