@@ -258,6 +258,31 @@ static void EncodeFrame(id<MTLRenderCommandEncoder> encoder, NSSize size)
     [encoder endEncoding];
 }
 
+static void PublishCapture(BOOL active)
+{
+    if (!capturePending) return;
+    if (active) ST_EtchDrawer();
+    EtchSnapshot snapshot = {0};
+    int captured = R_EtchTakeSnapshot(&snapshot);
+    capturePending = NO;
+    if (active && !captured) I_Error("Cannot snapshot the GPU scene");
+    if (active && captured) EtchGPUOfferSnapshot(&snapshot);
+    free(snapshot.segments);
+}
+
+static BOOL DrawGPU(void)
+{
+    BOOL active = GPUActive();
+    PublishCapture(active);
+    const char *error = EtchGPUError();
+    if (error) I_Error("Etch GPU: %s", error);
+    if (!active) return NO;
+    presentedFrames = EtchGPUFrameCount();
+    if (runFrames && presentedFrames >= runFrames) I_Quit();
+    EtchGPUDraw(queue, layer, window.backingScaleFactor);
+    return YES;
+}
+
 void I_FinishUpdate(void)
 {
     if (!window || !window.isVisible || window.isMiniaturized) return;
@@ -265,6 +290,7 @@ void I_FinishUpdate(void)
         NSSize size = [window.contentView convertRectToBacking:window.contentView.bounds].size;
         if (size.width < 1 || size.height < 1) return;
         layer.drawableSize = size;
+        if (gpuEtch && DrawGPU()) return;
         id<CAMetalDrawable> drawable = [layer nextDrawable];
         if (!drawable) return;
         [indices replaceRegion:MTLRegionMake2D(0, 0, 320, 200) mipmapLevel:0
