@@ -86,6 +86,10 @@ static void direction_memory(void)
     near(s.elapsed_s, profile(100, 60, 250) + profile(10, 60, 250));
     assert(EtchDeviceRequestErase(d));
     assert(EtchDeviceTick(d, 2.5));
+    MotionPoint rejected[] = {{100, 10}, {-1, 10}};
+    EtchStatus before = EtchDeviceGetStatus(d);
+    assert(!EtchDeviceSubmitHardware(d, rejected, 2));
+    near(EtchDeviceGetStatus(d).elapsed_s, before.elapsed_s);
     MotionPoint back[] = {{100, 10}, {0, 10}};
     assert(EtchDeviceSubmitHardware(d, back, 2));
     near(EtchDeviceGetStatus(d).remaining_s, profile(100.15, 60, 250));
