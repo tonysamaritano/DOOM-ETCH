@@ -52,6 +52,7 @@ static void manualEraseFreezesRevealedPrefix(void)
     assert(fabs(waiting.currentOpacity - .025) < 1e-6 && waiting.currentBlur > 0);
     assert(waiting.ghostOpacity == 0);
     EtchGPUPath *old = current; pending = fixturePath(.2f);
+    needsPath = NO; /* Emulate the accepted planner offer before publication. */
     EtchGPUTick(testClock, YES);
     assert(ghost == old && current != old && !pending);
     assert(fabs(ghostTime - .5) < 1e-9 && playhead == 0);
@@ -77,6 +78,7 @@ static void automaticHoldAndErase(void)
     assert(fabs(frame.currentTime - 2) < 1e-9);
     assert(fabs(frame.currentOpacity - .025) < 1e-6);
     EtchGPUPath *finished = current; pending = fixturePath(.2f);
+    needsPath = NO;
     EtchGPUTick(testClock, YES);
     assert(ghost == finished && ghostTime == 2 && playhead == 0);
     assert(holdTime == 0 && eraseTime == 0 && !erasing && !EtchGPUNeedsPath());
@@ -123,7 +125,7 @@ static void ghostPixelsExcludeUndrawnGeometry(void)
     assert(darkening(background, middle, 60, 60) < darkening(background, before, 60, 60));
     assert(darkening(background, before, 60, 36) >= 2);
     assert(darkening(background, middle, 60, 36) < darkening(background, before, 60, 36));
-    advance(.326); pending = fixturePath(.2f); EtchGPUTick(testClock, YES);
+    advance(.326); pending = fixturePath(.2f); needsPath = NO; EtchGPUTick(testClock, YES);
     unsigned char *after = renderFrame(EtchGPUFrameState());
     double ghostDark = darkening(background, after, 60, 60);
     assert(ghostDark >= 2 && ghostDark <= 10); /* Pale 2.5% ink, rather than the old dark line. */
