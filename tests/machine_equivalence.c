@@ -47,3 +47,37 @@ static void equivalent(MotionPath path, double expected_seconds)
     printf("machine-equivalence points=%zu seconds=%.17g\n", path.count, duration);
     EtchDestroy(direct); MachinePlaybackDestroy(play);
 }
+
+static void real_size_paths(void)
+{
+    unsigned char kinds[] = {MOTION_START, MOTION_OUTLINE, MOTION_CONNECTOR,
+        MOTION_OUTLINE, MOTION_OUTLINE, MOTION_CONNECTOR};
+    MotionPoint diagonal[] = {{0, 0}, {2000, 2000}};
+    MotionPath p = {diagonal, kinds, 2, 3403, 2552, 170.15, 127.6};
+    equivalent(p, 134 * sqrt(2) / 75);
+    MotionPoint reverse[] = {{100, 100}, {2100, 100}, {2100, 100},
+        {100, 100}, {100, 2100}, {100, 100}};
+    p.points = reverse; p.count = 6;
+    equivalent(p, 2 * (100 / 60.0 + 60.0 / 250) +
+        2 * (100.15 / 60.0 + 60.0 / 250));
+}
+
+static void raw_ties_and_extents(void)
+{
+    unsigned char kinds[] = {MOTION_START, MOTION_OUTLINE, MOTION_OUTLINE,
+        MOTION_CONNECTOR, MOTION_OUTLINE};
+    MotionPoint tie[] = {{0, 0}, {.49999998, .49999998}, {.5, .5},
+        {.50000002, .50000002}, {20, 20}};
+    MotionPath p = {tie, kinds, 5, 3403, 2552, 170.15, 127.6};
+    equivalent(p, -1);
+    MotionPoint custom[] = {{10, 10}, {100, 100}, {0, 0}, {50, 50}};
+    p = (MotionPath){custom, kinds, 4, 100, 100, 1.023, 1.037};
+    equivalent(p, -1);
+}
+
+int main(void)
+{
+    real_size_paths(); raw_ties_and_extents();
+    puts("machine-equivalence: raw IR and serialized controller agree");
+    return 0;
+}
