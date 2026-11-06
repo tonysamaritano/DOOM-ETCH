@@ -218,3 +218,21 @@ static void chunk_invariance(void)
     }
     EtchDestroy(a); EtchDestroy(b);
 }
+
+static void deferred_erase(void)
+{
+    MotionPoint p[] = {{0, 0}, {100, 0}, {100, 100}};
+    EtchDevice *d = EtchCreate(EtchAssumedDefaults(), p[0]);
+    assert(d && EtchDeviceSubmitHardware(d, p, 3));
+    assert(EtchDeviceTick(d, .1));
+    assert(EtchDeviceRequestErase(d));
+    assert(EtchDeviceTick(d, 1.8066666666666667 + 1));
+    EtchStatus s = EtchDeviceGetStatus(d);
+    point(s.cursor_mm, 100, 0);
+    near(s.elapsed_s, 143.0 / 75); near(s.erase_left_s, 1.5);
+    assert(s.completed == 1 && !s.drawing && s.erasing);
+    assert(!EtchDeviceSubmitHardware(d, p, 3));
+    assert(EtchDeviceTick(d, 1.5));
+    assert(EtchDeviceReady(d));
+    EtchDestroy(d);
+}
