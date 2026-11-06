@@ -38,6 +38,9 @@ rcsid[] = "$Id: v_video.c,v 1.5 1997/02/03 22:45:13 b1 Exp $";
 #include "m_swap.h"
 
 #include "v_video.h"
+#include "r_etch.h"
+#include "w_wad.h"
+#include "z_zone.h"
 
 
 // Each screen is [SCREENWIDTH*SCREENHEIGHT]; 
@@ -167,6 +170,8 @@ V_CopyRect
 { 
     byte*	src;
     byte*	dest; 
+
+    if (R_EtchHUDCapturing()) return;
 	 
 #ifdef RANGECHECK 
     if (srcx<0
