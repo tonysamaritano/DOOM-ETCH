@@ -142,3 +142,30 @@ static void graph_unique_edges(Graph *graph, size_t count)
             graph->edges[graph->edge_count++] = edge;
     }
 }
+
+static int graph_adjacency(Graph *graph)
+{
+    size_t vertices = graph->vertex_count, edges = graph->edge_count;
+    if (!edges) return 1;
+    graph->degree = calloc(vertices, sizeof(*graph->degree));
+    graph->offset = calloc(vertices + 1, sizeof(*graph->offset));
+    graph->cursor = malloc(vertices * sizeof(*graph->cursor));
+    graph->adjacent = malloc(2 * edges * sizeof(*graph->adjacent));
+    graph->stack = malloc((edges + 1) * sizeof(*graph->stack));
+    graph->used = calloc(edges, sizeof(*graph->used));
+    if (!graph->degree || !graph->offset || !graph->cursor || !graph->adjacent
+        || !graph->stack || !graph->used) return 0;
+    for (size_t i = 0; i < edges; i++) {
+        graph->degree[graph->edges[i].a]++;
+        graph->degree[graph->edges[i].b]++;
+    }
+    for (size_t i = 0; i < vertices; i++)
+        graph->offset[i + 1] = graph->offset[i] + graph->degree[i];
+    memcpy(graph->cursor, graph->offset, vertices * sizeof(*graph->cursor));
+    for (size_t i = 0; i < edges; i++) {
+        graph->adjacent[graph->cursor[graph->edges[i].a]++] = i;
+        graph->adjacent[graph->cursor[graph->edges[i].b]++] = i;
+    }
+    memcpy(graph->cursor, graph->offset, vertices * sizeof(*graph->cursor));
+    return 1;
+}
