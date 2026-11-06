@@ -737,6 +737,8 @@ void R_DrawPSprite (pspdef_t* psp)
     }
 	
     if (R_EtchWeaponActive() && vis->xiscale) {
+        const byte *palette = R_EtchWeaponTexturesEnabled()
+            ? W_CacheLumpName("PLAYPAL", PU_STATIC) : NULL;
         int lump = vis->patch + firstspritelump;
         const patch_t *patch = W_CacheLumpNum(lump, PU_CACHE);
         double scale_x = (double)FRACUNIT / vis->xiscale;
@@ -746,7 +748,7 @@ void R_DrawPSprite (pspdef_t* psp)
             / FRACUNIT;
         if (!R_EtchOverlayPatch(lump, patch, W_LumpLength(lump),
                 origin_x, origin_y, scale_x, scale_y,
-                vis->x1, vis->x2, mceilingclip, mfloorclip, NULL, 0))
+                vis->x1, vis->x2, mceilingclip, mfloorclip, vis->colormap, palette, 0))
             I_Error("Cannot capture weapon outline for lump %d", lump);
     }
     R_DrawVisSprite (vis, vis->x1, vis->x2);
@@ -961,6 +963,12 @@ void R_DrawSprite (vissprite_t* spr)
     mfloorclip = clipbot;
     mceilingclip = cliptop;
     if (R_EtchSpritesActive()) {
+        const byte *palette = R_EtchSpriteTexturesEnabled()
+            ? W_CacheLumpName("PLAYPAL", PU_STATIC) : NULL;
+        const byte *translation = NULL;
+        if (spr->mobjflags & MF_TRANSLATION)
+            translation = translationtables - 256
+                + ((spr->mobjflags & MF_TRANSLATION) >> (MF_TRANSSHIFT - 8));
         int lump = spr->patch + firstspritelump;
         const patch_t *patch = W_CacheLumpNum(lump, PU_CACHE);
         double scale_x = (double)FRACUNIT / spr->xiscale;
@@ -970,7 +978,7 @@ void R_DrawSprite (vissprite_t* spr)
             / FRACUNIT;
         if (!R_EtchSpritePatch(lump, patch, W_LumpLength(lump),
                 origin_x, origin_y, scale_x, scale_y,
-                spr->x1, spr->x2, cliptop, clipbot))
+                spr->x1, spr->x2, cliptop, clipbot, spr->colormap, palette, translation))
             I_Error("Cannot capture sprite silhouette for lump %d", lump);
     }
     R_DrawVisSprite (spr, spr->x1, spr->x2);
