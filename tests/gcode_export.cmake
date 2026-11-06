@@ -40,7 +40,7 @@ message(STATUS "${validation}")
 function(reject_frames label)
     execute_process(COMMAND "${EXPORTER}" "${WAD}" "${PREFIX}-invalid" --frames ${ARGN}
         RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors)
-    if(result EQUAL 0 OR NOT "${output}${errors}" MATCHES "frames")
+    if(result EQUAL 0 OR NOT "${output}${errors}" MATCHES "[Ff]rames")
         message(FATAL_ERROR "Invalid frame count ${label} was not rejected: ${output}${errors}")
     endif()
     file(GLOB unexpected "${PREFIX}-invalid*")
