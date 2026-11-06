@@ -50,3 +50,29 @@ static void modal_program(void)
     machine_near(p.moves[0].feed_mm_s, 60);
     MachineProgramFree(&p);
 }
+
+static void stream_boundaries(void)
+{
+    MachineProgram p = {0}; MachineParseError error = {0};
+    char line[84]; memset(line, ' ', sizeof line); line[0] = ';';
+    line[80] = '\r'; line[81] = '\n'; line[82] = 0;
+    assert(MachineGCodeParse(&p, line, NULL, &error));
+    line[80] = ' '; line[81] = '\n';
+    assert(!MachineGCodeParse(&p, line, NULL, &error));
+    assert(error.line == 1 && error.message[0]);
+    FILE *f = tmpfile(); assert(f);
+    const char embedded[] = "F60\nG1 X1\0G1 X2\n";
+    assert(fwrite(embedded, 1, sizeof embedded - 1, f) == sizeof embedded - 1);
+    rewind(f);
+    assert(!MachineGCodeParseFile(&p, f, NULL, &error));
+    assert(error.line == 2 && error.message[0]);
+    assert(!ferror(f)); fclose(f);
+    MachineProgramFree(&p);
+}
+
+int main(void)
+{
+    rejected_programs(); modal_program(); stream_boundaries();
+    puts("machine-parser: strict syntax, physical lines and ownership passed");
+    return 0;
+}
