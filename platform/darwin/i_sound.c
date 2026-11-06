@@ -191,3 +191,41 @@ void I_StopSound(int handle)
         if (voices[i].handle == handle) voices[i].sample = NULL;
     pthread_mutex_unlock(&soundLock);
 }
+
+int I_SoundIsPlaying(int handle)
+{
+    int playing = 0;
+    pthread_mutex_lock(&soundLock);
+    for (int i = 0; i < AUDIO_VOICES; ++i)
+        if (voices[i].handle == handle && voices[i].sample) playing = 1;
+    pthread_mutex_unlock(&soundLock);
+    return playing;
+}
+
+void I_UpdateSoundParams(int handle, int volume, int pan, int pitch)
+{
+    pthread_mutex_lock(&soundLock);
+    for (int i = 0; i < AUDIO_VOICES; ++i)
+        if (voices[i].handle == handle && voices[i].sample)
+            setVoiceParams(&voices[i], volume, pan, pitch);
+    pthread_mutex_unlock(&soundLock);
+}
+
+void I_SetChannels(void) { }
+void I_UpdateSound(void) { }
+void I_SubmitSound(void) { }
+void I_SetSfxVolume(int volume) { snd_SfxVolume = volume; }
+void I_InitMusic(void)
+{
+    if (!M_CheckParm("-nosound") && !M_CheckParm("-nomusic"))
+        fprintf(stderr, "MUS/MIDI music is unsupported\n");
+}
+void I_ShutdownMusic(void) { }
+void I_SetMusicVolume(int volume) { snd_MusicVolume = volume; }
+void I_PauseSong(int handle) { (void)handle; }
+void I_ResumeSong(int handle) { (void)handle; }
+int I_RegisterSong(void *data) { (void)data; return 0; }
+void I_PlaySong(int handle, int looping) { (void)handle; (void)looping; }
+void I_StopSong(int handle) { (void)handle; }
+void I_UnRegisterSong(int handle) { (void)handle; }
+int I_QrySongPlaying(int handle) { (void)handle; return 0; }
