@@ -287,7 +287,8 @@ BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
 BOOL EtchGPUNeedsPath(void)
 {
     if (!os_unfair_lock_trylock(&stateLock)) return NO;
-    BOOL requested = running && needsPath && !planning && !pending && !failure[0];
+    EtchGPUControls();
+    BOOL requested = running && !paused && needsPath && !planning && !pending && !failure[0];
     os_unfair_lock_unlock(&stateLock);
     return requested;
 }
@@ -448,6 +449,7 @@ BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingS
         dispatch_semaphore_signal(gate); return NO;
     }
     if (!os_unfair_lock_trylock(&stateLock)) { dispatch_semaphore_signal(gate); return NO; }
+    EtchGPUControls();
     if (!running || failure[0]) {
         os_unfair_lock_unlock(&stateLock); dispatch_semaphore_signal(gate); return NO;
     }
