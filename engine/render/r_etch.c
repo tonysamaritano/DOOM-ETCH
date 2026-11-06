@@ -53,3 +53,19 @@ static size_t boundary_segments(MotionSegment *segments)
     }
     return count;
 }
+
+int R_EtchBuildMotion(MotionPath *path)
+{
+    if (!active) return 0;
+    active = 0;
+    if (!path) return 0;
+    size_t count = boundary_segments(NULL);
+    // At most (width+1)*height + (height+1)*width segments fit this map.
+    MotionSegment *segments = count ? malloc(count * sizeof(*segments)) : NULL;
+    if (count && !segments) return 0;
+    boundary_segments(segments);
+    int success = MotionPlanSegments(path, segments, count,
+        (unsigned)width, (unsigned)height, (MotionPoint){0, 0});
+    free(segments);
+    return success;
+}
