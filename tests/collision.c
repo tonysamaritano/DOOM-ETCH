@@ -102,6 +102,14 @@ static void moveBoundaries(void)
     assert(!P_TryMove(&body, MM(8), 0));
     scene(1, 0); walls[0].flags |= ML_BLOCKING;
     assert(!P_TryMove(&body, MM(8), 0));
+    scene(1, 0); rooms[1].floorheight = -MM(25);
+    assert(!P_TryMove(&body, MM(8), 0));
+    body.flags |= MF_DROPOFF;
+    assert(P_TryMove(&body, MM(8), 0));
+    scene(1, 0); walls[0].flags |= ML_BLOCKMONSTERS;
+    assert(!P_TryMove(&body, MM(8), 0));
+    player_t player = {0}; body.player = &player;
+    assert(P_TryMove(&body, MM(8), 0));
     scene(0, 0);
     crowd[0] = (mobj_t){.x = MM(24), .radius = MM(16), .flags = MF_SOLID};
     P_SetThingPosition(&crowd[0]);
