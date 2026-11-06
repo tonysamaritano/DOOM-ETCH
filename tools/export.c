@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include <stdio.h>
+#include <string.h>
 #include "doomstat.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -23,8 +24,8 @@ int WriteMotionOutput(const char *prefix, const char *extension, const MotionPat
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s IWAD PREFIX\n", argv[0]);
+    if (argc < 3 || argc > 4 || (argc == 4 && strcmp(argv[3], "--no-sprites"))) {
+        fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites]\n", argv[0]);
         return 2;
     }
     myargc = argc; myargv = argv;
@@ -53,6 +54,7 @@ int main(int argc, char **argv)
         G_Ticker();
         ++gametic;
     }
+    R_EtchSprites(argc == 3);
     if (!R_EtchBegin(viewwidth, viewheight))
         I_Error("Cannot capture the E1M1 view");
     R_RenderPlayerView(&players[0]);
@@ -63,5 +65,6 @@ int main(int argc, char **argv)
     printf("%zu moves at %.2f x %.2f mm (assumed feed 3600 mm/min)\n",
            path.count - 1, path.width_mm, path.height_mm);
     MotionFree(&path);
+    R_EtchResetSprites();
     return 0;
 }
