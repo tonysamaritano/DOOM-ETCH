@@ -16,3 +16,22 @@ export function pitchLoop(big,small,centers) {
   }
   return {big,small,centers,sine,cosine,angle,arcBig,straight,arcSmall,length,point};
 }
+export function projectLoop(loop,x,y) {
+  const b=loop,candidates=[];
+  function arc(cx,radius,start,sweep,offset) {
+    const a=start+((Math.atan2(y,x-cx)-start)%tau+tau)%tau;
+    if(a<=start+sweep)candidates.push(offset+radius*(a-start));
+  }
+  arc(0,b.big,b.angle,Math.PI+2*Math.asin(b.sine),0);
+  arc(b.centers,b.small,-b.angle,2*b.angle,b.arcBig+b.straight);
+  const lower=(x-b.big*b.sine)*b.cosine+(y+b.big*b.cosine)*b.sine;
+  candidates.push(b.arcBig+Math.max(0,Math.min(b.straight,lower)));
+  const upper=-(x-b.centers-b.small*b.sine)*b.cosine+(y-b.small*b.cosine)*b.sine;
+  candidates.push(b.arcBig+b.straight+b.arcSmall+Math.max(0,Math.min(b.straight,upper)));
+  let best=null;
+  for(const u of candidates) {
+    const p=b.point(u),dx=x-p[0],dy=y-p[1],error=dx*dx+dy*dy;
+    if(!best||error<best.error)best={u,offset:dx*p[2]+dy*p[3],error};
+  }
+  return best;
+}
