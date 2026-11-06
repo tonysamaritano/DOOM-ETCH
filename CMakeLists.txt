@@ -53,7 +53,7 @@ if(BUILD_TESTING)
     add_test(NAME zone-startup-alignment COMMAND zone-startup-test)
 endif()
 
-add_library(etch-motion STATIC etch/motion.c etch/svg.c etch/gcode_writer.c)
+add_library(etch-motion STATIC etch/motion.c etch/svg.c etch/gcode_writer.c etch/silhouette.c)
 target_include_directories(etch-motion PUBLIC etch)
 target_link_libraries(doom-engine PUBLIC etch-motion)
 add_executable(etch-export tools/export.c tools/export_files.c tools/headless.c platform/darwin/i_net.c)
