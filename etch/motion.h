@@ -28,5 +28,10 @@ int MotionCopy(MotionPath *destination, const MotionPath *source);
 void MotionFree(MotionPath *path);
 int MotionWriteSVG(FILE *stream, const MotionPath *path);
 int MotionWriteGCode(FILE *stream, const MotionPath *path, double feed_mm_min);
+int MotionWriteGCodeFrame(FILE *stream, const MotionPath *path, double feed_mm_min,
+                         int first, int last);
+/* Assumed .05 mm grid in top-left device coordinates; failure leaves output intact.
+ * Validates only dimensions and the supplied point, not the path's point array. */
+int MotionQuantizePoint(const MotionPath *path, MotionPoint source, MotionPoint *device_mm);
 
 #endif
