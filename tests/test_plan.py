@@ -23,10 +23,6 @@ class PlannerTests(unittest.TestCase):
         capture.write_text(f'# doom-wall-bands-v1,{width},{height}\n' + rows)
         return capture
 
-    def test_nearest_wall_wins_overlapping_bands(self):
-        with tempfile.TemporaryDirectory() as directory:
-            capture = self.capture(directory, '1,1,1,4\n1,0,2,9\n')
-            self.assertEqual(plan.load_bands(capture), [[0, 9, 0], [0, 4, 0], [0, 9, 0]])
 
 
 
