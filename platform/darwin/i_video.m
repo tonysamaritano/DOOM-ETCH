@@ -455,3 +455,24 @@ void I_MetalFileDraw(const unsigned char *ink, double fade)
     }
     FinishUpdate(ink);
 }
+
+static void PublishPhysicalCapture(BOOL active)
+{
+    if (!capturePending) return;
+    if (active) ST_EtchDrawer();
+    EtchSnapshot snapshot={0};
+    int captured=R_EtchTakeSnapshot(&snapshot);
+    capturePending=NO;
+    if (!active || captureGeneration!=sceneGeneration || !MachineLiveNeedsPath(live)) {
+        free(snapshot.segments); return;
+    }
+    if (!captured) I_Error("Cannot snapshot the physical rig scene");
+    MotionPoint cursor=EtchDeviceGetStatus(MachineLiveDevice(live)).cursor_mm;
+    MotionPoint start={cursor.x/MOTION_WIDTH_MM*snapshot.width,cursor.y/MOTION_HEIGHT_MM*snapshot.height};
+    MotionPath path={0}; MachineParseError error={0};
+    int ok=MotionPlanSegments(&path,snapshot.segments,snapshot.count,snapshot.width,snapshot.height,start);
+    free(snapshot.segments);
+    if (ok) ok=MachineLiveSubmit(live,&path,&error);
+    MotionFree(&path);
+    if (!ok) I_Error("Cannot submit the physical rig scene: %s",error.message);
+}
