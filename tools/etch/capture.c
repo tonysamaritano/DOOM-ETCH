@@ -34,3 +34,23 @@ int main(int argc, char **argv)
     gamemode = shareware;
     playeringame[0] = true;
     consoleplayer = displayplayer = 0;
+    M_Init();
+    R_Init();
+    R_SetViewSize(11, 0);
+    R_ExecuteSetViewSize();
+    P_Init();
+    S_Init(8, 8);
+    HU_Init();
+    ST_Init();
+    D_CheckNetGame();
+    singletics = true;
+    G_InitNew(sk_medium, 1, 1);
+    G_Ticker();
+    gametic++;
+    if (!R_EtchBegin(argv[2], viewwidth, viewheight))
+        I_Error("Cannot open capture: %s", argv[2]);
+    R_RenderPlayerView(&players[0]);
+    if (!R_EtchEnd()) I_Error("Cannot write capture: %s", argv[2]);
+    printf("Captured %dx%d wall bands to %s\n", viewwidth, viewheight, argv[2]);
+    return 0;
+}
