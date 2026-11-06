@@ -53,6 +53,30 @@ static int ParseFrames(const char *text, unsigned *frames)
     return 1;
 }
 
+static int CaptureFrame(MotionPath *path, MotionPoint cursor_mm)
+{
+    if (!R_EtchBegin(viewwidth, viewheight)) return 0;
+    R_RenderPlayerView(&players[0]);
+    ST_EtchDrawer();
+    EtchSnapshot snapshot = {0};
+    if (!R_EtchTakeSnapshot(&snapshot)) return 0;
+    MotionPoint start = {cursor_mm.x / MOTION_WIDTH_MM * snapshot.width,
+        cursor_mm.y / MOTION_HEIGHT_MM * snapshot.height};
+    int success = MotionPlanSegments(path, snapshot.segments, snapshot.count,
+        snapshot.width, snapshot.height, start);
+    free(snapshot.segments);
+    return success;
+}
+
+static int WriteFrameSVG(const char *prefix, unsigned frame, const MotionPath *path)
+{
+    if (!frame) return WriteMotionOutput(prefix, "svg", path);
+    char filename[PATH_MAX];
+    int length = snprintf(filename, sizeof(filename), "%s-frame%03u", prefix, frame);
+    if (length < 0 || (size_t)length >= sizeof(filename)) return 0;
+    return WriteMotionOutput(filename, "svg", path);
+}
+
 int main(int argc, char **argv)
 {
     unsigned frames = 1;
