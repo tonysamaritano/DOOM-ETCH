@@ -209,3 +209,31 @@ endif()
 add_executable(etch-gcode-run tools/gcode_run.c)
 target_link_libraries(etch-gcode-run PRIVATE etch-controller)
 target_link_libraries(doom-metal PRIVATE etch-controller)
+
+if(BUILD_TESTING)
+    add_executable(gcode-step-counter-test tests/gcode_steps.c)
+    target_compile_options(gcode-step-counter-test PRIVATE -UNDEBUG)
+    add_test(NAME machine-gcode-runner COMMAND "${CMAKE_COMMAND}"
+        "-DRUNNER=$<TARGET_FILE:etch-gcode-run>"
+        "-DEXPORTER=$<TARGET_FILE:etch-export>" "-DGAME=$<TARGET_FILE:doom-metal>"
+        "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/gcode-runner"
+        -P "${PROJECT_SOURCE_DIR}/tests/gcode_runner.cmake")
+endif()
+if(BUILD_TESTING AND DOOM_TEST_WAD_DIRECTORY
+   AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+    add_test(NAME machine-gcode-e1m1 COMMAND "${CMAKE_COMMAND}"
+        "-DEXPORTER=$<TARGET_FILE:etch-export>" "-DRUNNER=$<TARGET_FILE:etch-gcode-run>"
+        "-DCOUNTER=$<TARGET_FILE:gcode-step-counter-test>"
+        "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+        "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/e1m1-00"
+        -P "${PROJECT_SOURCE_DIR}/tests/gcode_e1m1.cmake")
+    set_tests_properties(machine-gcode-e1m1 PROPERTIES TIMEOUT 120)
+endif()
+if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
+    add_test(NAME machine-gcode-native COMMAND "${CMAKE_COMMAND}"
+        "-DGAME=$<TARGET_FILE:doom-metal>" "-DRUNNER=$<TARGET_FILE:etch-gcode-run>"
+        "-DCONFIG=${CMAKE_CURRENT_BINARY_DIR}/gcode-native.cfg"
+        "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/gcode-native"
+        -P "${PROJECT_SOURCE_DIR}/tests/gcode_native.cmake")
+    set_tests_properties(machine-gcode-native PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+endif()
