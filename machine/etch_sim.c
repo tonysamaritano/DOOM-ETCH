@@ -133,3 +133,34 @@ int EtchDeviceSubmitHardware(EtchDevice *d,const MotionPoint *p,size_t n)
 {
     return submit(d,p,n,INFINITY);
 }
+static double distance_at(const Segment *s,double t,double *velocity)
+{
+    if (t>=s->duration) { *velocity=0; return s->travel; }
+    if (t<s->ramp) { *velocity=s->acceleration*t; return *velocity*t/2; }
+    double left=s->duration-t;
+    if (left<s->ramp) {
+        *velocity=s->acceleration*left;
+        return s->travel-*velocity*left/2;
+    }
+    *velocity=s->peak;
+    return s->peak*(t-s->ramp/2);
+}
+/* Fixed geometric samples, never tick-fragment rasterization: identical ink
+ * for every clock partition, bounded independently of the hardware step. */
+static void ink_progress(EtchDevice *d,const Segment *s,double drawn)
+{
+    if (!s->length || drawn<=0) return;
+    double dx=(s->end.x-s->start.x)/d->config.width_mm*(ETCH_INK_WIDTH-1);
+    double dy=(s->end.y-s->start.y)/d->config.height_mm*(ETCH_INK_HEIGHT-1);
+    unsigned samples=(unsigned)ceil(fmax(fabs(dx),fabs(dy)));
+    if (!samples) samples=1;
+    while (d->next_sample<=samples &&
+           (double)d->next_sample/samples <= drawn/s->length) {
+        double fraction=(double)d->next_sample++/samples;
+        double x=(s->start.x+(s->end.x-s->start.x)*fraction)/d->config.width_mm;
+        double y=(s->start.y+(s->end.y-s->start.y)*fraction)/d->config.height_mm;
+        unsigned ix=(unsigned)lround(x*(ETCH_INK_WIDTH-1));
+        unsigned iy=(unsigned)lround(y*(ETCH_INK_HEIGHT-1));
+        d->ink[iy*ETCH_INK_WIDTH+ix]=ETCH_INK_FRESH;
+    }
+}
