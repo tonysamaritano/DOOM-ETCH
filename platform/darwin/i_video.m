@@ -514,7 +514,8 @@ static void FinishRig(void)
     if (physicalRig) DrawPhysicalRig(active,seconds);
     else {
         EtchGPUTick(now,active); PublishCapture(active); UpdateGPUTitle();
-        if (EtchGPUError()) I_Error("Live rig GPU: %s",EtchGPUError());
+        const char *error=EtchGPUError();
+        if (error) I_Error("Live rig GPU: %s",error);
         if (active) [playView drawEtchWithQueue:queue];
     }
     if (!active) [playView publishIndices:screens[0] palette:colors metadata:
