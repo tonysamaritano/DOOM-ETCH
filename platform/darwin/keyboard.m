@@ -25,3 +25,15 @@ int DoomKeyForEvent(NSEvent *event)
     unichar key = [text characterAtIndex:0];
     return key >= 32 && key < 127 ? key : 0;
 }
+
+void DoomDispatchKeyEvent(NSEvent *event,BOOL held[256],void (^post)(int,BOOL))
+{
+    if (!held || !post || event.isARepeat ||
+        (event.type!=NSEventTypeKeyDown && event.type!=NSEventTypeKeyUp)) return;
+    if (event.modifierFlags & NSEventModifierFlagCommand) return;
+    int key=DoomKeyForEvent(event);
+    if (key<=0 || key>=256) return;
+    BOOL down=event.type==NSEventTypeKeyDown;
+    held[key]=down;
+    post(key,down);
+}
