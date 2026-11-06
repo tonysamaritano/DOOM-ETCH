@@ -35,3 +35,25 @@ static void checkBoundary(const MotionPath *path, const MotionSegment *edges, si
     }
     for (size_t edge = 0; edge < count; ++edge) assert(visits[edge] == 2);
 }
+
+static void outerCell(void)
+{
+    const MotionSegment edges[] = {
+        {{1, 1}, {2, 1}}, {{1, 2}, {2, 2}}, {{1, 1}, {1, 2}}, {{2, 1}, {2, 2}}
+    };
+    MotionPath path = {0};
+    assert(R_EtchBegin(3, 3));
+    R_EtchColumn(1, 1, 1, 7);
+    assert(R_EtchBuildMotion(&path));
+    assert(path.width == 3 && path.height == 3);
+    checkBoundary(&path, edges, 4);
+    unsigned connectors = 0;
+    for (size_t i = 1; i < path.count; ++i)
+        if (path.kinds[i] == MOTION_CONNECTOR) {
+            ++connectors;
+            assert(samePoint(path.points[i - 1], (MotionPoint){0, 0}));
+            assert(samePoint(path.points[i], (MotionPoint){1, 1}));
+        }
+    assert(connectors == 1);
+    MotionFree(&path);
+}
