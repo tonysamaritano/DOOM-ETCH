@@ -31,3 +31,32 @@ static Silhouette ring(void)
     }
     return shape;
 }
+
+static void project(const Silhouette *shape, double sx, SilRects *fill, SilLines *outline)
+{
+    short top[320], bottom[320];
+    for (int x = 0; x < 320; ++x) { top[x] = -1; bottom[x] = 200; }
+    assert(SilProject(shape, sx > 0 ? 20 : 52, 10, sx, 1,
+                      0, 319, top, bottom, 320, 200, fill, outline));
+}
+static int inside(const SilRects *fill, double x, double y)
+{
+    for (size_t i = 0; i < fill->count; ++i) {
+        SilRect r = fill->data[i];
+        if (x >= r.x0 - 1e-8 && x <= r.x1 + 1e-8 &&
+            y >= r.y0 - 1e-8 && y <= r.y1 + 1e-8) return 1;
+    }
+    return 0;
+}
+static void respectsOpacity(const SilLines *strokes, const SilRects *fill)
+{
+    assert(strokes->count);
+    for (size_t i = 0; i < strokes->count; ++i) {
+        MotionSegment line = strokes->data[i];
+        for (int sample = 0; sample <= 32; ++sample) {
+            double t = sample / 32.0;
+            assert(inside(fill, line.a.x + (line.b.x - line.a.x) * t,
+                          line.a.y + (line.b.y - line.a.y) * t));
+        }
+    }
+}
