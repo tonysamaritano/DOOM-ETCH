@@ -167,3 +167,37 @@ static void CheckObjects(void)
     assert(paused->oldstatus == down && activeplats[1] == paused);
     assert(th == &thinkercap);
 }
+static void RoundTrip(unsigned offset)
+{
+    sector_t original[10] = {0}, restored[10] = {0};
+    line_t originalLine[1] = {0}, restoredLine[1] = {0};
+    side_t originalSides[2] = {0}, restoredSides[2] = {0};
+    byte *buffer = calloc(1, 32768), *copy = calloc(1, 32768);
+    assert(buffer && copy);
+    memset(activeceilings, 0, sizeof(activeceilings));
+    memset(activeplats, 0, sizeof(activeplats));
+    P_InitThinkers(); BuildWorld(original, originalLine, originalSides);
+    BuildPlayers(); BuildObjects();
+    save_p = buffer + offset;
+    P_ArchivePlayers(); P_ArchiveWorld(); P_ArchiveThinkers(); P_ArchiveSpecials();
+    size_t length = (size_t)(save_p - buffer);
+    assert(length < 32768);
+    memcpy(copy, buffer, length);
+    memset(buffer, 0xa5, length); // loading cannot reuse the original save bytes
+    BuildWorld(restored, restoredLine, restoredSides);
+    for (int i = 0; i < 10; i++) {
+        restored[i].floorheight = 0; restored[i].lightlevel = 0;
+    }
+    restoredSides[0].textureoffset = 0; restoredLine[0].tag = 0;
+    memset(players, 0, sizeof(players));
+    memset(activeceilings, 0, sizeof(activeceilings));
+    memset(activeplats, 0, sizeof(activeplats));
+    save_p = copy + offset;
+    P_UnArchivePlayers(); P_UnArchiveWorld(); P_UnArchiveThinkers(); P_UnArchiveSpecials();
+    assert((size_t)(save_p - copy) == length);
+    for (int i = 0; i < MAXPLAYERS; i += 2) {
+        assert(players[i].health == 81 - i && players[i].armorpoints == 27 + i);
+        assert(players[i].ammo[am_clip] == 34 + i);
+        assert(players[i].psprites[0].state == &states[7 + i]);
+        assert(!players[i].message && !players[i].attacker);
+    }
