@@ -149,19 +149,6 @@ def write_svg(points, kinds, prefix):
     return destination
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('capture', type=Path)
-    parser.add_argument('--output', type=Path, required=True)
-    args = parser.parse_args()
-    try:
-        points, kinds = make_plan(load_bands(args.capture))
-        output = write_svg(points, kinds, args.output)
-    except (OSError, ValueError) as error:
-        parser.exit(1, f'{error}\n')
-    length = sum(math.dist(a, b) for a, b in zip(points, points[1:]))
-    print(f'{len(kinds)} moves; {length:.6f} mm; {kinds.count("connector")} connectors')
-    print(output)
 
 
 if __name__ == '__main__':
