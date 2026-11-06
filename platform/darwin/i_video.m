@@ -165,6 +165,14 @@ void I_StartTic(void)
                 untilDate:[NSDate distantPast] inMode:NSDefaultRunLoopMode dequeue:YES])) {
             BOOL keyEvent = event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp;
             if (event.window == window && keyEvent) {
+                NSEventModifierFlags chord=NSEventModifierFlagControl | NSEventModifierFlagCommand;
+                if (playOnEtch && (event.modifierFlags & chord)==chord &&
+                    [event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"f"]) {
+                    if (held[KEY_RCTRL]) PostKey(KEY_RCTRL,NO);
+                    if (held['f']) PostKey('f',NO);
+                    if (event.type==NSEventTypeKeyDown && !event.isARepeat) [window toggleFullScreen:nil];
+                    continue;
+                }
                 if (event.modifierFlags & NSEventModifierFlagCommand) {
                     if (event.type == NSEventTypeKeyDown &&
                         [event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"q"])
