@@ -156,6 +156,10 @@ const char *EtchPlayArgumentError(int argc,char **argv)
 {
     (void)web; (void)navigation; if (!_stopped) _failure=error.localizedDescription;
 }
+- (void)invalidate
+{
+    _generation++; [_frames discardLatest];
+}
 - (void)stop
 {
     _stopped=YES; _generation++; [_frames stop];
