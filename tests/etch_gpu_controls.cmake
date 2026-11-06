@@ -25,12 +25,11 @@ reject_rate(missing)
 foreach(value IN ITEMS nan inf 64junk 0 -1 0.015624 1024.0001)
     reject_rate("${value}" "${value}")
 endforeach()
-string(TIMESTAMP started_us "%s%f" UTC)
-execute_process(COMMAND "${CMAKE_COMMAND}" -E env "DOOMWADDIR=${wad_directory}"
+execute_process(COMMAND "${CMAKE_COMMAND}" -E time
+    "${CMAKE_COMMAND}" -E env "DOOMWADDIR=${wad_directory}"
     "${GAME}" --etch-gpu --etch-gpu-instant --etch-gpu-rate 64
     -warp 1 1 -nosound --run-frames 120 -config "${CONFIG}"
     RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 60)
-string(TIMESTAMP finished_us "%s%f" UTC)
 set(log "${output}\n${errors}")
 if(NOT result EQUAL 0)
     message(FATAL_ERROR "Instant GPU run failed (${result}): ${log}")
@@ -45,9 +44,8 @@ set(uploads "${CMAKE_MATCH_2}")
 if(NOT gpu OR NOT gpu_frames EQUAL 120 OR uploads LESS 2)
     message(FATAL_ERROR "Instant GPU run needs 120 GPU frames and repeated path uploads: ${log}")
 endif()
-math(EXPR elapsed_us "${finished_us} - ${started_us}")
-if(NOT elapsed_us GREATER 0)
-    message(FATAL_ERROR "Instant GPU elapsed wall-clock time was not measurable")
+string(REGEX MATCH "Elapsed time[^\r\n]*" timing "${log}")
+if(NOT timing)
+    message(FATAL_ERROR "CMake time wrapper did not report the elapsed process time: ${log}")
 endif()
-math(EXPR average_frame_us "${elapsed_us} / 120")
-message(STATUS "Instant GPU: frames=${gpu_frames} uploads=${uploads} wall_clock_us=${elapsed_us} average_frame_us=${average_frame_us} (including startup)")
+message(STATUS "Instant GPU: frames=${gpu_frames} uploads=${uploads}; ${timing} (including startup)")
