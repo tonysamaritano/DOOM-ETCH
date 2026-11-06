@@ -110,3 +110,33 @@ static void retain_ghost(Presentation *p)
     }
     p->shaking=NO; p->shaken=YES;
 }
+static int advance(Presentation *p,double seconds)
+{
+    if (!p->paused && !MachinePlaybackDone(p->play) && !MachinePlaybackTick(p->play,seconds)) {
+        const MachineParseError *e=MachinePlaybackError(p->play);
+        fprintf(stderr,"Playback:%zu: %s\n",e->line,e->message); return 0;
+    }
+    if (MachinePlaybackDone(p->play)) {
+        if (!p->reported) {
+            if (!MachineReport(stdout,MachinePlaybackProgram(p->play),MachinePlaybackSeconds(p->play),1))
+                return 0;
+            p->reported=YES;
+        }
+        if (p->queued && !p->paused) {
+            p->queued=NO; p->shaking=YES; p->shake_time=0;
+            return 1;
+        }
+    }
+    if (p->shaking && !p->paused) {
+        p->shake_time+=seconds;
+        if (p->shake_time>=MachinePlaybackProgram(p->play)->settings.erase_seconds) retain_ghost(p);
+    }
+    return 1;
+}
+static void title(Presentation *p,NSWindow *window)
+{
+    NSString *state=p->paused ? @"paused" : p->shaking ? @"presentation shake" :
+        p->queued ? @"shake queued after file" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
+    window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@ · F6 replay · F7 shake · F9 pause",
+        p->rate,MachinePlaybackSeconds(p->play),state];
+}
