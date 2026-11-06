@@ -31,7 +31,9 @@
 #ifdef __cplusplus
 typedef bool boolean;
 #else
-typedef enum {false, true} boolean;
+#include <stdbool.h>
+// Keep the engine enum width while sharing C and Cocoa truth values.
+typedef enum { doom_false = false, doom_true = true } boolean;
 #endif
 typedef unsigned char byte;
 #endif
