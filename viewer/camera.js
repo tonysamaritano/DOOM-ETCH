@@ -26,13 +26,14 @@ function fit(camera,controls,bounds) {
 export function buildCamera(scene,renderer,stage) {
   const camera=new THREE.PerspectiveCamera(35,1,.005,15);camera.up.set(0,0,1);camera.setFocalLength(45);
   const controls=new OrbitControls(camera,renderer.domElement);controls.minDistance=.15;controls.maxDistance=3;
+  camera.position.set(.4,-.6,.35);controls.target.set(0,0,.12);controls.update();
   controls.enableDamping=false;let bounds=null,autofocus=true;
   const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
   const bokeh=new BokehPass(scene,camera,{focus:.65,aperture:.02,maxblur:.012});composer.addPass(bokeh);composer.addPass(new OutputPass());
   const inputs=Object.fromEntries(['lens','aperture','focus'].map(id=>[id,document.getElementById(id)]));
   function optics() {
     camera.setFocalLength(Number(inputs.lens.value));
-    const focus=autofocus?camera.position.distanceTo(controls.target):Number(inputs.focus.value);
+    const focus=Math.max(.01,autofocus?camera.position.distanceTo(controls.target):Number(inputs.focus.value));
     if(autofocus)inputs.focus.value=focus;
     const focal=Number(inputs.lens.value)/1000,fstop=Number(inputs.aperture.value);
     bokeh.uniforms.focus.value=focus;bokeh.uniforms.aperture.value=focal*focal/(fstop*focus*Math.max(.001,focus-focal)*.036);
