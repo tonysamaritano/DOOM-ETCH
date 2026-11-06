@@ -132,10 +132,22 @@ static void either_side_of_half_step(void)
     }
     MachinePlaybackDestroy(recorded); EtchTraceFree(&trace);
 }
+static void preserve_unrepresentable_tick_rejection(void)
+{
+    MachineSettings settings; MachineSettingsDefault(&settings);
+    settings.steps_per_mm[0] = 40; settings.steps_per_mm[1] = 16;
+    settings.max_rate_mm_min[1] = 420; settings.acceleration_mm_s2[0] = 47;
+    MachinePlayback *p = play_text(fixture, &settings);
+    assert(MachinePlaybackTick(p, 16.134844794832826));
+    // At this boundary the erase remainder is smaller than one cumulative ULP.
+    assert(!MachinePlaybackTick(p, .0073791160081064788));
+    assert(strstr(MachinePlaybackError(p)->message, "unrepresentable positive playback clock"));
+    MachinePlaybackDestroy(p);
+}
 int main(void)
 {
     metadata_and_profiles(); nonuniform_steps_and_empty(); exact_feed_and_erase_boundaries();
-    either_side_of_half_step();
+    either_side_of_half_step(); preserve_unrepresentable_tick_rejection();
     puts("machine-trace: independent sampled cursor/motor positions within 1e-5 mm");
     return 0;
 }
