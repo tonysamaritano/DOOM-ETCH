@@ -37,3 +37,23 @@ static double profile(double length, double speed, double acceleration)
         ? 2 * sqrt(length / acceleration)
         : length / speed + speed / acceleration;
 }
+
+static double run(EtchConfig c, MotionPoint end, double feed)
+{
+    MotionPoint p[] = {{0, 0}, end};
+    EtchDevice *d = EtchCreate(c, p[0]);
+    assert(d);
+    assert(feed ? EtchDeviceSubmit(d, p, 2, feed)
+                : EtchDeviceSubmitHardware(d, p, 2));
+    EtchStatus s = EtchDeviceGetStatus(d);
+    double duration = s.remaining_s;
+    assert(s.count == 1 && s.completed == 0 && s.drawing);
+    assert(EtchDeviceTick(d, duration + 1));
+    s = EtchDeviceGetStatus(d);
+    near(s.elapsed_s, duration); near(s.remaining_s, 0);
+    point(s.cursor_mm, end.x, end.y);
+    point(s.motor_velocity_mm_s, 0, 0);
+    assert(s.completed == 1 && EtchDeviceReady(d));
+    EtchDestroy(d);
+    return duration;
+}
