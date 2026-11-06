@@ -102,3 +102,29 @@ MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *program,Machine
         if (e) *e=p->error;
         MachinePlaybackDestroy(p); return NULL;
     }
+    if (e) *e=(MachineParseError){0};
+    return p;
+}
+int MachinePlaybackTick(MachinePlayback *p,double seconds)
+{
+    if (!p || !isfinite(seconds) || seconds<0 || p->failed) return 0;
+    while (!p->done) {
+        EtchStatus before=EtchDeviceGetStatus(p->device);
+        double left=p->active==2 ? before.erase_left_s : before.remaining_s;
+        double slice=fmin(seconds,left);
+        if (!EtchDeviceTick(p->device,slice)) return runtime_fail(p,0,"device clock rejected tick");
+        EtchStatus after=EtchDeviceGetStatus(p->device);
+        double elapsed=p->active==2 ? p->program.settings.erase_seconds-after.erase_left_s : after.elapsed_s;
+        double clock=p->completed_seconds+elapsed;
+        if (!isfinite(clock) || clock<p->seconds) return runtime_fail(p,0,"invalid playback clock");
+        p->seconds=clock; seconds=fmax(0,seconds-slice);
+        if (EtchDeviceReady(p->device)) {
+            p->completed_seconds=clock;
+            if (!advance(p)) return 0;
+        } else {
+            if (!seconds) break;
+            if (!slice) return runtime_fail(p,0,"device made no progress");
+        }
+    }
+    return 1;
+}
