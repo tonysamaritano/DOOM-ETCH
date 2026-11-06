@@ -22,3 +22,42 @@ for (const index of [-1, .5, 1, NaN])
 for (const args of [[NaN, 20, 1], [0, 0, 1], [0, 20, Infinity]])
   assert.throws(() => quantize(...args), RangeError);
 console.log('viewer trace invalid sampling arguments rejected');
+
+const {writeFileSync, readFileSync, mkdirSync} = await import('node:fs');
+const {dirname} = await import('node:path');
+const {spawnSync} = await import('node:child_process');
+const generator = process.argv[3], prefix = process.argv[4];
+assert(generator && prefix, 'Pass the native generator and scratch output prefix');
+mkdirSync(dirname(prefix), {recursive: true});
+const fixtures = [
+  {name: 'straight', text: 'G1 X100 F3600\nM2\n'},
+  {name: 'reverse', text: 'G1 X100 F3600\nG1 X0\nM2\n'},
+  {name: 'asymmetric', settings: ['$100=40', '$101=16', '$111=420', '$120=47'],
+    text: 'G1 X100 F3600\nG1 X40 Y97.6\nG1 X50 Y87.6 F600\n'
+      + 'M0\nG0 X10 Y117.6\nG1 X10 Y117.6\nM0\nM2\n'},
+  {name: 'clipped-extent',
+    text: '; ETCH_SIZE X1.023 Y1.037\n; ETCH_START X0 Y1.037\n'
+      + 'G1 X1.023 Y0 F3600\nG1 X0 Y1.037\nM0\nM2\n'},
+  {name: 'stationary', text: '; ETCH_START X5 Y122.6\n'
+      + 'G1 X5 Y122.6 F600\nM0\nG1 X5 Y122.6\nM2\n'},
+  {name: 'empty', text: ''},
+  {name: 'end-only', text: 'M2\n'},
+  {name: 'erase-only', text: 'M0\nM0\nM2\n'},
+];
+for (const fixture of fixtures) {
+  const stem = `${prefix}-${fixture.name}`;
+  writeFileSync(`${stem}.gcode`, fixture.text);
+  const result = spawnSync(generator,
+    [`${stem}.gcode`, `${stem}.json`, `${stem}-samples.json`, ...(fixture.settings || [])],
+    {encoding: 'utf8', timeout: 15000});
+  assert.equal(result.status, 0, `${fixture.name}: ${result.stderr}`);
+  const trace = validateTrace(JSON.parse(readFileSync(`${stem}.json`, 'utf8')));
+  const samples = JSON.parse(readFileSync(`${stem}-samples.json`, 'utf8'));
+  for (const [time, x, y, mx, my] of samples) {
+    const point = sampleTrace(trace, time);
+    for (const [key, expected] of Object.entries({x, y, mx, my}))
+      assert(Math.abs(point[key] - expected) <= 1e-5,
+        `${fixture.name} at ${time}: ${key}=${point[key]}, native=${expected}`);
+  }
+  console.log(`${fixture.name}: ${samples.length} native samples agree within 1e-5 mm`);
+}
