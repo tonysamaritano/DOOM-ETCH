@@ -41,9 +41,12 @@ static int coordinate(char text[128], double value, double extent)
 static double quantized(double units, unsigned source_extent, double extent_mm)
 {
     double millimeters = (units / source_extent) * extent_mm;
-    double last = floor(extent_mm / step_mm + 1e-9);
-    double steps = fmin(round(millimeters / step_mm), last);
-    return fmin(extent_mm, fmax(0.0, steps * step_mm));
+    double steps_per_mm = 1.0 / step_mm;
+    double last = floor(extent_mm * steps_per_mm);
+    double steps = fmin(round(millimeters * steps_per_mm), last);
+    double result = steps / steps_per_mm;
+    if (result > extent_mm) result = fmax(0.0, steps - 1.0) / steps_per_mm;
+    return result + 0.0;
 }
 
 int MotionQuantizePoint(const MotionPath *path, MotionPoint source, MotionPoint *device_mm)
