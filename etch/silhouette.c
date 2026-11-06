@@ -332,3 +332,34 @@ fail:
     free(intervals); SilLinesFree(&result);
     return 0;
 }
+
+static int strong_boundary(unsigned a, unsigned b, const double tone[256])
+{
+    return a < 256 && b < 256 && fabs(tone[a] - tone[b]) >= 36
+        && (int)tone[a] / 64 != (int)tone[b] / 64;
+}
+
+static int feature_run(const Silhouette *shape, const double tone[256],
+                        int axis, unsigned fixed, SilLines *result)
+{
+    unsigned length = axis ? shape->height : shape->width;
+    int begin = -1;
+    for (unsigned run = 0; run <= length; run++) {
+        int edge = 0;
+        if (run < length) {
+            size_t at = axis ? (size_t)run * shape->width + fixed
+                : (size_t)fixed * shape->width + run;
+            unsigned a = shape->texels[at];
+            unsigned b = shape->texels[at - (axis ? 1 : shape->width)];
+            edge = strong_boundary(a, b, tone);
+        }
+        if (edge && begin < 0) begin = (int)run;
+        if (!edge && begin >= 0) {
+            MotionPoint a = axis ? (MotionPoint){fixed, begin} : (MotionPoint){begin, fixed};
+            MotionPoint b = axis ? (MotionPoint){fixed, run} : (MotionPoint){run, fixed};
+            if (!SilLineAdd(result, a, b)) return 0;
+            begin = -1;
+        }
+    }
+    return 1;
+}
