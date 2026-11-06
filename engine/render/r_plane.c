@@ -369,7 +369,6 @@ void R_DrawPlanes (void)
     visplane_t*		pl;
     int			light;
     int			x;
-    int			stop;
     int			angle;
 				
 #ifdef RANGECHECK
@@ -435,19 +434,8 @@ void R_DrawPlanes (void)
 
 	planezlight = zlight[light];
 
-	pl->top[pl->maxx+1] = 0xff;
-	pl->top[pl->minx-1] = 0xff;
-		
-	stop = pl->maxx + 1;
+	R_EmitPlaneSpans(pl);
 
-	for (x=pl->minx ; x<= stop ; x++)
-	{
-	    R_MakeSpans(x,pl->top[x-1],
-			pl->bottom[x-1],
-			pl->top[x],
-			pl->bottom[x]);
-	}
-	
 	Z_ChangeTag (ds_source, PU_CACHE);
     }
 }

@@ -64,6 +64,7 @@ R_MakeSpans
   int		b2 );
 
 void R_DrawPlanes (void);
+void R_EmitPlaneSpans(visplane_t *plane);
 
 visplane_t*
 R_FindPlane
