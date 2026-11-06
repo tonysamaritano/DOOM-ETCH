@@ -113,9 +113,29 @@ static void exact_feed_and_erase_boundaries(void)
     machine_near(MachinePlaybackSeconds(plain), trace.clock);
     MachinePlaybackDestroy(plain); MachinePlaybackDestroy(recorded); EtchTraceFree(&trace);
 }
+static void either_side_of_half_step(void)
+{
+    const char *text = "; ETCH_START X0 Y127.6\nG1 X1 F3600\nM2\n";
+    MachineSettings settings; MachineSettingsDefault(&settings); EtchTrace trace = {0};
+    MachinePlayback *recorded = record(text, settings, &trace);
+    double threshold = sqrt(2 * .025 / 250);
+    for (int side = -1; side <= 1; side += 2) {
+        double t = threshold + side * 1e-8;
+        MachinePlayback *plain = play_text(text, &settings);
+        assert(MachinePlaybackTick(plain, t));
+        MotionPoint cursor, motor; assert(EtchTraceSample(&trace, t, &cursor, &motor));
+        EtchStatus status = EtchDeviceGetStatus(MachinePlaybackDevice(plain));
+        near_sample(cursor, status.cursor_mm); near_sample(motor, status.motor_mm);
+        machine_point(cursor, side < 0 ? 0 : .05, 0);
+        machine_near(motor.x, .5 * 250 * t * t);
+        MachinePlaybackDestroy(plain);
+    }
+    MachinePlaybackDestroy(recorded); EtchTraceFree(&trace);
+}
 int main(void)
 {
     metadata_and_profiles(); nonuniform_steps_and_empty(); exact_feed_and_erase_boundaries();
+    either_side_of_half_step();
     puts("machine-trace: independent sampled cursor/motor positions within 1e-5 mm");
     return 0;
 }
