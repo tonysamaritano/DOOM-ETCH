@@ -86,6 +86,23 @@ void I_StartFrame(void)
         capturePending = YES;
     }
 }
+static void ToggleGPULayer(int key)
+{
+    switch (key) {
+    case KEY_F2: R_EtchHatchPattern((R_EtchHatchPatternValue() + 1) % 3); break;
+    case KEY_F3: R_EtchSpriteTextures(!R_EtchSpriteTexturesEnabled()); break;
+    case KEY_F4: R_EtchTextures(!R_EtchTexturesEnabled()); break;
+    case KEY_F5: R_EtchSprites(!R_EtchSpritesEnabled()); break;
+    case 'h':
+        R_EtchHUD(!R_EtchHUDEnabled());
+        R_SetViewSize(R_EtchHUDEnabled() ? 10 : 11, 0);
+        break;
+    case 'g': R_EtchWeapon(!R_EtchWeaponEnabled()); break;
+    case 'j': R_EtchWeaponTextures(!R_EtchWeaponTexturesEnabled()); break;
+    }
+    EtchGPUInvalidate();
+}
+
 void I_StartTic(void)
 {
     if (!window) return;
