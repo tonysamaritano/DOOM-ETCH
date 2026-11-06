@@ -32,6 +32,7 @@ set(CMAKE_OBJC_COMPILER "${CMAKE_C_COMPILER}" CACHE FILEPATH "Objective-C compil
 enable_language(OBJC)
 add_executable(doom-metal
     platform/darwin/main.m
+    platform/darwin/file_play.m
     platform/darwin/i_system.c
     platform/darwin/i_net.c
     platform/darwin/keyboard.m
