@@ -4,6 +4,8 @@
 #import <QuartzCore/CAMetalLayer.h>
 #import "keyboard.h"
 #import "etch_gpu.h"
+#import "etch_play.h"
+#include "live.h"
 #import <QuartzCore/CAMediaTiming.h>
 #include <errno.h>
 #include <limits.h>
@@ -34,6 +36,13 @@ static BOOL held[256];
 static unsigned presentedFrames, runFrames;
 static BOOL fileMode, fileClosed;
 static BOOL gpuEtch, capturePending;
+static BOOL playOnEtch,physicalRig;
+static EtchPlayView *playView;
+static MachineLive *live;
+static double livePrevious;
+static unsigned sceneGeneration,captureGeneration;
+static BOOL SceneActive(void)
+{ return gamestate == GS_LEVEL && !menuactive && !automapactive; }
 static BOOL GPUActive(void)
 { return gpuEtch && gamestate == GS_LEVEL && !menuactive && !automapactive; }
 unsigned I_MetalPresentedFrames(void) { return presentedFrames; }
@@ -96,6 +105,13 @@ static double ReadGPURate(void)
 
 void I_StartFrame(void)
 {
+    if (physicalRig) {
+        if (SceneActive() && gametic >= 20 && !capturePending && MachineLiveNeedsPath(live)) {
+            if (!R_EtchBegin(320,168)) I_Error("Cannot capture the physical rig scene");
+            capturePending=YES; captureGeneration=sceneGeneration;
+        }
+        return;
+    }
     if (!gpuEtch) return;
     BOOL active = GPUActive();
     EtchGPUTick(CACurrentMediaTime(), active);
@@ -118,12 +134,13 @@ static void ToggleGPULayer(int key)
     case 'g': R_EtchWeapon(!R_EtchWeaponEnabled()); break;
     case 'j': R_EtchWeaponTextures(!R_EtchWeaponTexturesEnabled()); break;
     }
-    EtchGPUInvalidate();
+    if (physicalRig) { sceneGeneration++; MachineLiveErase(live); }
+    else EtchGPUInvalidate();
 }
 
 static BOOL HandleGPUKey(int key, BOOL pressed)
 {
-    if (!gpuEtch) return NO;
+    if (!gpuEtch && !physicalRig) return NO;
     BOOL layerKey = key == KEY_F2 || key == KEY_F3 || key == KEY_F4 || key == KEY_F5
         || key == 'h' || key == 'g' || key == 'j';
     BOOL playbackKey = key == KEY_F7 || key == KEY_F8 || key == KEY_F9
@@ -131,7 +148,10 @@ static BOOL HandleGPUKey(int key, BOOL pressed)
     if (!layerKey && !playbackKey) return NO;
     if (pressed) {
         if (layerKey) ToggleGPULayer(key);
-        else EtchGPUAction(key);
+        else if (physicalRig) {
+            if (key==KEY_F7) { sceneGeneration++; MachineLiveErase(live); }
+            if (key==KEY_F9) MachineLivePause(live,!MachineLivePaused(live));
+        } else EtchGPUAction(key);
     }
     return YES;
 }
