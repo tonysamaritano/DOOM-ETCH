@@ -27,6 +27,18 @@ typedef struct SpriteFrame {
     int features_ready;
     struct SpriteFrame *next;
 } SpriteFrame;
+typedef struct {
+    int tier, family, row, x;
+    MotionSegment line;
+} WallHatch;
+typedef struct {
+    int tier, x;
+    const unsigned char *source, *light, *palette;
+    double mid, scale, next_scale, center, u, u_end;
+} WallTexture;
+static WallHatch *wall_hatches;
+static size_t hatch_count, hatch_capacity;
+
 static SpriteFrame *sprite_frames;
 static int sprites_enabled = 1;
 static int hud_enabled = 1, weapon_enabled = 1, hud_capture;
@@ -106,6 +118,9 @@ int R_EtchBuildMotion(MotionPath *path)
         success = MotionPlanSegments(path, walls, wall_count,
             (unsigned)width, (unsigned)height, (MotionPoint){0, 0});
     free(walls);
+    free(wall_hatches);
+    wall_hatches = NULL;
+    hatch_count = hatch_capacity = 0;
     walls = NULL;
     wall_count = wall_capacity = 0;
     hud_capture = 0;
@@ -133,6 +148,7 @@ void R_EtchWallBegin(void)
     if (!active || failed) return;
     if (wall_open) { failed = 1; return; }
     memset(samples, 0, sizeof(samples));
+    hatch_count = 0;
     wall_open = 1;
 }
 
