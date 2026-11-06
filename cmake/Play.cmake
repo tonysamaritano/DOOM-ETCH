@@ -3,6 +3,7 @@ target_sources(etch-controller PRIVATE machine/live.c)
 target_sources(doom-metal PRIVATE
     platform/darwin/etch_packet.m platform/darwin/etch_play.m)
 target_link_libraries(doom-metal PRIVATE "-framework WebKit")
+include(cmake/PlayResources.cmake)
 
 if(BUILD_TESTING)
     add_test(NAME machine-play-flags COMMAND "${CMAKE_COMMAND}"
