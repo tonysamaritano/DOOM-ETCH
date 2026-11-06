@@ -144,3 +144,25 @@ static double averageX(const SilLines *ink)
         sum += (ink->data[i].a.x + ink->data[i].b.x) * 0.5;
     return sum / ink->count;
 }
+
+static void flippedTextureAndDenseSpacing(void)
+{
+    Silhouette shape = ring();
+    for (unsigned y = 0; y < 32; ++y)
+        for (unsigned x = 16; x < 32; ++x)
+            if (shape.texels[y * 32 + x] != 256) shape.texels[y * 32 + x] = 255;
+    SilRects fill = {0}; SilLines boundary = {0}, normal = {0}, flipped = {0}, dense = {0};
+    project(&shape, 1, &fill, &boundary);
+    assert(SilHatch(&shape, &fill, 20, 10, 1, 1, light, palette, NULL, 0, &normal));
+    assert(averageX(&normal) < 36);
+    assert(SilHatchDetail(&shape, &fill, 20, 10, 1, 1, light, palette, NULL,
+                          0, 0.7975, &dense));
+    respectsOpacity(&dense, &fill); physicalSpacing(&dense, 0.7975);
+    assert(dense.count > normal.count);
+    project(&shape, -1, &fill, &boundary);
+    assert(SilHatch(&shape, &fill, 52, 10, -1, 1, light, palette, NULL, 0, &flipped));
+    assert(averageX(&flipped) > 36 && flipped.count == normal.count);
+    respectsOpacity(&flipped, &fill);
+    SilLinesFree(&normal); SilLinesFree(&flipped); SilLinesFree(&dense);
+    SilRectsFree(&fill); SilLinesFree(&boundary); SilhouetteFree(&shape);
+}
