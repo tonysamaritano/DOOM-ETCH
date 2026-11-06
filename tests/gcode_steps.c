@@ -41,7 +41,7 @@ int main(int argc, char **argv)
         } else if (!strncmp(line, "M0", 2)) ++c.erasures;
     }
     assert(!ferror(f) && start && c.moves); fclose(f);
-    printf("{\"moves\":%" PRIu64 ",\"erasures\":%" PRIu64
+    printf("{\"moves\":%" PRIu64 ",\"erases\":%" PRIu64
         ",\"steps_x\":%" PRIu64 ",\"steps_y\":%" PRIu64
         ",\"reversals_x\":%" PRIu64 ",\"reversals_y\":%" PRIu64 "}\n",
         c.moves, c.erasures, c.steps[0], c.steps[1], c.reversals[0], c.reversals[1]);
