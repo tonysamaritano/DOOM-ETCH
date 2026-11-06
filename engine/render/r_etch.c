@@ -22,10 +22,28 @@ static int width, height;
 typedef struct SpriteFrame {
     int lump;
     Silhouette shape;
+    SilLines features;
+    int features_ready;
     struct SpriteFrame *next;
 } SpriteFrame;
 static SpriteFrame *sprite_frames;
 static int sprites_enabled = 1;
+static int hud_enabled = 1, weapon_enabled = 1, hud_capture;
+
+void R_EtchHUD(int enabled) { hud_enabled = enabled != 0; }
+void R_EtchWeapon(int enabled) { weapon_enabled = enabled != 0; }
+int R_EtchHUDEnabled(void) { return hud_enabled; }
+int R_EtchWeaponActive(void) { return active && !failed && weapon_enabled; }
+int R_EtchHUDCapturing(void) { return hud_capture; }
+void R_EtchHUDEnd(void) { hud_capture = 0; }
+int R_EtchHUDBegin(void)
+{
+    if (!active || failed || !hud_enabled || width != 320 || (height != 168 && height != 200))
+        return 0;
+    hud_capture = 1;
+    height = 200;
+    return 1;
+}
 
 void R_EtchSprites(int enabled) { sprites_enabled = enabled != 0; }
 int R_EtchSpritesActive(void) { return active && !failed && sprites_enabled; }
@@ -51,6 +69,7 @@ void R_EtchResetSprites(void)
     while (sprite_frames) {
         SpriteFrame *next = sprite_frames->next;
         SilhouetteFree(&sprite_frames->shape);
+        SilLinesFree(&sprite_frames->features);
         free(sprite_frames);
         sprite_frames = next;
     }
@@ -70,19 +89,20 @@ int R_EtchBuildMotion(MotionPath *path)
     if (!active) return 0;
     active = 0;
     int success = 0;
-    if (path && !failed && !wall_open)
+    if (path && !failed && !wall_open && !hud_capture)
         success = MotionPlanSegments(path, walls, wall_count,
             (unsigned)width, (unsigned)height, (MotionPoint){0, 0});
     free(walls);
     walls = NULL;
     wall_count = wall_capacity = 0;
+    hud_capture = 0;
     return success;
 }
 
 void R_EtchFrameBegin(int w, int h)
 {
     if (!active) return;
-    failed = 0; wall_open = 0; wall_count = 0;
+    failed = 0; wall_open = 0; wall_count = 0; hud_capture = 0;
     if (w <= 0 || w > CAPTURE_WIDTH || h <= 0 || h > CAPTURE_HEIGHT) {
         failed = 1;
         return;
