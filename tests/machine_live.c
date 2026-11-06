@@ -4,13 +4,17 @@
 static unsigned char kinds[]={MOTION_START,MOTION_OUTLINE,MOTION_OUTLINE};
 static MotionPath path(MotionPoint *points,size_t count)
 {
-    return (MotionPath){points,kinds,count,170.15,127.6,170.15,127.6};
+    static MotionPoint source[3];assert(count<=3);
+    for(size_t i=0;i<count;i++)source[i]=(MotionPoint){points[i].x*20,points[i].y*20};
+    return (MotionPath){source,kinds,count,3403,2552,170.15,127.6};
 }
 static void submit(MachineLive *live,EtchDevice *direct,MotionPoint *points,size_t count)
 {
     MotionPath p=path(points,count);MachineParseError error={0};
     assert(MachineLiveNeedsPath(live));
-    assert(MachineLiveSubmit(live,&p,&error));
+    int accepted=MachineLiveSubmit(live,&p,&error);
+    if(!accepted)fprintf(stderr,"Live submit: line %zu: %s\n",error.line,error.message);
+    assert(accepted);
     assert(EtchDeviceSubmit(direct,points,count,60));
 }
 static void step(MachineLive *live,EtchDevice *direct,double seconds)
@@ -61,6 +65,7 @@ int main(void)
     assert(MachineLiveSubmit(live,&empty,&error) && MachineLiveNeedsPath(live));
     machine_near(MachineLiveSeconds(live),total);
     only[0]=(MotionPoint){0,0};
+    empty=path(only,1);
     assert(!MachineLiveSubmit(live,&empty,&error));
     compare_devices(MachineLiveDevice(live),direct);
     MotionPoint corner[]={{10,20},{110,20},{110,120}};
