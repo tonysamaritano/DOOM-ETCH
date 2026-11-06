@@ -39,6 +39,8 @@ rcsid[] = "$Id: r_segs.c,v 1.3 1997/01/29 20:10:19 b1 Exp $";
 
 #include "r_local.h"
 #include "r_sky.h"
+#include "w_wad.h"
+#include "z_zone.h"
 
 
 // OPTIMIZE: closed two sided lines as single sided
@@ -215,6 +217,10 @@ void R_RenderSegLoop (void)
     int			top;
     int			bottom;
 
+    double texture_u = 0, texture_u_end = 0;
+    const byte *etch_palette = R_EtchTexturesActive()
+        ? W_CacheLumpName("PLAYPAL", PU_STATIC) : NULL;
+
     //texturecolumn = 0;				// shut up compiler warning
 	
     R_EtchWallBegin();
@@ -268,6 +274,12 @@ void R_RenderSegLoop (void)
 	    // calculate texture offset
 	    angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 	    texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
+	    texture_u = (double)texturecolumn / FRACUNIT;
+	    if (R_EtchTexturesActive()) {
+	        angle_t next_angle = (rw_centerangle + xtoviewangle[rw_x + 1]) >> ANGLETOFINESHIFT;
+	        texture_u_end = (double)(rw_offset - FixedMul(finetangent[next_angle], rw_distance))
+	            / FRACUNIT;
+	    }
 	    texturecolumn >>= FRACBITS;
 	    // calculate lighting
 	    index = rw_scale>>LIGHTSCALESHIFT;
