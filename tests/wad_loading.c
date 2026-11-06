@@ -61,3 +61,26 @@ static void readWads(char **paths, const char *mode)
     W_ReadLump(0, &first);
     assert(first == 11);
 }
+
+int main(int argc, char **argv)
+{
+    assert(argc == 2);
+    char base[] = "/tmp/doom-etch-base-XXXXXX.wad";
+    char patch[] = "/tmp/doom-etch-patch-XXXXXX.wad";
+    char *paths[] = {base, patch, NULL};
+    writeWad(base, "valid", 11);
+    writeWad(patch, argv[1], 22);
+    pid_t child = fork();
+    assert(child >= 0);
+    if (!child) {
+        readWads(paths, argv[1]);
+        _exit(0);
+    }
+    int status;
+    assert(waitpid(child, &status, 0) == child);
+    unlink(base);
+    unlink(patch);
+    assert(WIFEXITED(status));
+    assert(WEXITSTATUS(status) == (!strcmp(argv[1], "valid") ? 0 : REJECTED));
+    return 0;
+}
