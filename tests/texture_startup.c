@@ -53,7 +53,7 @@ void Z_Free(void *ptr)
 static const unsigned char patchBytes[] = {
     2,0, 1,0, 0,0, 0,0, 16,0,0,0, 16,0,0,0, 0,1,0,7,0,255
 };
-static unsigned char textureBytes[76];
+static unsigned char textureBytes[78];
 static const unsigned char namesBytes[] = {1,0,0,0,'P','A','T','C','H',0,0,0};
 int W_CheckNumForName(char *name)
 {
@@ -107,7 +107,8 @@ static void MakeTextures(void)
 {
     Put32(textureBytes, 2);
     for (unsigned i = 0; i < 2; i++) {
-        unsigned offset = 12 + i * 32;
+        // WAD records can start on a two-byte boundary, as in shareware E1M1.
+        unsigned offset = 14 + i * 32;
         Put32(textureBytes + 4 + i * 4, offset);
         unsigned char *record = textureBytes + offset;
         memcpy(record, i ? "SECOND" : "FIRST", i ? 6 : 5);
