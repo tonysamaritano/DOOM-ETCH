@@ -43,6 +43,7 @@ target_link_libraries(doom-metal PRIVATE doom-engine
     "-framework AudioToolbox")
 
 if(BUILD_TESTING)
+    include(tests/critical.cmake)
     include(tests/wad_path.cmake)
     include(tests/texture_startup.cmake)
     include(tests/translation.cmake)
