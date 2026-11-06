@@ -18,7 +18,8 @@ static void rejected_programs(void)
         char text[256];
         snprintf(text, sizeof text, "; first physical line\n\n%s", invalid[i]);
         assert(!MachineGCodeParse(&p, text, NULL, &error));
-        assert(error.line >= 3 && error.message[0]);
+        assert(error.line == 3 + (strchr(invalid[i], '\n') != NULL));
+        assert(error.message[0]);
         assert(p.moves == owned && p.count == 1);
         machine_point(p.moves[0].cnc_mm, 2, 3);
         machine_near(p.moves[0].feed_mm_s, 60);
