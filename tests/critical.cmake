@@ -10,3 +10,10 @@ target_include_directories(keyboard-events-test PRIVATE platform/darwin engine/c
 target_compile_options(keyboard-events-test PRIVATE -UNDEBUG -fobjc-arc)
 target_link_libraries(keyboard-events-test PRIVATE "-framework AppKit")
 add_test(NAME keyboard-events COMMAND keyboard-events-test)
+
+add_executable(wad-loading-test tests/wad_loading.c)
+target_link_libraries(wad-loading-test PRIVATE doom-engine)
+target_compile_options(wad-loading-test PRIVATE -UNDEBUG)
+foreach(case valid header directory count payload index)
+    add_test(NAME wad-loading-${case} COMMAND wad-loading-test ${case})
+endforeach()
