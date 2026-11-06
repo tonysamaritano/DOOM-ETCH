@@ -202,6 +202,24 @@ void EtchGPUSetRate(double rate)
 void EtchGPUSetInstant(BOOL enabled) { EtchGPUQueueControl(EtchInstant, enabled != NO); }
 void EtchGPUInvalidate(void) { EtchGPUQueueControl(EtchInvalidate, 0); }
 
+static void EtchGPUChangeMode(BOOL enabled)
+{
+    instant = enabled; paused = NO; erasing = NO;
+    holdTime = eraseTime = 0; instantGhostElapsed = ghostInterval;
+    playhead = instant && current ? current.duration : 0;
+    needsPath = replaceRequested = controlClockReset = YES;
+}
+static void EtchGPUClearPaths(void)
+{
+    generation++;
+    current = pending = ghost = nil;
+    playhead = ghostTime = holdTime = eraseTime = 0;
+    erasing = replaceRequested = NO;
+    instantGhostElapsed = ghostInterval;
+    needsPath = controlClockReset = YES;
+    // Keep planning true until the one old worker finishes and discards its result.
+}
+
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
 {
     if (!snapshot || (!snapshot->segments && snapshot->count) || snapshot->count > 400000
