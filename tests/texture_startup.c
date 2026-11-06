@@ -67,3 +67,39 @@ int W_GetNumForName(char *name)
     assert(result >= 0);
     return result;
 }
+int W_LumpLength(int lump) { return lump == 2 ? sizeof(textureBytes) : 256; }
+void *W_CacheLumpName(char *name, int tag)
+{
+    (void)tag;
+    const void *source = !strcmp(name, "PNAMES") ? (const void *)namesBytes : textureBytes;
+    size_t length = !strcmp(name, "PNAMES") ? sizeof(namesBytes) : sizeof(textureBytes);
+    void *copy = malloc(length);
+    assert(copy);
+    memcpy(copy, source, length);
+    return copy;
+}
+void *W_CacheLumpNum(int lump, int tag)
+{
+    (void)tag;
+    assert(lump == 1);
+    return (void *)patchBytes;
+}
+void W_ReadLump(int lump, void *dest)
+{
+    assert(lump == 5);
+    uintptr_t address = (uintptr_t)dest;
+    fprintf(stderr, "colormap allocation=%p aligned=%p\n", (void *)colormapAllocation, dest);
+    assert((address & 255) == 0);
+    assert(address >= colormapAllocation && address - colormapAllocation <= 255);
+    memset(dest, 42, 256);
+}
+static void Put16(unsigned char *p, unsigned value)
+{
+    p[0] = value & 255;
+    p[1] = (value >> 8) & 255;
+}
+static void Put32(unsigned char *p, unsigned value)
+{
+    Put16(p, value);
+    Put16(p + 2, value >> 16);
+}
