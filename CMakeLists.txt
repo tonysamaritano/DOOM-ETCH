@@ -194,7 +194,8 @@ if(BUILD_TESTING)
 endif()
 
 add_library(etch-controller STATIC machine/gcode.c machine/steppers.c
-    machine/bridge.c machine/playback.c machine/run.c)
+    machine/bridge.c machine/playback.c machine/run.c
+    machine/trace.c machine/trace_source.c machine/trace_write.c)
 target_include_directories(etch-controller PUBLIC machine)
 target_link_libraries(etch-controller PUBLIC etch-simulator)
 if(BUILD_TESTING)
