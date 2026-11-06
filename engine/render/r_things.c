@@ -38,6 +38,7 @@ rcsid[] = "$Id: r_things.c,v 1.5 1997/02/03 16:47:56 b1 Exp $";
 #include "w_wad.h"
 
 #include "r_local.h"
+#include "r_etch.h"
 
 #include "doomstat.h"
 
@@ -946,6 +947,19 @@ void R_DrawSprite (vissprite_t* spr)
 		
     mfloorclip = clipbot;
     mceilingclip = cliptop;
+    if (R_EtchSpritesActive()) {
+        int lump = spr->patch + firstspritelump;
+        const patch_t *patch = W_CacheLumpNum(lump, PU_CACHE);
+        double scale_x = (double)FRACUNIT / spr->xiscale;
+        double scale_y = (double)spr->scale / FRACUNIT;
+        double origin_x = spr->x1 - (double)spr->startfrac / FRACUNIT * scale_x;
+        double origin_y = (double)(centeryfrac - FixedMul(spr->texturemid, spr->scale))
+            / FRACUNIT;
+        if (!R_EtchSpritePatch(lump, patch, W_LumpLength(lump),
+                origin_x, origin_y, scale_x, scale_y,
+                spr->x1, spr->x2, cliptop, clipbot))
+            I_Error("Cannot capture sprite silhouette for lump %d", lump);
+    }
     R_DrawVisSprite (spr, spr->x1, spr->x2);
 }
 
