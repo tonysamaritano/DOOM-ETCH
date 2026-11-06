@@ -183,6 +183,21 @@ static void rateBoundsAndQueuedOrder(void)
     EtchGPUShutdown();
 }
 
+static void rateScalesDrawingHoldAndFade(void)
+{
+    startFixture(); EtchGPUSetRate(2); EtchGPUTick(testClock, YES);
+    advance(.125); assert(fabs(playhead - .25) < 1e-9);
+    playhead = current.duration; holdTime = 0;
+    advance(.299); assert(!erasing && !EtchGPUNeedsPath());
+    advance(.002); assert(erasing && eraseTime == 0);
+    advance(.324); assert(!EtchGPUNeedsPath());
+    advance(.002); assert(EtchGPUNeedsPath());
+    EtchGPUShutdown();
+    startFixture(); EtchGPUSetRate(1.0 / 64); EtchGPUTick(testClock, YES);
+    advance(.5); assert(fabs(playhead - 1.0 / 128) < 1e-9);
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
