@@ -335,20 +335,18 @@ void EtchGPUTick(double now, BOOL active)
 {
     if (!isfinite(now) || !os_unfair_lock_trylock(&stateLock)) return;
     if (!running) { os_unfair_lock_unlock(&stateLock); return; }
+    EtchGPUControls();
     double dt = clockStarted ? now - previous : 0;
     previous = now; clockStarted = YES;
-    BOOL replaced = NO;
-    if (pending && (!current || (erasing && eraseTime >= eraseSeconds))) {
-        ghost = current;
-        ghostTime = current ? fmin(playhead, current.duration) : 0;
-        current = pending; pending = nil;
-        playhead = holdTime = eraseTime = 0; erasing = NO; replaced = YES;
+    BOOL replaced = controlClockReset; controlClockReset = NO;
+    BOOL advanceClock = active && !paused && !replaced && dt >= 0 && dt <= .5;
+    if (instant && advanceClock) instantGhostElapsed += dt;
+    if (pending && !paused && (!current || instant || replaceRequested
+            || (erasing && eraseTime >= eraseSeconds))) {
+        EtchGPUInstallPending(); replaced = YES;
     }
-    if (atomic_exchange(&eraseRequested, NO) && current && !erasing) {
-        erasing = YES; eraseTime = holdTime = 0; replaced = YES;
-    }
-    if (active && current && !replaced && dt >= 0 && dt <= .5)
-        EtchGPUAdvance(dt);
+    if (advanceClock && current && !replaced && !instant) EtchGPUAdvance(dt * drawRate);
+    if (instant && active && !paused && !planning && !pending) needsPath = YES;
     os_unfair_lock_unlock(&stateLock);
 }
 
