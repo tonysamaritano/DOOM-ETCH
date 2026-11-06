@@ -52,6 +52,9 @@ static void bounds(void)
     assert(box[BOXTOP] == 4 && box[BOXBOTTOM] == -3);
 }
 
+extern unsigned long SwapLONG(unsigned long value);
+extern unsigned short SwapSHORT(unsigned short value);
+
 static void endian(void)
 {
     const unsigned char disk[] = {0x42, 0x18, 0x75, 0x23};
@@ -59,6 +62,8 @@ static void endian(void)
     unsigned int value;
     memcpy(&word, disk, sizeof(word));
     memcpy(&value, disk, sizeof(value));
+    assert(SwapLONG(0x12345678) == 0x78563412);
+    assert(SwapSHORT(0xcabd) == 0xbdca);
     assert(SHORT(word) == 0x1842);
     assert(LONG(value) == 0x23751842);
 }
