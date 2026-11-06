@@ -98,7 +98,7 @@ const char *EtchPlayArgumentError(int argc,char **argv)
     if (_stopped) return;
     NSURL *url=task.request.URL; NSString *mime=nil; NSData *data=nil;
     if ([url.scheme isEqualToString:@"doomrig"] && [url.host isEqualToString:@"local"] &&
-        [url.path isEqualToString:@"/frame"]) {
+        !url.user && !url.password && !url.port && [url.path isEqualToString:@"/frame"]) {
         data=[_frames take]; mime=@"application/octet-stream";
     } else {
         NSURL *file=EtchPlayResource(_assets,url,&mime);
@@ -126,11 +126,23 @@ const char *EtchPlayArgumentError(int argc,char **argv)
     if ([body[@"type"] isEqual:@"ready"]) _ready=YES;
     else if ([body[@"type"] isEqual:@"presented"]) {
         NSNumber *sequence=body[@"sequence"];
-        double value=[sequence isKindOfClass:NSNumber.class] ? sequence.doubleValue : 0;
+        BOOL number=[sequence isKindOfClass:NSNumber.class] &&
+            CFGetTypeID((__bridge CFTypeRef)sequence)!=CFBooleanGetTypeID();
+        double value=number ? sequence.doubleValue : 0;
         if (isfinite(value) && value>0 && value<=9007199254740991.0 && floor(value)==value)
             [_frames acknowledge:(uint64_t)value];
     } else if ([body[@"type"] isEqual:@"error"])
         _failure=[body[@"message"] description] ?: @"Live rig script failed";
+}
+- (void)webView:(WKWebView *)web decidePolicyForNavigationAction:(WKNavigationAction *)action
+    decisionHandler:(void (^)(WKNavigationActionPolicy))decision
+{
+    (void)web;
+    NSURL *url=action.request.URL;
+    BOOL local=[url.scheme isEqualToString:@"doomrig"] && [url.host isEqualToString:@"local"] &&
+        !url.user && !url.password && !url.port;
+    if (!local && !_stopped) _failure=@"Live rig navigation left the staged local origin";
+    decision(local ? WKNavigationActionPolicyAllow : WKNavigationActionPolicyCancel);
 }
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)web
 {
