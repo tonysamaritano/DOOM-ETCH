@@ -30,3 +30,32 @@ static const char *attribute(const char *tag, const char *name)
     }
     assert(!"Missing SVG attribute"); return NULL;
 }
+
+static double number(const char **text)
+{
+    while (isspace((unsigned char)**text) || **text == ',') ++*text;
+    char *end;
+    double value = strtod(*text, &end);
+    assert(end != *text && isfinite(value));
+    *text = end;
+    return value;
+}
+static size_t validatePath(const char *text)
+{
+    const char *path = strstr(text, "<path");
+    assert(path && !strstr(path + 5, "<path"));
+    const char *data = attribute(path, "d");
+    char quote = data[-1];
+    size_t points = 0;
+    for (;;) {
+        while (isspace((unsigned char)*data)) ++data;
+        if (*data == quote) break;
+        assert(*data++ == (points ? 'L' : 'M'));
+        double x = number(&data), y = number(&data);
+        assert(x >= -1e-8 && x <= 170.15 + 1e-8);
+        assert(y >= -1e-8 && y <= 127.6 + 1e-8);
+        ++points;
+    }
+    assert(points > 1);
+    return points - 1;
+}
