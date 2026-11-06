@@ -232,6 +232,19 @@ void EtchGPUTick(double now, BOOL active)
     os_unfair_lock_unlock(&stateLock);
 }
 
+static EtchGPUFrame *EtchGPUFrameState(void)
+{
+    double fade = erasing ? fmin(1, eraseTime / eraseSeconds) : 0;
+    EtchGPUFrame *frame = [EtchGPUFrame new];
+    frame.current = current; frame.ghost = ghost;
+    frame.currentTime = playhead; frame.ghostTime = ghostTime;
+    frame.currentOpacity = (float)(1 - (1 - ghostOpacity) * fade);
+    frame.currentBlur = (float)(1.3 * fade);
+    frame.ghostOpacity = (float)(ghostOpacity * (1 - fade));
+    frame.ghostBlur = 1.3f;
+    return frame;
+}
+
 static BOOL EtchGPUEncode(id<MTLCommandBuffer> command, id<MTLTexture> target,
     EtchGPUPath *path, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
     double clock, double backingScale)
