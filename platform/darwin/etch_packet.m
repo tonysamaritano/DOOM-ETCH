@@ -58,7 +58,8 @@ NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence)
     NSData *_pixels,*_metadata;
     uint64_t _delivered,_outstanding;
     unsigned _limit,_presented;
-    BOOL _stopped;
+    BOOL _stopped,_watching,_wasVisible;
+    double _watchTime,_visibleElapsed;
 }
 - (instancetype)initWithLimit:(unsigned)limit
 {
@@ -79,7 +80,7 @@ NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence)
     NSDictionary *metadata=[NSJSONSerialization JSONObjectWithData:_metadata options:0 error:nil];
     NSData *packet=EtchPlayPacket(_pixels,metadata,_delivered+1);
     if (!packet) return nil;
-    _outstanding=++_delivered;
+    _outstanding=++_delivered; _watching=NO; _visibleElapsed=0;
     _pixels=_metadata=nil;
     return packet;
 }
@@ -90,6 +91,15 @@ NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence)
     return YES;
 }
 - (unsigned)presented { return _presented; }
+- (BOOL)acknowledgementHealthyAt:(double)now visible:(BOOL)visible
+{
+    if (!isfinite(now) || now<0) return NO;
+    if (!_outstanding || _stopped) { _watching=NO; return YES; }
+    if (_watching && now<_watchTime) return NO;
+    if (_watching && visible && _wasVisible) _visibleElapsed+=now-_watchTime;
+    _watchTime=now; _wasVisible=visible; _watching=YES;
+    return _visibleElapsed<15;
+}
 - (void)discardLatest { _pixels=_metadata=nil; }
 - (void)stop
 {
