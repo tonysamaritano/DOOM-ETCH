@@ -17,3 +17,18 @@ function metadataValid(m) {
     if(m.cursor_mm.some((x,i)=>x<0||x>m.travel_mm[i]))throw Error('Cursor outside physical travel');
   } else if(physicalFields.some(key=>Object.hasOwn(m,key)))throw Error('Physical state on a nonphysical frame');
 }
+export function decodeFrame(buffer) {
+  if(!(buffer instanceof ArrayBuffer))throw new TypeError('Frame must be an ArrayBuffer');
+  if(buffer.byteLength===0)return null;
+  if(buffer.byteLength<4)throw Error('Truncated frame header');
+  const jsonBytes=new DataView(buffer).getUint32(0,true);
+  if(!jsonBytes||jsonBytes>16384||jsonBytes>buffer.byteLength-4)throw Error('Invalid metadata length');
+  const json=new TextDecoder('utf-8',{fatal:true}).decode(new Uint8Array(buffer,4,jsonBytes));
+  const metadata=JSON.parse(json);metadataValid(metadata);
+  const pixelBytes=metadata.width*metadata.height*(metadata.kind==='bgra'?4:1);
+  const paletteBytes=metadata.kind==='indexed'?1024:0,offset=4+jsonBytes;
+  if(buffer.byteLength!==offset+pixelBytes+paletteBytes)throw Error('Packed pixel length mismatch');
+  const pixels=new Uint8Array(buffer,offset,pixelBytes);
+  const palette=paletteBytes?new Uint8Array(buffer,offset+pixelBytes,paletteBytes):null;
+  return {metadata,pixels,palette};
+}
