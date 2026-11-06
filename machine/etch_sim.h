@@ -26,4 +26,24 @@ typedef struct {
     int drawing, erasing;
 } EtchStatus;
 typedef struct EtchDevice EtchDevice;
+EtchConfig EtchAssumedDefaults(void);
+/* All positions are millimetres from top-left, +Y down; start is step-quantized. */
+EtchDevice *EtchCreate(EtchConfig configuration, MotionPoint start_mm);
+void EtchDestroy(EtchDevice *device);
+/* Busy/shaking submission fails unchanged. The owned copied path must begin at
+ * the current quantized cursor. Positive finite feed caps path speed only. */
+int EtchDeviceSubmit(EtchDevice *device, const MotionPoint *points_mm, size_t point_count,
+                     double path_feed_mm_s);
+int EtchDeviceSubmitHardware(EtchDevice *device, const MotionPoint *points_mm, size_t point_count);
+/* Tick accepts finite nonnegative seconds. elapsed_s is drawing-only time,
+ * resets on successful submission, and clamps to exact completed profiles.
+ * Idle/shake time is excluded; surplus tick time advances a requested shake. */
+int EtchDeviceTick(EtchDevice *device, double seconds);
+/* Finish the current segment, cancel later segments, then shake. Idle starts
+ * immediately; repeated requests do not restart the shake. Cursor/motors stay. */
+int EtchDeviceRequestErase(EtchDevice *device);
+int EtchDeviceReady(const EtchDevice *device);
+EtchStatus EtchDeviceGetStatus(const EtchDevice *device);
+/* Borrowed persistent classifications (not intensities); valid until destruction. */
+const unsigned char *EtchDeviceInk(const EtchDevice *device);
 #endif
