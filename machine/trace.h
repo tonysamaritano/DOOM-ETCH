@@ -26,7 +26,9 @@ FILE *EtchTraceSource(FILE *,EtchTrace *,MachineParseError *);
 /* Current accepted submission profile; local t0, no line/frame metadata. */
 int EtchDeviceProfile(const EtchDevice *,size_t index,EtchTraceSegment *);
 /* Finite times in [0,clock], completed traces only. Optional outputs are
- * unchanged on failure. Cursor uses axis step grids; motor is continuous. */
+ * unchanged on failure. Cursor uses axis step grids; motor is continuous.
+ * Global-time sampling may select an adjacent cell at an exact half-step tie
+ * compared with incremental ticks; continuous positions agree to roundoff. */
 int EtchTraceSample(const EtchTrace *,double time,MotionPoint *cursor,MotionPoint *motor);
 int EtchTraceRecordDevice(EtchTrace *,const EtchDevice *,const MachineStep *,size_t count,size_t frame);
 int EtchTraceRecordErase(EtchTrace *,double duration);
