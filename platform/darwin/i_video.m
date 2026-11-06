@@ -205,3 +205,20 @@ void I_WaitVBL(int count)
 void I_ReadScreen(byte *dest) { memcpy(dest, screens[0], SCREENWIDTH * SCREENHEIGHT); }
 void I_BeginRead(void) {}
 void I_EndRead(void) {}
+
+static void EncodeFrame(id<MTLRenderCommandEncoder> encoder, NSSize size)
+{
+    // Correct Doom's non-square pixels and letterbox resizable windows at 4:3.
+    double width = size.width, height = width * 0.75;
+    if (height > size.height) {
+        height = size.height;
+        width = height * 4.0 / 3.0;
+    }
+    double x = (size.width - width) / 2, y = (size.height - height) / 2;
+    [encoder setViewport:(MTLViewport){x, y, width, height, 0, 1}];
+    [encoder setRenderPipelineState:pipeline];
+    [encoder setFragmentTexture:indices atIndex:0];
+    [encoder setFragmentBytes:colors length:sizeof(colors) atIndex:0];
+    [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
+    [encoder endEncoding];
+}
