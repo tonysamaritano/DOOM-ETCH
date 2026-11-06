@@ -23,5 +23,13 @@ The remaining folders will arrive as the port and drawing system are built:
 - `assets/rig/`: the rig model.
 - `test-data/`: ignored local shareware `doom1.wad`; game data is not included.
 
-This layout step preserves engine code unchanged. The build returns in the
-next step with CMake; native macOS platform implementations follow it.
+Build the engine library on macOS with the active Xcode command-line tools:
+
+```sh
+cmake --preset test
+cmake --build --preset test --target doom-engine
+ctest --preset test
+```
+
+The `sanitize` and `coverage` presets instrument the engine separately.
+CTest has no tests yet; native macOS platform code and tests follow.
