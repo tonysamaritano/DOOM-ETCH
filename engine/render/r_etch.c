@@ -358,6 +358,9 @@ void R_EtchWallEnd(void)
         tier_edges(tier);
         tier_caps(tier);
     }
+    if (hatch_count) qsort(wall_hatches, hatch_count, sizeof(*wall_hatches), compare_wall_hatch);
+    for (size_t i = 0; i < hatch_count; ++i)
+        add_segment(wall_hatches[i].line.a, wall_hatches[i].line.b);
     wall_open = 0;
 }
 
