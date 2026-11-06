@@ -61,3 +61,36 @@ static double *setting(MachineSettings *s,const char *key)
     for (unsigned i=0;i<6;i++) if (!strcmp(key,keys[i])) return values[i];
     return NULL;
 }
+int MachineSettingsParse(MachineSettings *out,const char *assignment,MachineParseError *e)
+{
+    if (!out || !assignment) return fail(e,0,"missing settings assignment");
+    const char *equal=strchr(assignment,'=');
+    if (!equal || equal==assignment || (size_t)(equal-assignment)>31)
+        return fail(e,0,"expected setting=value");
+    char key[32]; size_t length=(size_t)(equal-assignment);
+    memcpy(key,assignment,length); key[length]=0;
+    MachineSettings next=*out; double *target=setting(&next,key);
+    if (!target) return fail(e,0,"unknown setting");
+    char *end; double value=strtod(equal+1,&end);
+    if (end==equal+1) return fail(e,0,"missing setting value");
+    while (*end==' ' || *end=='\t' || *end=='\r' || *end=='\n') end++;
+    if (*end || !isfinite(value)) return fail(e,0,"invalid setting value");
+    *target=value;
+    if (!MachineSettingsValidate(&next,e)) return 0;
+    *out=next; if (e) *e=(MachineParseError){0};
+    return 1;
+}
+/* Compile on the physical top-left grid. CNC Y is reflected exactly once. */
+static int target(const MachineSettings *s,MotionPoint cnc,int64_t steps[2])
+{
+    if (!isfinite(cnc.x) || !isfinite(cnc.y) || cnc.x<0 || cnc.y<0 ||
+        cnc.x>s->width_mm || cnc.y>s->height_mm) return 0;
+    double physical[2]={cnc.x,s->height_mm-cnc.y};
+    for (unsigned a=0;a<2;a++) {
+        double rate=s->steps_per_mm[a],extent=a ? s->height_mm : s->width_mm;
+        double index=fmin(round(physical[a]*rate),floor(extent*rate));
+        if (index/rate>extent) index=fmax(0,index-1);
+        steps[a]=(int64_t)index;
+    }
+    return 1;
+}
