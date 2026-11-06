@@ -121,3 +121,27 @@ void R_EtchWallColumn(int tier, int x, double top, double bottom,
     if (sample.bottom <= sample.top && sample.bottom_end <= sample.top_end) return;
     samples[tier][x] = sample;
 }
+
+static void add_segment(MotionPoint a, MotionPoint b)
+{
+    if (failed || (a.x == b.x && a.y == b.y)) return;
+    if (wall_count) {
+        MotionSegment *last = &walls[wall_count - 1];
+        double dx = last->b.x - last->a.x, dy = last->b.y - last->a.y;
+        double nx = b.x - a.x, ny = b.y - a.y;
+        if (last->b.x == a.x && last->b.y == a.y
+            && fabs(dx * ny - dy * nx) < 1e-8 && dx * nx + dy * ny > 0) {
+            last->b = b;
+            return;
+        }
+    }
+    if (wall_count == MAX_SEGMENTS) { failed = 1; return; }
+    if (wall_count == wall_capacity) {
+        size_t capacity = wall_capacity ? wall_capacity * 2 : 256;
+        if (capacity > MAX_SEGMENTS) capacity = MAX_SEGMENTS;
+        MotionSegment *next = realloc(walls, capacity * sizeof(*next));
+        if (!next) { failed = 1; return; }
+        walls = next; wall_capacity = capacity;
+    }
+    walls[wall_count++] = (MotionSegment){a, b};
+}
