@@ -62,3 +62,33 @@ static double coordinate(const char *text, char axis)
     assert(end > field + 1 && isfinite(value));
     return value;
 }
+
+static size_t svgPoints(const char *svg, MotionPoint *points)
+{
+    const char *path = strstr(svg, "<path");
+    assert(path && !strstr(path + 5, "<path"));
+    char data[8192]; attribute(path, "d", data, sizeof(data));
+    char *cursor = data;
+    size_t count = 0;
+    while (*cursor) {
+        while (isspace((unsigned char)*cursor)) ++cursor;
+        if (!*cursor) break;
+        assert(*cursor++ == (count ? 'L' : 'M'));
+        assert(count < 16);
+        char *end;
+        points[count].x = strtod(cursor, &end); assert(end != cursor); cursor = end;
+        while (isspace((unsigned char)*cursor) || *cursor == ',') ++cursor;
+        points[count].y = strtod(cursor, &end); assert(end != cursor); cursor = end;
+        assert(isfinite(points[count].x) && isfinite(points[count].y));
+        ++count;
+    }
+    return count;
+}
+static void physicalPoints(const MotionPath *path, const MotionPoint *actual, size_t count)
+{
+    assert(count == path->count);
+    for (size_t i = 0; i < count; ++i) {
+        assert(fabs(actual[i].x - path->points[i].x * 170.15 / 320) < 0.00001);
+        assert(fabs(actual[i].y - path->points[i].y * 127.6 / 200) < 0.00001);
+    }
+}
