@@ -60,9 +60,24 @@ static void device_grid_phase(void)
     MachineProgramFree(&p); MachineStepProgramFree(&out);
 }
 
+static void asymmetric_steps(void)
+{
+    MachineSettings s; MachineSettingsDefault(&s);
+    s.steps_per_mm[0] = 40; s.steps_per_mm[1] = 10;
+    MachineParseOptions options = {{1, 2}};
+    MachineProgram p = {0}; MachineStepProgram out = {0}; MachineParseError e = {0};
+    assert(MachineGCodeParse(&p, "G1 X1.025 Y2.1 F60\nX1 Y2", &options, &e));
+    assert(MachineSteppersCompile(&out, &p, &s, &e));
+    assert(out.start_steps[0] == 40 && out.start_steps[1] == 1256);
+    assert(out.moves[0].target_steps[0] == 41 && out.moves[0].target_steps[1] == 1255);
+    assert(out.total_steps[0] == 2 && out.total_steps[1] == 2);
+    assert(out.reversals[0] == 1 && out.reversals[1] == 1);
+    MachineProgramFree(&p); MachineStepProgramFree(&out);
+}
+
 int main(void)
 {
-    counters(); compile_rejection(); device_grid_phase();
+    counters(); compile_rejection(); device_grid_phase(); asymmetric_steps();
     puts("machine-steppers: device grid, counts and transactional compilation passed");
     return 0;
 }
