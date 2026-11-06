@@ -35,6 +35,7 @@ static void compile_rejection(void)
     p.moves[0].cnc_mm.x = NAN;
     assert(!MachineSteppersCompile(&out, &p, &s, &e));
     assert(out.moves == owned && out.count == 1);
+    p.moves[0].cnc_mm.x = 1;
     s.steps_per_mm[0] = 1e300;
     assert(!MachineSteppersCompile(&out, &p, &s, &e));
     assert(out.moves == owned);
