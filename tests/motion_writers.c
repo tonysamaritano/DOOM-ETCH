@@ -187,3 +187,25 @@ static void emittedFormatsAgree(void)
     free(svg); free(gcode);
     fclose(svgStream); fclose(codeStream);
 }
+
+static void writerArgumentFailures(void)
+{
+    MotionPath valid = writerFixture(), invalid = {0};
+    FILE *stream = tmpfile(); assert(stream);
+    assert(!MotionWriteSVG(NULL, &valid));
+    assert(!MotionWriteSVG(stream, NULL));
+    assert(!MotionWriteSVG(stream, &invalid));
+    assert(!MotionWriteGCode(NULL, &valid, 100));
+    assert(!MotionWriteGCode(stream, NULL, 100));
+    assert(!MotionWriteGCode(stream, &invalid, 100));
+    const double badFeed[] = {0, -10, NAN, INFINITY};
+    for (size_t i = 0; i < sizeof(badFeed) / sizeof(*badFeed); ++i)
+        assert(!MotionWriteGCode(stream, &valid, badFeed[i]));
+    assert(ftell(stream) == 0);
+    fclose(stream);
+}
+void MotionWriterTests(void)
+{
+    emittedFormatsAgree();
+    writerArgumentFailures();
+}
