@@ -39,6 +39,7 @@ static const char rcsid[] = "$Id: r_main.c,v 1.5 1997/02/03 22:45:12 b1 Exp $";
 
 #include "r_local.h"
 #include "r_sky.h"
+#include "r_etch.h"
 
 
 
@@ -870,6 +871,7 @@ void R_SetupFrame (player_t* player)
 void R_RenderPlayerView (player_t* player)
 {	
     R_SetupFrame (player);
+    R_EtchFrameBegin(viewwidth, viewheight);
 
     // Clear buffers.
     R_ClearClipSegs ();
