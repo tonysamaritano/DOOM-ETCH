@@ -24,3 +24,27 @@ static int timed_segment(const MotionPath *path, size_t index, double speed,
     *elapsed = next;
     return 1;
 }
+
+int MotionTimelineBuild(const MotionPath *path, double speed,
+    MotionTimedSegment **out, size_t *count, double *duration)
+{
+    if (out) *out = NULL;
+    if (count) *count = 0;
+    if (duration) *duration = 0;
+    if (!out || !count || !duration || !path || !path->count
+        || path->count > SIZE_MAX / sizeof(*path->points)
+        || path->count - 1 > SIZE_MAX / sizeof(MotionTimedSegment)
+        || !isfinite(speed) || speed <= 0 || !MotionValid(path)) return 0;
+    size_t length = path->count - 1;
+    MotionTimedSegment *segments = length ? calloc(length, sizeof(*segments)) : NULL;
+    if (length && !segments) return 0;
+    double elapsed = 0;
+    for (size_t i = 0; i < length; i++) {
+        if (!timed_segment(path, i, speed, &elapsed, &segments[i])) {
+            free(segments);
+            return 0;
+        }
+    }
+    *out = segments; *count = length; *duration = elapsed;
+    return 1;
+}
