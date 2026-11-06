@@ -205,3 +205,23 @@ static int shape_valid(const Silhouette *shape)
     }
     return 1;
 }
+
+static int project_rectangle(SilRect r, double ox, double oy, double sx, double sy,
+    int first, int last, const short *top, const short *bottom, unsigned height, SilRects *fill)
+{
+    double a = ox + r.x0 * sx, b = ox + r.x1 * sx;
+    double y0 = oy + r.y0 * sy, y1 = oy + r.y1 * sy;
+    if (!isfinite(a) || !isfinite(b) || !isfinite(y0) || !isfinite(y1)) return 0;
+    if (a > b) { double swap = a; a = b; b = swap; }
+    double left = fmax(first, a), right = fmin(last + 1, b);
+    if (left >= right) return 1;
+    for (int x = (int)floor(left); x < right;) {
+        int end = x + 1;
+        while (end < right && top[end] == top[x] && bottom[end] == bottom[x]) end++;
+        double low = fmax(y0, fmax(0, top[x] + 1));
+        double high = fmin(y1, fmin(height, bottom[x]));
+        if (!SilRectAdd(fill, (SilRect){fmax(left, x), low, fmin(right, end), high})) return 0;
+        x = end;
+    }
+    return 1;
+}
