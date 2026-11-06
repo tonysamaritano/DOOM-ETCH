@@ -89,6 +89,9 @@ static void direction_memory(void)
     MotionPoint back[] = {{100, 10}, {0, 10}};
     assert(EtchDeviceSubmitHardware(d, back, 2));
     near(EtchDeviceGetStatus(d).remaining_s, profile(100.15, 60, 250));
+    assert(EtchDeviceTick(d, .02)); /* .05 mm of .15 mm slack. */
+    point(EtchDeviceGetStatus(d).cursor_mm, 100, 10);
+    assert(EtchDeviceGetStatus(d).motor_mm.x < 100);
     assert(EtchDeviceTick(d, 10));
     point(EtchDeviceGetStatus(d).cursor_mm, 0, 10);
     EtchDestroy(d);
