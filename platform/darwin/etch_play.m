@@ -129,3 +129,41 @@ NSURL *EtchPlayResource(NSURL *root,NSURL *request,NSString **mime)
         HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":mime,@"Cache-Control":@"no-store"}];
     [task didReceiveResponse:response]; [task didReceiveData:data]; [task didFinish];
 }
+- (void)webView:(WKWebView *)web stopURLSchemeTask:(id<WKURLSchemeTask>)task
+{
+    // Scheme responses complete synchronously; no deferred task can outlive cancellation.
+    (void)web; (void)task;
+}
+- (void)userContentController:(WKUserContentController *)controller didReceiveScriptMessage:(WKScriptMessage *)message
+{
+    (void)controller;
+    if (_stopped || ![message.body isKindOfClass:NSDictionary.class]) return;
+    NSDictionary *body=message.body;
+    if ([body[@"type"] isEqual:@"ready"]) _ready=YES;
+    else if ([body[@"type"] isEqual:@"presented"]) {
+        NSNumber *sequence=body[@"sequence"];
+        double value=[sequence isKindOfClass:NSNumber.class] ? sequence.doubleValue : 0;
+        if (isfinite(value) && value>0 && value<=9007199254740991.0 && floor(value)==value)
+            [_frames acknowledge:(uint64_t)value];
+    } else if ([body[@"type"] isEqual:@"error"])
+        _failure=[body[@"message"] description] ?: @"Live rig script failed";
+}
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)web
+{
+    (void)web; _failure=@"Live rig WebContent process terminated";
+}
+- (void)webView:(WKWebView *)web didFailProvisionalNavigation:(WKNavigation *)navigation withError:(NSError *)error
+{
+    (void)web; (void)navigation; if (!_stopped) _failure=error.localizedDescription;
+}
+- (void)webView:(WKWebView *)web didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error
+{
+    (void)web; (void)navigation; if (!_stopped) _failure=error.localizedDescription;
+}
+- (void)stop
+{
+    _stopped=YES; _generation++; [_frames stop];
+    [_web.configuration.userContentController removeScriptMessageHandlerForName:@"presentation"];
+    [_web stopLoading]; _web.navigationDelegate=nil; [_web removeFromSuperview]; _web=nil;
+}
+@end
