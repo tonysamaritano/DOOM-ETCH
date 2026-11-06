@@ -95,3 +95,28 @@ static void copyAndFree(void)
     MotionFree(&copy);
     MotionFree(NULL);
 }
+
+static void validation(void)
+{
+    assert(!MotionValid(NULL));
+    MotionPath path = {0};
+    assert(!MotionValid(&path));
+    assert(MotionPlanSegments(&path, NULL, 0, 10, 10, (MotionPoint){10, 10}));
+    assert(MotionValid(&path) && path.count == 1 && path.kinds[0] == MOTION_START);
+    pointEquals(path.points[0], (MotionPoint){10, 10});
+    MotionPath invalid = path;
+    invalid.width = 0; assert(!MotionValid(&invalid));
+    invalid = path; invalid.width_mm = NAN; assert(!MotionValid(&invalid));
+    invalid = path; invalid.height_mm = -1; assert(!MotionValid(&invalid));
+    path.points[0].x = 10.01; assert(!MotionValid(&path));
+    path.points[0].x = NAN; assert(!MotionValid(&path));
+    path.points[0] = (MotionPoint){10, 10};
+    path.kinds[0] = MOTION_OUTLINE; assert(!MotionValid(&path));
+    path.kinds[0] = MOTION_START; assert(MotionValid(&path));
+    MotionFree(&path);
+    assert(MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){0, 0}));
+    path.kinds[1] = 99; assert(!MotionValid(&path));
+    path.kinds[1] = MOTION_START; assert(!MotionValid(&path));
+    path.kinds[1] = MOTION_OUTLINE; assert(MotionValid(&path));
+    MotionFree(&path);
+}
