@@ -29,6 +29,7 @@ rcsid[] = "$Id: p_maputl.c,v 1.5 1997/02/03 22:45:11 b1 Exp $";
 
 
 #include <stdlib.h>
+#include "i_system.h"
 
 
 #include "m_bbox.h"
@@ -600,6 +601,8 @@ PIT_AddLineIntercepts (line_t* ld)
     }
     
 	
+    if (intercept_p >= intercepts + MAXINTERCEPTS)
+        I_Error("PIT_AddLineIntercepts: MAXINTERCEPTS exceeded (%i)", MAXINTERCEPTS);
     intercept_p->frac = frac;
     intercept_p->isaline = true;
     intercept_p->d.line = ld;
