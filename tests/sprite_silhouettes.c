@@ -62,3 +62,34 @@ static int hasLineAt(const SilLines *lines, double x, double y)
         if (onLine((MotionPoint){x, y}, lines->data[i])) return 1;
     return 0;
 }
+
+static void expectedContour(const SilLines *actual, const MotionSegment *sides, size_t count)
+{
+    double covered[8] = {0}; assert(count <= 8);
+    for (size_t i = 0; i < actual->count; ++i) {
+        MotionSegment line = actual->data[i];
+        size_t side;
+        for (side = 0; side < count; ++side)
+            if (onLine(line.a, sides[side]) && onLine(line.b, sides[side])) break;
+        assert(side < count);
+        covered[side] += lineLength(line.a, line.b);
+    }
+    for (size_t side = 0; side < count; ++side)
+        assert(fabs(covered[side] - lineLength(sides[side].a, sides[side].b)) < 1e-8);
+}
+static void decodeHole(void)
+{
+    unsigned char patch[128]; size_t bytes = ringPatch(patch);
+    Silhouette shape = {0}; assert(SilhouetteDecode(&shape, patch, bytes));
+    assert(shape.width == 3 && shape.height == 3);
+    assert(fabs(area(&shape.fill) - 8) < 1e-9);
+    assert(filled(&shape.fill, 0.5, 1.5));
+    assert(!filled(&shape.fill, 1.5, 1.5));
+    const MotionSegment contour[] = {
+        {{0, 0}, {3, 0}}, {{3, 0}, {3, 3}}, {{3, 3}, {0, 3}}, {{0, 3}, {0, 0}},
+        {{1, 1}, {2, 1}}, {{2, 1}, {2, 2}}, {{2, 2}, {1, 2}}, {{1, 2}, {1, 1}}
+    };
+    expectedContour(&shape.outline, contour, 8);
+    SilhouetteFree(&shape); SilhouetteFree(&shape);
+    assert(!shape.width && !shape.height && !shape.fill.data && !shape.outline.data);
+}
