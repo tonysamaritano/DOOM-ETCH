@@ -35,7 +35,7 @@ if __name__ == '__main__':
     import json
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8770)
-    parser.add_argument('--three', type=Path, default=ROOT / 'build/vendor/three')
+    parser.add_argument('--three', type=Path, default=ROOT / 'viewer/vendor/three')
     args = parser.parse_args()
     three = args.three.resolve()
     try:
@@ -43,7 +43,7 @@ if __name__ == '__main__':
         assert package['name'] == 'three' and package['version'] == '0.163.0'
         assert (three / 'examples/jsm/postprocessing/BokehPass.js').is_file()
     except (OSError, ValueError, KeyError, AssertionError):
-        parser.error('--three must point to the complete local three.js 0.163.0 package')
+        parser.error('--three must contain the required browser modules from three.js 0.163.0')
     print(f'Viewer: http://127.0.0.1:{args.port}/viewer/index.html?trace=YOUR_TRACE_URL', flush=True)
     print(f'Local three.js: {three}', flush=True)
     ThreadingHTTPServer(('127.0.0.1', args.port), handler_for(three)).serve_forever()
