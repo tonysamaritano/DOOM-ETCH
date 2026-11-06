@@ -1,0 +1,7 @@
+if(BUILD_TESTING)
+    add_executable(sprite-names-test ${CMAKE_CURRENT_LIST_DIR}/sprite_names.c)
+    target_include_directories(sprite-names-test PRIVATE ${PROJECT_SOURCE_DIR}/engine/core)
+    target_compile_options(sprite-names-test PRIVATE -UNDEBUG)
+    add_test(NAME sprite-names-termination COMMAND sprite-names-test)
+    set_tests_properties(sprite-names-termination PROPERTIES TIMEOUT 10)
+endif()
