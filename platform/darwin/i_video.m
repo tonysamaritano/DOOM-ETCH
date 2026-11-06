@@ -476,3 +476,42 @@ static void PublishPhysicalCapture(BOOL active)
     MotionFree(&path);
     if (!ok) I_Error("Cannot submit the physical rig scene: %s",error.message);
 }
+static void DrawPhysicalRig(BOOL active,double seconds)
+{
+    if (!MachineLiveTick(live,seconds,active)) I_Error("Cannot advance the physical rig clock");
+    PublishPhysicalCapture(active);
+    if (active) {
+        byte palette[1024]; int shades[]={235,35,180};
+        for (unsigned i=0;i<256;i++) {
+            for (unsigned c=0;c<3;c++) palette[i*4+c]=(byte)shades[i<3 ? i : 0];
+            palette[i*4+3]=255;
+        }
+        EtchStatus status=EtchDeviceGetStatus(MachineLiveDevice(live));
+        NSDictionary *metadata=@{@"kind":@"indexed",@"mode":@"physical",@"width":@320,@"height":@200,
+            @"cursor_mm":@[@(status.cursor_mm.x),@(status.cursor_mm.y)],
+            @"motor_mm":@[@(status.motor_mm.x),@(status.motor_mm.y)],
+            @"travel_mm":@[@(MOTION_WIDTH_MM),@(MOTION_HEIGHT_MM)],
+            @"knob_mm_turn":@(MACHINE_ASSUMED_KNOB_MM_TURN),@"physical_seconds":@(MachineLiveSeconds(live))};
+        [playView publishIndices:EtchDeviceInk(MachineLiveDevice(live)) palette:palette metadata:metadata];
+    }
+    window.title=[NSString stringWithFormat:@"doom-etch · physical 1× · %.3f s · %@ · F7 erase · F9 pause",
+        MachineLiveSeconds(live),MachineLivePaused(live) ? @"paused" : @"unscaled motors"];
+}
+static void FinishRig(void)
+{
+    if (!window.isVisible || window.isMiniaturized) return;
+    [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate date]];
+    if (playView.failure) I_Error("Live rig: %s",playView.failure.UTF8String);
+    presentedFrames=playView.presented;
+    if (runFrames && presentedFrames>=runFrames) I_Quit();
+    double now=CACurrentMediaTime(),seconds=fmax(0,now-livePrevious);
+    livePrevious=now; BOOL active=SceneActive();
+    if (physicalRig) DrawPhysicalRig(active,seconds);
+    else {
+        EtchGPUTick(now,active); PublishCapture(active); UpdateGPUTitle();
+        if (EtchGPUError()) I_Error("Live rig GPU: %s",EtchGPUError());
+        if (active) [playView drawEtchWithQueue:queue];
+    }
+    if (!active) [playView publishIndices:screens[0] palette:colors metadata:
+        @{@"kind":@"indexed",@"mode":@"game",@"width":@320,@"height":@200}];
+}
