@@ -33,3 +33,38 @@ void I_Error(char *format, ...)
     exit(1);
 }
 void P_DamageMobj(mobj_t *a, mobj_t *b, mobj_t *c, int damage)
+{ (void)a; (void)b; (void)c; (void)damage; abort(); }
+boolean P_SetMobjState(mobj_t *thing, statenum_t state)
+{ (void)thing; (void)state; abort(); }
+void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher)
+{ (void)special; (void)toucher; abort(); }
+void P_CrossSpecialLine(int line, int side, mobj_t *thing)
+{ (void)line; (void)side; (void)thing; }
+static void scene(int count, int special)
+{
+    memset(rooms, 0, sizeof(rooms));
+    memset(links, 0, sizeof(links));
+    memset(&body, 0, sizeof(body));
+    memset(walls, 0, sizeof(walls));
+    for (int i = 0; i < 2; ++i) {
+        rooms[i].ceilingheight = MM(128);
+        areas[i].sector = &rooms[i];
+    }
+    for (int i = 0; i < count; ++i) {
+        fixed_t x = count == 1 ? 0 : -MM(4) + i * 1024;
+        endpoints[i * 2] = (vertex_t){x, -MM(128)};
+        endpoints[i * 2 + 1] = (vertex_t){x, MM(128)};
+        walls[i].v1 = &endpoints[i * 2];
+        walls[i].v2 = &endpoints[i * 2 + 1];
+        walls[i].dy = MM(256);
+        walls[i].slopetype = ST_VERTICAL;
+        walls[i].bbox[BOXLEFT] = walls[i].bbox[BOXRIGHT] = x;
+        walls[i].bbox[BOXBOTTOM] = -MM(128);
+        walls[i].bbox[BOXTOP] = MM(128);
+        walls[i].frontsector = &rooms[0];
+        walls[i].backsector = &rooms[1];
+        walls[i].flags = ML_TWOSIDED;
+        walls[i].special = special;
+        cells[16 + i] = i;
+    }
+    cells[16 + count] = -1;
