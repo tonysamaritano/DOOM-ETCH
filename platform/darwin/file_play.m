@@ -140,3 +140,37 @@ static void title(Presentation *p,NSWindow *window)
     window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@ · F6 replay · F7 shake · F9 pause",
         p->rate,MachinePlaybackSeconds(p->play),state];
 }
+static int present(MachinePlayback *play,const FileOptions *o)
+{
+    Presentation p={.play=play,.rate=o->rate,.last=CACurrentMediaTime()};
+    NSWindow *window=I_MetalFileOpen();
+    BOOL quit=NO; int ok=1;
+    while (!quit && !I_MetalFileClosed() && (!o->frames || I_MetalPresentedFrames()<o->frames)) {
+        @autoreleasepool {
+            if (!events(&p,window,&quit)) { ok=0; break; }
+            double now=CACurrentMediaTime(),delta=now-p.last;
+            p.last=now;
+            if (p.reset_clock) { delta=0; p.reset_clock=NO; }
+            if (!advance(&p,delta*p.rate)) { ok=0; break; }
+            title(&p,window);
+            const unsigned char *ink=p.shaken ? p.retained :
+                EtchDeviceInk(MachinePlaybackDevice(p.play));
+            double fade=p.shaking ? p.shake_time/MachinePlaybackProgram(p.play)->settings.erase_seconds : 0;
+            I_MetalFileDraw(ink,fade);
+            usleep(1000);
+        }
+    }
+    fprintf(stderr,"Presented %u frames\n",I_MetalPresentedFrames());
+    I_ShutdownGraphics(); MachinePlaybackDestroy(p.play);
+    return ok ? 0 : 1;
+}
+int EtchFileMain(int argc,char **argv)
+{
+    int file=0,scale=0;
+    for (int i=1;i<argc;i++) {
+        file|=!strcmp(argv[i],"--etch-gcode"); scale|=!strcmp(argv[i],"--etch-time-scale");
+    }
+    if (!file) {
+        if (scale) { fputs("--etch-time-scale requires standalone --etch-gcode\n",stderr); return 2; }
+        return -1;
+    }
