@@ -319,6 +319,37 @@ static void instantKeepsLatestSnapshotWhileWorkerBusy(void)
     EtchGPUShutdown();
 }
 
+static void instantQueuedOwnershipFollowsLifecycle(void)
+{
+    for (unsigned action = 0; action < 4; action++) {
+        startFixture(); EtchGPUSetInstant(YES); EtchGPUTick(testClock, YES);
+        dispatch_semaphore_t entered = dispatch_semaphore_create(0), unblock = dispatch_semaphore_create(0);
+        dispatch_async(plannerQueue, ^{
+            dispatch_semaphore_signal(entered);
+            dispatch_semaphore_wait(unblock, DISPATCH_TIME_FOREVER);
+        });
+        assert(dispatch_semaphore_wait(entered, dispatch_time(DISPATCH_TIME_NOW, 2 * NSEC_PER_SEC)) == 0);
+        for (unsigned i = 0; i < 2; i++) {
+            EtchSnapshot snapshot = {calloc(1, sizeof(MotionSegment)), 1, 100, 100};
+            assert(snapshot.segments); snapshot.segments[0] = (MotionSegment){{0, 0}, {40, 0}};
+            assert(EtchGPUOfferSnapshot(&snapshot) && !snapshot.segments);
+        }
+        assert(planning && latestSnapshot.segments);
+        if (action == 0) EtchGPUInvalidate();
+        if (action == 1) EtchGPUSetInstant(NO);
+        if (action == 2) EtchGPUAction(KEY_F9);
+        if (action < 3) {
+            EtchGPUTick(testClock, YES);
+            assert(!latestSnapshot.segments && !latestSnapshot.width && planning);
+        }
+        // Shutdown must free the queued owner before the blocked worker can resume.
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_MSEC),
+            dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0), ^{ dispatch_semaphore_signal(unblock); });
+        EtchGPUShutdown();
+        assert(!latestSnapshot.segments && !latestSnapshot.width && !planning);
+    }
+}
+
 int main(void)
 {
     @autoreleasepool {
@@ -332,6 +363,7 @@ int main(void)
         instantGhostCadenceIgnoresDrawingRate(); modeSwitchesClearPauseAndResetTimedDrawing();
         invalidationDiscardsInflightPlan(NO); invalidationDiscardsInflightPlan(YES);
         instantKeepsLatestSnapshotWhileWorkerBusy();
+        instantQueuedOwnershipFollowsLifecycle();
         puts("GPU ghost timing, prefix clipping, Metal pixels and resource lifetimes passed");
     }
     return EXIT_SUCCESS;
