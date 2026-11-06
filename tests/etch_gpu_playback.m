@@ -296,6 +296,9 @@ int main(void)
         }
         manualEraseFreezesRevealedPrefix(); automaticHoldAndErase();
         ghostPixelsExcludeUndrawnGeometry(); drainRetainsSubmittedResources();
+        rateBoundsAndQueuedOrder(); rateScalesDrawingHoldAndFade(); pauseAndManualErase();
+        instantGhostCadenceIgnoresDrawingRate(); modeSwitchesClearPauseAndResetTimedDrawing();
+        invalidationDiscardsInflightPlan(NO); invalidationDiscardsInflightPlan(YES);
         puts("GPU ghost timing, prefix clipping, Metal pixels and resource lifetimes passed");
     }
     return EXIT_SUCCESS;
