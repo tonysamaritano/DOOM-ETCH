@@ -32,3 +32,32 @@ static void advance(double seconds)
         testClock += step; EtchGPUTick(testClock, YES); seconds -= step;
     }
 }
+
+static void manualEraseFreezesRevealedPrefix(void)
+{
+    startFixture(); ghost = fixturePath(.15f); ghostTime = 2;
+    advance(.5); assert(fabs(playhead - .5) < 1e-9);
+    EtchGPUErase(); EtchGPUTick(testClock, YES);
+    assert(erasing && fabs(eraseTime) < 1e-9);
+    advance(.325);
+    assert(fabs(playhead - .5) < 1e-9 && !EtchGPUNeedsPath());
+    EtchGPUFrame *fading = EtchGPUFrameState();
+    assert(fabs(fading.currentTime - .5) < 1e-9);
+    assert(fabs(fading.currentOpacity - .5125) < 1e-5);
+    assert(fading.currentBlur > 0);
+    assert(fabs(fading.ghostOpacity - .0125) < 1e-5);
+    advance(.326);
+    assert(EtchGPUNeedsPath() && current == fading.current);
+    EtchGPUFrame *waiting = EtchGPUFrameState();
+    assert(fabs(waiting.currentOpacity - .025) < 1e-6 && waiting.currentBlur > 0);
+    assert(waiting.ghostOpacity == 0);
+    EtchGPUPath *old = current; pending = fixturePath(.2f);
+    EtchGPUTick(testClock, YES);
+    assert(ghost == old && current != old && !pending);
+    assert(fabs(ghostTime - .5) < 1e-9 && playhead == 0);
+    EtchGPUFrame *swapped = EtchGPUFrameState();
+    assert(fabs(swapped.ghostOpacity - .025) < 1e-6 && swapped.ghostBlur > 0);
+    assert(swapped.ghost == old && fabs(swapped.ghostTime - .5) < 1e-9);
+    assert(fading.current == old); /* Copied render state retains its immutable bundle. */
+    EtchGPUShutdown(); assert(!current && !pending && !ghost);
+}
