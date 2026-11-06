@@ -17,10 +17,24 @@
 @implementation EtchGPUPath
 @end
 
+/* Every queued render owns its two bundles and a copy of playback uniforms. */
+@interface EtchGPUFrame : NSObject
+@property(nonatomic, strong) EtchGPUPath *current;
+@property(nonatomic, strong) EtchGPUPath *ghost;
+@property(nonatomic) double currentTime, ghostTime;
+@property(nonatomic) float currentOpacity, currentBlur, ghostOpacity, ghostBlur;
+@end
+@implementation EtchGPUFrame
+@end
+
 static os_unfair_lock stateLock = OS_UNFAIR_LOCK_INIT;
 static id<MTLDevice> device;
 static id<MTLRenderPipelineState> linePipeline, backgroundPipeline;
-static EtchGPUPath *current, *pending;
+static EtchGPUPath *current, *pending, *ghost;
+static double ghostTime, holdTime, eraseTime;
+static BOOL erasing;
+static atomic_bool eraseRequested;
+static const double holdSeconds = .6, eraseSeconds = .65, ghostOpacity = .025;
 static dispatch_queue_t plannerQueue, renderQueue;
 static dispatch_semaphore_t renderGate;
 static dispatch_group_t renderGroup;

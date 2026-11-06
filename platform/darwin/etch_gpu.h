@@ -7,6 +7,7 @@
 void EtchGPUInit(id<MTLDevice> device, double visual_speed_mm_s);
 void EtchGPUShutdown(void);
 void EtchGPUTick(double now, BOOL active);
+void EtchGPUErase(void);
 BOOL EtchGPUNeedsPath(void);
 /* YES transfers and clears the snapshot; NO leaves ownership with the caller. */
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot);
