@@ -342,6 +342,7 @@ static void UpdateGPUTitle(void)
 static BOOL DrawGPU(void)
 {
     BOOL active = GPUActive();
+    EtchGPUTick(CACurrentMediaTime(), active); // Recheck after the engine tic wait.
     PublishCapture(active);
     UpdateGPUTitle();
     const char *error = EtchGPUError();
