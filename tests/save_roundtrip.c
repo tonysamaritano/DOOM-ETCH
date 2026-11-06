@@ -162,7 +162,7 @@ static void CheckObjects(void)
     assert(glow->sector == &sectors[7] && glow->direction == -1);
     assert(th != &thinkercap);
     ceiling_t *stopped = (ceiling_t *)th; th = th->next;
-    assert(stopped->sector == &sectors[8] && !th->prev->function.acp1);
+    assert(stopped->sector == &sectors[8] && !stopped->thinker.function.acp1);
     assert(stopped->olddirection == -1 && activeceilings[1] == stopped);
     assert(th != &thinkercap);
     plat_t *paused = (plat_t *)th; th = th->next;
@@ -188,10 +188,9 @@ static void RoundTrip(unsigned offset)
     memcpy(copy, buffer, length);
     memset(buffer, 0xa5, length); // loading cannot reuse the original save bytes
     BuildWorld(restored, restoredLine, restoredSides);
-    for (int i = 0; i < 10; i++) {
-        restored[i].floorheight = 0; restored[i].lightlevel = 0;
-    }
-    restoredSides[0].textureoffset = 0; restoredLine[0].tag = 0;
+    memset(restored, 0, sizeof(restored));
+    memset(restoredSides, 0, sizeof(restoredSides));
+    restoredLine[0].flags = restoredLine[0].special = restoredLine[0].tag = 0;
     memset(players, 0, sizeof(players));
     memset(activeceilings, 0, sizeof(activeceilings));
     memset(activeplats, 0, sizeof(activeplats));
