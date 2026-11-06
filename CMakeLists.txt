@@ -52,3 +52,12 @@ if(BUILD_TESTING)
     target_link_libraries(zone-startup-test PRIVATE doom-engine)
     add_test(NAME zone-startup-alignment COMMAND zone-startup-test)
 endif()
+
+add_executable(etch-capture tools/etch/capture.c tools/headless.c platform/darwin/i_net.c)
+target_link_libraries(etch-capture PRIVATE doom-engine)
+if(BUILD_TESTING)
+    find_package(Python3 3.12 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME pen-down-planner
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tests/test_plan.py")
+    set_tests_properties(pen-down-planner PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+endif()
