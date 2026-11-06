@@ -58,7 +58,7 @@ static int options(int argc,char **argv,FileOptions *o)
 typedef struct {
     MachinePlayback *play;
     double rate,shake_time,last;
-    BOOL paused,queued,shaking,shaken,reported,reset_clock;
+    BOOL paused,interrupted,shaking,shaken,reported,reset_clock;
     unsigned char retained[ETCH_INK_WIDTH*ETCH_INK_HEIGHT];
 } Presentation;
 static int replay(Presentation *p)
@@ -67,7 +67,7 @@ static int replay(Presentation *p)
     MachinePlayback *fresh=MachinePlaybackCreate(MachinePlaybackProgram(p->play),&error);
     if (!fresh) { fprintf(stderr,"Replay: %s\n",error.message); return 0; }
     MachinePlaybackDestroy(p->play); p->play=fresh;
-    p->paused=p->queued=p->shaking=p->shaken=p->reported=NO;
+    p->paused=p->interrupted=p->shaking=p->shaken=p->reported=NO;
     p->shake_time=0; p->reset_clock=YES; memset(p->retained,0,sizeof(p->retained));
     return 1;
 }
@@ -85,7 +85,10 @@ static int events(Presentation *p,NSWindow *window,BOOL *quit)
                 p->rate=EtchVisualRateKey(p->rate,key);
                 if (key==KEY_F6 && !replay(p)) return 0;
                 if (key==KEY_F9) { p->paused=!p->paused; p->reset_clock=YES; }
-                if (key==KEY_F7 && !p->shaken && !p->shaking) p->queued=YES;
+                if (key==KEY_F7 && !p->shaken && !p->shaking) {
+                    p->interrupted=YES; p->shaking=YES; p->shake_time=0;
+                    memcpy(p->retained,EtchDeviceInk(MachinePlaybackDevice(p->play)),sizeof(p->retained));
+                }
             }
             continue;
         }
@@ -112,19 +115,15 @@ static void retain_ghost(Presentation *p)
 }
 static int advance(Presentation *p,double seconds)
 {
-    if (!p->paused && !MachinePlaybackDone(p->play) && !MachinePlaybackTick(p->play,seconds)) {
+    if (!p->paused && !p->interrupted && !MachinePlaybackDone(p->play) && !MachinePlaybackTick(p->play,seconds)) {
         const MachineParseError *e=MachinePlaybackError(p->play);
         fprintf(stderr,"Playback:%zu: %s\n",e->line,e->message); return 0;
     }
-    if (MachinePlaybackDone(p->play)) {
+    if (MachinePlaybackDone(p->play) && !p->interrupted) {
         if (!p->reported) {
             if (!MachineReport(stdout,MachinePlaybackProgram(p->play),MachinePlaybackSeconds(p->play),1))
                 return 0;
             p->reported=YES;
-        }
-        if (p->queued && !p->paused) {
-            p->queued=NO; p->shaking=YES; p->shake_time=0;
-            return 1;
         }
     }
     if (p->shaking && !p->paused) {
@@ -136,10 +135,10 @@ static int advance(Presentation *p,double seconds)
 static void title(Presentation *p,NSWindow *window)
 {
     NSString *state=p->paused ? @"paused" : p->shaking ? @"presentation shake" :
-        p->queued ? @"shake queued after file" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
-    NSString *queued=p->queued ? @" · shake queued after file" : @"";
+        p->interrupted ? @"file interrupted · F6 to replay" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
+    NSString *interrupted=p->interrupted ? @" · file interrupted · F6 to replay" : @"";
     window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@%@ · F6 replay · F7 shake · F9 pause",
-        p->rate,MachinePlaybackSeconds(p->play),state,queued];
+        p->rate,MachinePlaybackSeconds(p->play),state,interrupted];
 }
 static int present(MachinePlayback *play,const FileOptions *o)
 {
@@ -155,7 +154,7 @@ static int present(MachinePlayback *play,const FileOptions *o)
             if (p.reset_clock) { delta=0; p.reset_clock=NO; }
             if (!advance(&p,delta*p.rate)) { ok=0; break; }
             title(&p,window);
-            const unsigned char *ink=p.shaken ? p.retained :
+            const unsigned char *ink=p.interrupted ? p.retained :
                 EtchDeviceInk(MachinePlaybackDevice(p.play));
             double fade=p.shaking ? p.shake_time/MachinePlaybackProgram(p.play)->settings.erase_seconds : 0;
             I_MetalFileDraw(ink,fade);
