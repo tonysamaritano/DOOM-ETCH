@@ -56,3 +56,34 @@ int SilRectAdd(SilRects *rectangles, SilRect rectangle)
     rectangles->data = next; rectangles->data[rectangles->count++] = rectangle;
     return 1;
 }
+
+int SilLineAdd(SilLines *lines, MotionPoint a, MotionPoint b)
+{
+    if (!lines || !collection_valid(lines->data, lines->count, lines->capacity)
+        || !coordinate(a.x) || !coordinate(a.y) || !coordinate(b.x) || !coordinate(b.y)) return 0;
+    if (a.x == b.x && a.y == b.y) return 1;
+    MotionSegment *next = reserve(lines->data, &lines->capacity, lines->count, sizeof(*next));
+    if (!next) return 0;
+    lines->data = next; lines->data[lines->count++] = (MotionSegment){a, b};
+    return 1;
+}
+static int rectangles_valid(const SilRects *rectangles)
+{
+    if (!rectangles || !collection_valid(rectangles->data, rectangles->count, rectangles->capacity))
+        return 0;
+    for (size_t i = 0; i < rectangles->count; i++) {
+        SilRect r = rectangles->data[i];
+        if (!rectangle_valid(r) || r.x0 >= r.x1 || r.y0 >= r.y1) return 0;
+    }
+    return 1;
+}
+static int lines_valid(const SilLines *lines)
+{
+    if (!lines || !collection_valid(lines->data, lines->count, lines->capacity)) return 0;
+    for (size_t i = 0; i < lines->count; i++) {
+        MotionSegment s = lines->data[i];
+        if (!coordinate(s.a.x) || !coordinate(s.a.y) || !coordinate(s.b.x) || !coordinate(s.b.y))
+            return 0;
+    }
+    return 1;
+}
