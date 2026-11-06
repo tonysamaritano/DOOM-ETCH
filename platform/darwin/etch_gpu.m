@@ -551,3 +551,21 @@ static void EtchGPUReadRender(id<MTLCommandQueue> queue,EtchGPUFrame *frame,
         [command commit];
     }
 }
+BOOL EtchGPUReadPixels(id<MTLCommandQueue> queue,void (^completion)(NSData *))
+{
+    if (!queue || !completion) return NO;
+    dispatch_semaphore_t gate=renderGate;
+    if (!gate || dispatch_semaphore_wait(gate,DISPATCH_TIME_NOW)!=0) return NO;
+    if (!os_unfair_lock_trylock(&stateLock)) { dispatch_semaphore_signal(gate); return NO; }
+    EtchGPUControls();
+    if (!running || failure[0]) {
+        os_unfair_lock_unlock(&stateLock); dispatch_semaphore_signal(gate); return NO;
+    }
+    EtchGPUFrame *frame=EtchGPUFrameState();
+    id<MTLRenderPipelineState> background=backgroundPipeline,lines=linePipeline;
+    dispatch_group_t group=renderGroup; dispatch_queue_t renderer=renderQueue;
+    dispatch_group_enter(group);
+    os_unfair_lock_unlock(&stateLock);
+    dispatch_async(renderer,^{ EtchGPUReadRender(queue,frame,background,lines,gate,group,completion); });
+    return YES;
+}
