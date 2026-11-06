@@ -30,3 +30,35 @@ static size_t ringPatch(unsigned char patch[128])
     }
     return at;
 }
+
+static double area(const SilRects *rectangles)
+{
+    double sum = 0;
+    for (size_t i = 0; i < rectangles->count; ++i) {
+        SilRect r = rectangles->data[i];
+        assert(r.x1 > r.x0 && r.y1 > r.y0);
+        sum += (r.x1 - r.x0) * (r.y1 - r.y0);
+    }
+    return sum;
+}
+static int filled(const SilRects *rectangles, double x, double y)
+{
+    for (size_t i = 0; i < rectangles->count; ++i) {
+        SilRect r = rectangles->data[i];
+        if (x > r.x0 && x < r.x1 && y > r.y0 && y < r.y1) return 1;
+    }
+    return 0;
+}
+static double lineLength(MotionPoint a, MotionPoint b)
+{ return hypot(a.x - b.x, a.y - b.y); }
+static int onLine(MotionPoint point, MotionSegment line)
+{
+    return fabs(lineLength(line.a, point) + lineLength(point, line.b)
+                - lineLength(line.a, line.b)) < 1e-8;
+}
+static int hasLineAt(const SilLines *lines, double x, double y)
+{
+    for (size_t i = 0; i < lines->count; ++i)
+        if (onLine((MotionPoint){x, y}, lines->data[i])) return 1;
+    return 0;
+}
