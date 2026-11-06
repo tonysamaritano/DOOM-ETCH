@@ -62,3 +62,43 @@ static int valid_program(const MachineStepProgram *p,MachineParseError *e)
     }
     return 1;
 }
+static int advance(MachinePlayback *p)
+{
+    if (p->next==p->program.count) { p->done=1; p->active=0; return 1; }
+    const MachineStep *s=&p->program.moves[p->next];
+    if (s->kind==MACHINE_MOVE_END) { p->next++; p->done=1; p->active=0; return 1; }
+    if (s->kind==MACHINE_MOVE_PAUSE) {
+        p->next++; p->active=2;
+        return EtchDeviceRequestErase(p->device) ? 1 : runtime_fail(p,s->line,"erase rejected");
+    }
+    size_t first=p->next;
+    double feed=s->feed_mm_s;
+    while (p->next<p->program.count) {
+        const MachineStep *next=&p->program.moves[p->next];
+        if (next->kind>=MACHINE_MOVE_PAUSE || next->feed_mm_s!=feed) break;
+        p->next++;
+    }
+    if (!MachineSubmitBatch(p->device,&p->program,first,p->next-first,&p->error)) {
+        p->failed=1; return 0;
+    }
+    p->active=1; return 1;
+}
+MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *program,MachineParseError *e)
+{
+    if (!valid_program(program,e)) return NULL;
+    MachinePlayback *p=calloc(1,sizeof(*p));
+    if (!p) { fail(e,0,"out of memory"); return NULL; }
+    p->program=*program; p->program.moves=NULL;
+    if (program->count) {
+        p->program.moves=malloc(program->count*sizeof(*program->moves));
+        if (!p->program.moves) { fail(e,0,"out of memory"); MachinePlaybackDestroy(p); return NULL; }
+        memcpy(p->program.moves,program->moves,program->count*sizeof(*program->moves));
+    }
+    MotionPoint start={program->start_steps[0]/program->settings.steps_per_mm[0],
+                       program->start_steps[1]/program->settings.steps_per_mm[1]};
+    p->device=EtchCreate(MachineSettingsConfig(&program->settings),start);
+    if (!p->device) { fail(e,0,"invalid device configuration"); MachinePlaybackDestroy(p); return NULL; }
+    if (!advance(p) || !MachinePlaybackTick(p,0)) {
+        if (e) *e=p->error;
+        MachinePlaybackDestroy(p); return NULL;
+    }
