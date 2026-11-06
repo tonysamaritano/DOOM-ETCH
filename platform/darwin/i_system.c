@@ -30,3 +30,19 @@ byte *I_ZoneBase(int *size)
         I_Error("Could not allocate the %d-byte Doom zone", *size);
     return zone;
 }
+
+byte *I_AllocLow(int length)
+{
+    byte *memory = calloc((size_t)length, 1);
+    if (!memory)
+        I_Error("Could not allocate %d bytes", length);
+    return memory;
+}
+
+/* The optional DOS tactile device has no equivalent on this platform. */
+void I_Tactile(int on, int off, int total)
+{
+    (void)on;
+    (void)off;
+    (void)total;
+}
