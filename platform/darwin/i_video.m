@@ -41,6 +41,7 @@ static EtchPlayView *playView;
 static MachineLive *live;
 static double livePrevious;
 static unsigned sceneGeneration,captureGeneration;
+static void FinishRig(void);
 static BOOL SceneActive(void)
 { return gamestate == GS_LEVEL && !menuactive && !automapactive; }
 static BOOL GPUActive(void)
@@ -437,7 +438,11 @@ static void FinishUpdate(const byte *frame)
     }
 }
 
-void I_FinishUpdate(void) { FinishUpdate(screens[0]); }
+void I_FinishUpdate(void)
+{
+    if (playView) { @autoreleasepool { FinishRig(); } }
+    else FinishUpdate(screens[0]);
+}
 
 NSWindow *I_MetalFileOpen(void)
 {
