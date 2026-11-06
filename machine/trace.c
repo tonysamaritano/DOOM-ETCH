@@ -31,3 +31,35 @@ int EtchTraceRecordErase(EtchTrace *t,double duration)
     t->erases[t->erase_count++]=(EtchTraceErase){t->clock,duration};
     t->clock+=duration; return 1;
 }
+int EtchTraceRecordDevice(EtchTrace *t,const EtchDevice *d,const MachineStep *steps,
+                          size_t count,size_t frame)
+{
+    EtchStatus status=EtchDeviceGetStatus(d);
+    if (!t || !d || t->failed || t->completed || (count && !steps) ||
+        count!=status.count || count>SIZE_MAX-t->count) return 0;
+    double duration=status.elapsed_s+status.remaining_s,finish=t->clock+duration;
+    if (!isfinite(finish) || (duration>0 && finish<=t->clock)) { t->failed=1; return 0; }
+    if (!reserve((void **)&t->segments,&t->capacity,t->count+count,sizeof(*t->segments))) {
+        t->failed=1; return 0;
+    }
+    for (size_t i=0;i<count;i++) {
+        EtchTraceSegment segment;
+        if (!EtchDeviceProfile(d,i,&segment)) { t->failed=1; return 0; }
+        segment.t0+=t->clock; segment.line=steps[i].line; segment.frame=frame;
+        t->segments[t->count+i]=segment;
+    }
+    t->count+=count; t->clock=finish;
+    return 1;
+}
+static double sample_grid(double value,double step,double extent)
+{
+    double reciprocal=1/step;
+    double maximum=isfinite(reciprocal) ? floor(extent*reciprocal) : floor(extent/step);
+    double index=isfinite(reciprocal) ? round(value*reciprocal) : round(value/step);
+    index=fmin(index,maximum);
+    double result=isfinite(reciprocal) ? index/reciprocal : index*step;
+    if (result>extent) {
+        index=fmax(0,index-1); result=isfinite(reciprocal) ? index/reciprocal : index*step;
+    }
+    return result;
+}
