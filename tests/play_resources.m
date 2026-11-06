@@ -26,6 +26,20 @@ int main(void)
         NSString *mime=nil;
         assert(EtchPlayResource(root,[NSURL URLWithString:@"doomrig://local/"],&mime));
         assert([mime isEqualToString:@"text/html"]);
+        NSURL *outside=[base URLByAppendingPathComponent:@"outside.js"];
+        assert([[NSData data] writeToURL:outside atomically:YES]);
+        assert([files createSymbolicLinkAtPath:[root.path stringByAppendingPathComponent:@"escape.js"]
+            withDestinationPath:outside.path error:nil]);
+        for(NSString *address in @[@"https://local/index.html",@"doomrig://elsewhere/index.html",
+            @"doomrig://local:123/index.html",@"doomrig://user@local/index.html",
+            @"doomrig://user:password@local/index.html",@"doomrig://local/escape.js",
+            @"doomrig://local/%2e%2e/outside.js",@"doomrig://local/%252e%252e/outside.js",
+            @"doomrig://local/missing.js",@"doomrig://local/shared/",
+            @"doomrig://local/package.json"]) {
+            mime=@"unchanged";
+            assert(!EtchPlayResource(root,[NSURL URLWithString:address],&mime));
+            assert([mime isEqualToString:@"unchanged"]);
+        }
         assert([files removeItemAtURL:base error:nil]);
         puts("PASS actual staged resource paths and MIME types");
     }
