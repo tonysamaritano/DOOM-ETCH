@@ -169,3 +169,36 @@ static int graph_adjacency(Graph *graph)
     memcpy(graph->cursor, graph->offset, vertices * sizeof(*graph->cursor));
     return 1;
 }
+
+/* Storage is reserved for every DFS step and one connector per component. */
+static void append_move(MotionPath *path, MotionPoint point, unsigned char kind)
+{
+    MotionPoint previous = path->points[path->count - 1];
+    if (same_point(previous, point)) return;
+    if (path->count >= 2 && kind == MOTION_OUTLINE
+        && path->kinds[path->count - 1] == MOTION_OUTLINE) {
+        MotionPoint before = path->points[path->count - 2];
+        double dx = previous.x - before.x, dy = previous.y - before.y;
+        double nx = point.x - previous.x, ny = point.y - previous.y;
+        if (fabs(dx * ny - dy * nx) < 1e-9 && dx * nx + dy * ny > 0) {
+            path->points[path->count - 1] = point;
+            return;
+        }
+    }
+    path->points[path->count] = point;
+    path->kinds[path->count++] = kind;
+}
+
+static size_t closest_vertex(const Graph *graph, MotionPoint point)
+{
+    size_t closest = graph->vertex_count;
+    double best = HUGE_VAL;
+    for (size_t i = 0; i < graph->vertex_count; i++) {
+        if (!graph->degree[i]) continue;
+        MotionPoint candidate = graph->vertices[i].point;
+        double dx = candidate.x - point.x, dy = candidate.y - point.y;
+        double distance = dx * dx + dy * dy;
+        if (distance < best) { best = distance; closest = i; }
+    }
+    return closest;
+}
