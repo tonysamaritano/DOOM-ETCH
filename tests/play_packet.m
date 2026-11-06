@@ -42,7 +42,13 @@ static void ownership(void)
     assert([header(latest)[@"width"] intValue]==320);
     assert([header(latest)[@"sequence"] unsignedLongLongValue]==2);
     assert(firstPixel(a)==1 && q.presented==1);
-    [q stop];assert(![q acknowledge:2] && [q take].length==0);
+    assert([q publishPixels:pixels(4) metadata:game()]);[q discardLatest];
+    assert([q take].length==0 && q.presented==1);
+    assert([q acknowledge:2] && [q take].length==0);
+    assert([q publishPixels:pixels(5) metadata:game()]);
+    NSData *fresh=[q take];assert(firstPixel(fresh)==5);
+    assert([header(fresh)[@"sequence"] unsignedLongLongValue]==3);
+    [q stop];assert(![q acknowledge:3] && [q take].length==0);
     assert(![q publishPixels:pixels(4) metadata:game()]);
 }
 static void limit(void)
