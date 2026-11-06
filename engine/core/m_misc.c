@@ -318,10 +318,9 @@ void M_SaveDefaults (void)
 		
     for (i=0 ; i<numdefaults ; i++)
     {
-	if (defaults[i].defaultvalue > -0xfff
-	    && defaults[i].defaultvalue < 0xfff)
+	if (!defaults[i].stringdefault)
 	{
-	    v = *defaults[i].location;
+	    v = *(int *)defaults[i].location;
 	    fprintf (f,"%s\t\t%i\n",defaults[i].name,v);
 	} else {
 	    fprintf (f,"%s\t\t\"%s\"\n",defaults[i].name,
@@ -352,7 +351,12 @@ void M_LoadDefaults (void)
     // set everything to base values
     numdefaults = sizeof(defaults)/sizeof(defaults[0]);
     for (i=0 ; i<numdefaults ; i++)
-	*defaults[i].location = defaults[i].defaultvalue;
+	{
+        if (defaults[i].stringdefault)
+            *(char **)defaults[i].location = defaults[i].stringdefault;
+        else
+            *(int *)defaults[i].location = defaults[i].defaultvalue;
+    }
     
     // check for a custom default file
     i = M_CheckParm ("-config");
@@ -389,11 +393,10 @@ void M_LoadDefaults (void)
 		for (i=0 ; i<numdefaults ; i++)
 		    if (!strcmp(def, defaults[i].name))
 		    {
-			if (!isstring)
-			    *defaults[i].location = parm;
-			else
-			    *defaults[i].location =
-				(int) newstring;
+			if (!isstring && !defaults[i].stringdefault)
+                            *(int *)defaults[i].location = parm;
+                        else if (isstring && defaults[i].stringdefault)
+                            *(char **)defaults[i].location = newstring;
 			break;
 		    }
 	    }
