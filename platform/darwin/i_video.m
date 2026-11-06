@@ -163,10 +163,18 @@ void I_InitGraphics(void)
 {
     presentedFrames = runFrames = 0;
     ReadFrameLimit();
+    gpuEtch = M_CheckParm("--etch-gpu") != 0;
+    capturePending = NO;
     @autoreleasepool {
         [NSApplication sharedApplication];
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
         InitRenderer();
+        if (gpuEtch) {
+            // Visual playback speed, independent of the later physical simulator.
+            EtchGPUInit(device, 1200);
+            if (EtchGPUError()) I_Error("Etch GPU: %s", EtchGPUError());
+            R_SetViewSize(10, 0);
+        }
         NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
             NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
         window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 720)
@@ -191,6 +199,17 @@ void I_InitGraphics(void)
 
 void I_ShutdownGraphics(void)
 {
+    if (gpuEtch) {
+        EtchGPUShutdown();
+        fprintf(stderr, "Etch GPU: frames=%u uploads=%u\n",
+            EtchGPUFrameCount(), EtchGPUUploadCount());
+    }
+    if (capturePending) {
+        EtchSnapshot snapshot = {0};
+        R_EtchTakeSnapshot(&snapshot);
+        free(snapshot.segments);
+        capturePending = NO;
+    }
     for (int key = 1; key < 256; key++)
         if (held[key]) PostKey(key, NO);
     [window orderOut:nil];
