@@ -250,3 +250,32 @@ static void EtchGPUFrameDone(dispatch_semaphore_t gate, dispatch_group_t group)
     dispatch_semaphore_signal(gate);
     dispatch_group_leave(group);
 }
+
+static void EtchGPURender(id<MTLCommandQueue> queue, CAMetalLayer *layer,
+    EtchGPUPath *path, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
+    double clock, double backingScale, dispatch_semaphore_t gate, dispatch_group_t group)
+{
+    @autoreleasepool {
+        // Drawable acquisition can wait for WindowServer, so it stays on this queue.
+        id<CAMetalDrawable> drawable = [layer nextDrawable];
+        if (!drawable) { EtchGPUFrameDone(gate, group); return; }
+        id<MTLCommandBuffer> command = [queue commandBuffer];
+        if (!command) {
+            EtchGPUFail("Cannot create a GPU drawing command buffer");
+            EtchGPUFrameDone(gate, group); return;
+        }
+        if (!EtchGPUEncode(command, drawable.texture, path, background, lines, clock, backingScale)) {
+            EtchGPUFrameDone(gate, group); return;
+        }
+        NSUInteger count = path.count;
+        [command addCompletedHandler:^(id<MTLCommandBuffer> completed) {
+            // Holding the bundle here also keeps its buffer alive through completion.
+            if (path && path.count != count) EtchGPUFail("A submitted drawing path was modified");
+            if (completed.status == MTLCommandBufferStatusCompleted) atomic_fetch_add(&frames, 1);
+            else EtchGPUFail(completed.error.localizedDescription.UTF8String ?: "GPU drawing did not complete");
+            EtchGPUFrameDone(gate, group);
+        }];
+        [command presentDrawable:drawable];
+        [command commit];
+    }
+}
