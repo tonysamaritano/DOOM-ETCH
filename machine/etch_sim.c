@@ -123,7 +123,8 @@ static int submit(EtchDevice *d,const MotionPoint *p,size_t n,double feed)
             !profile(d->config,&s[i],feed,px,py)) { free(s); return 0; }
         total+=s[i].duration; s[i].finish=total;
         motor.x+=s[i].unit.x*s[i].travel; motor.y+=s[i].unit.y*s[i].travel;
-        if (!isfinite(total) || !isfinite(motor.x) || !isfinite(motor.y)) {
+        if (!isfinite(total) || (s[i].duration>0 && total<=s[i].begin) ||
+            !isfinite(motor.x) || !isfinite(motor.y)) {
             free(s); return 0;
         }
         cursor=s[i].end; px=s[i].direction_x; py=s[i].direction_y;
