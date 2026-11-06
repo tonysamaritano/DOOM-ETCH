@@ -20,3 +20,9 @@ endforeach()
 stage_play(assets/rig/etch-rig.glb rig.glb)
 stage_play(assets/rig/bezel-note.png bezel-note.png)
 stage_play(assets/rig/cheat-note.jpg cheat-note.jpg)
+foreach(file LICENSE build/three.module.js
+    examples/jsm/loaders/GLTFLoader.js
+    examples/jsm/utils/BufferGeometryUtils.js
+    examples/jsm/environments/RoomEnvironment.js)
+    stage_play("viewer/vendor/three/${file}" "vendor/three/${file}")
+endforeach()
