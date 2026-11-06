@@ -76,3 +76,22 @@ static void rejects(const MotionPath *path, double speed)
     assert(!MotionTimelineBuild(path, speed, &records, &count, &seconds));
     assert(!records && count == 0 && seconds == 0);
 }
+
+static void invalidInputAndFloatOverflow(void)
+{
+    MotionPath path = hundred();
+    const double badSpeeds[] = {0, -1, NAN, INFINITY, DBL_MIN, 1e-40};
+    for (size_t i = 0; i < sizeof(badSpeeds) / sizeof(*badSpeeds); ++i)
+        rejects(&path, badSpeeds[i]);
+    rejects(NULL, 50);
+    MotionPath invalid = path; invalid.width = 0; rejects(&invalid, 50);
+    invalid = path; invalid.width_mm = NAN; rejects(&invalid, 50);
+    invalid = path; invalid.count = SIZE_MAX / sizeof(MotionTimedSegment) + 2;
+    rejects(&invalid, 50); /* Reject allocation overflow before reading impossible point storage. */
+    MotionTimedSegment *records = NULL; size_t count = 0; double seconds = 0;
+    double representable = FLT_MAX * 0.5;
+    assert(MotionTimelineBuild(&path, 100 / representable, &records, &count, &seconds));
+    assert(count == 1 && isfinite(records[0].timing[1]));
+    assert(fabs(seconds / representable - 1) < 1e-12);
+    free(records);
+}
