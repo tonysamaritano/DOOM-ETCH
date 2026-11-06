@@ -91,3 +91,13 @@ void I_UpdateSoundParams(int handle, int volume, int separation, int pitch)
 {
     (void)handle; (void)volume; (void)separation; (void)pitch;
 }
+
+void I_InitMusic(void) {}
+void I_ShutdownMusic(void) {}
+void I_SetMusicVolume(int volume) { (void)volume; }
+int I_RegisterSong(void *data) { (void)data; return 0; }
+void I_PlaySong(int handle, int looping) { (void)handle; (void)looping; }
+void I_StopSong(int handle) { (void)handle; }
+void I_UnRegisterSong(int handle) { (void)handle; }
+void I_PauseSong(int handle) { (void)handle; }
+void I_ResumeSong(int handle) { (void)handle; }
