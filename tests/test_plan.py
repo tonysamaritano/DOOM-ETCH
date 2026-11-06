@@ -27,3 +27,17 @@ class PlannerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             capture = self.capture(directory, '1,1,1,4\n1,0,2,9\n')
             self.assertEqual(plan.load_bands(capture), [[0, 9, 0], [0, 4, 0], [0, 9, 0]])
+
+    def test_rejects_invalid_capture(self):
+        bad = ['# unknown,3,3\n', '# doom-wall-bands-v1,0,3\n',
+               '# doom-wall-bands-v1,3,3\n3,0,1,2\n',
+               '# doom-wall-bands-v1,3,3\n1,2,1,2\n',
+               '# doom-wall-bands-v1,3,3\n1,0,1,0\n',
+               '# doom-wall-bands-v1,3,3\n1,0,1\n']
+        with tempfile.TemporaryDirectory() as directory:
+            filename = Path(directory) / 'bad.csv'
+            for text in bad:
+                with self.subTest(text=text):
+                    filename.write_text(text)
+                    with self.assertRaises(ValueError):
+                        plan.load_bands(filename)
