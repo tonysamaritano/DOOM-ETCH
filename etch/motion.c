@@ -202,3 +202,29 @@ static size_t closest_vertex(const Graph *graph, MotionPoint point)
     }
     return closest;
 }
+
+static void walk_component(Graph *graph, MotionPath *path, size_t root)
+{
+    size_t depth = 1;
+    graph->stack[0] = root;
+    while (depth) {
+        size_t vertex = graph->stack[depth - 1], next;
+        size_t *cursor = &graph->cursor[vertex];
+        while (*cursor < graph->offset[vertex + 1] && graph->used[graph->adjacent[*cursor]])
+            (*cursor)++;
+        if (*cursor == graph->offset[vertex + 1]) {
+            depth--;
+            if (!depth) continue;
+            next = graph->stack[depth - 1];
+        } else {
+            size_t edge_id = graph->adjacent[(*cursor)++];
+            Edge edge = graph->edges[edge_id];
+            graph->used[edge_id] = 1;
+            next = edge.a == vertex ? edge.b : edge.a;
+            graph->degree[vertex]--;
+            graph->degree[next]--;
+            graph->stack[depth++] = next;
+        }
+        append_move(path, graph->vertices[next].point, MOTION_OUTLINE);
+    }
+}
