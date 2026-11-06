@@ -20,3 +20,12 @@ endforeach()
 
 include(tests/save_roundtrip.cmake)
 include(tests/movement.cmake)
+
+if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+    add_test(NAME level-smoke COMMAND doom-metal
+        -warp 1 1 -nosound --run-frames 120
+        -config "${CMAKE_CURRENT_BINARY_DIR}/level-smoke.cfg")
+    set_tests_properties(level-smoke PROPERTIES
+        ENVIRONMENT "DOOMWADDIR=${DOOM_TEST_WAD_DIRECTORY}"
+        TIMEOUT 60)
+endif()
