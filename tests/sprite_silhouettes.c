@@ -169,3 +169,31 @@ static void overlappingMasks(void)
     expectedContour(&scene, visible, 2);
     SilRectsFree(&mask); SilLinesFree(&scene);
 }
+
+static void painterOrder(void)
+{
+    SilRects back = {0}, front = {0}; SilLines backLines = {0}, frontLines = {0};
+    assert(SilRectAdd(&back, (SilRect){0, 0, 4, 4}));
+    assert(SilRectAdd(&front, (SilRect){2, -1, 5, 5}));
+    assert(SilContours(&back, &backLines) && SilContours(&front, &frontLines));
+    SilLines forward = {0}, reverse = {0};
+    assert(SilComposite(&forward, &back, &backLines));
+    assert(SilComposite(&forward, &front, &frontLines));
+    assert(!hasLineAt(&forward, 4, 2));
+    assert(hasLineAt(&forward, 2, 2) && hasLineAt(&forward, 1, 0));
+    assert(SilComposite(&reverse, &front, &frontLines));
+    assert(SilComposite(&reverse, &back, &backLines));
+    assert(hasLineAt(&reverse, 4, 2));
+    assert(!hasLineAt(&reverse, 2, 2));
+    SilRectsFree(&back); SilRectsFree(&front);
+    SilLinesFree(&backLines); SilLinesFree(&frontLines);
+    SilLinesFree(&forward); SilLinesFree(&reverse);
+}
+static void rejectDecode(Silhouette *shape, const void *patch, size_t bytes)
+{
+    Silhouette saved = *shape;
+    assert(!SilhouetteDecode(shape, patch, bytes));
+    assert(shape->fill.data == saved.fill.data && shape->outline.data == saved.outline.data);
+    assert(shape->fill.count == saved.fill.count && shape->outline.count == saved.outline.count);
+    assert(shape->width == 3 && shape->height == 3 && fabs(area(&shape->fill) - 8) < 1e-9);
+}
