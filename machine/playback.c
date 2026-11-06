@@ -25,7 +25,7 @@ void MachinePlaybackDestroy(MachinePlayback *p)
 {
     if (p) { EtchDestroy(p->device); MachineStepProgramFree(&p->program); free(p); }
 }
-EtchDevice *MachinePlaybackDevice(MachinePlayback *p) { return p ? p->device : NULL; }
+const EtchDevice *MachinePlaybackDevice(const MachinePlayback *p) { return p ? p->device : NULL; }
 const MachineStepProgram *MachinePlaybackProgram(const MachinePlayback *p)
 {
     return p ? &p->program : NULL;
