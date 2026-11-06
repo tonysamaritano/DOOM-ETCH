@@ -168,6 +168,21 @@ static void drainRetainsSubmittedResources(void)
     assert(!planning && !current && !pending && !ghost && !plannerQueue);
 }
 
+static void rateBoundsAndQueuedOrder(void)
+{
+    startFixture();
+    for (int i = 0; i < 20; ++i) EtchGPUAction('+');
+    EtchGPUTick(testClock, YES); assert(drawRate == 1024);
+    assert([EtchGPUStatus() containsString:@"1024"]);
+    for (int i = 0; i < 30; ++i) EtchGPUAction('-');
+    EtchGPUTick(testClock, YES); assert(drawRate == 1.0 / 64);
+    EtchGPUSetRate(1024); EtchGPUAction('+'); EtchGPUAction('-');
+    EtchGPUTick(testClock, YES); assert(drawRate == 512);
+    EtchGPUSetRate(1.0 / 64); EtchGPUAction('-'); EtchGPUAction('+');
+    EtchGPUTick(testClock, YES); assert(drawRate == 1.0 / 32);
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
