@@ -164,3 +164,35 @@ static void ink_progress(EtchDevice *d,const Segment *s,double drawn)
         d->ink[iy*ETCH_INK_WIDTH+ix]=ETCH_INK_FRESH;
     }
 }
+static void begin_erase(EtchDevice *d)
+{
+    d->erase_requested=0; d->erase_time=0; d->status.erasing=1;
+    d->status.erase_left_s=d->config.erase_seconds;
+}
+static void finish_erase(EtchDevice *d)
+{
+    const unsigned cells=ETCH_INK_WIDTH*ETCH_INK_HEIGHT;
+    unsigned marks=0;
+    for (unsigned i=0;i<cells;i++) marks+=d->ink[i]!=ETCH_INK_EMPTY;
+    unsigned keep=(unsigned)floor(marks*d->config.ghost_fraction);
+    unsigned seed=(++d->erase_count%cells)*7919%cells;
+    /* 9973 is coprime to 64000: every cell is visited exactly once. */
+    for (unsigned i=0;i<cells;i++) {
+        unsigned at=(i*9973+seed)%cells;
+        if (d->ink[at]) {
+            d->ink[at]=keep ? ETCH_INK_GHOST : ETCH_INK_EMPTY;
+            if (keep) keep--;
+        }
+    }
+    d->status.erasing=0; d->status.erase_left_s=0;
+}
+int EtchDeviceRequestErase(EtchDevice *d)
+{
+    if (!d) return 0;
+    if (d->status.erasing || d->erase_requested) return 1;
+    if (d->status.drawing) {
+        d->erase_requested=1; d->total=d->segments[d->index].finish;
+        d->status.remaining_s=d->total-d->status.elapsed_s;
+    } else begin_erase(d);
+    return 1;
+}
