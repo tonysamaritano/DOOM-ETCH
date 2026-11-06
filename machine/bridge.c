@@ -66,3 +66,36 @@ static int metadata(const char *text,MachineSettings *s,MachineParseOptions *sta
     }
     return 1;
 }
+int MachineRead(FILE *stream,MachineSettings *settings,MachineProgram *program,MachineParseError *e)
+{
+    if (!stream || !settings || !program) return fail(e,0,"missing controller input");
+    if (!MachineSettingsValidate(settings,e)) return 0;
+    char *text=read_text(stream,e); if (!text) return 0;
+    MachineSettings next=*settings;
+    MachineParseOptions start={{0,next.height_mm}};
+    int ok=metadata(text,&next,&start,e);
+    if (ok && (start.start_cnc_mm.x<0 || start.start_cnc_mm.y<0 ||
+        start.start_cnc_mm.x>next.width_mm || start.start_cnc_mm.y>next.height_mm))
+        ok=fail(e,0,"required start outside travel");
+    if (ok) ok=MachineGCodeParse(program,text,&start,e);
+    free(text); if (ok) *settings=next;
+    return ok;
+}
+int MachineSubmitMotion(EtchDevice *device,const MotionPath *path,double feed,MachineParseError *e)
+{
+    if (!device || !MotionValid(path) || !isfinite(feed) || feed<=0 || feed/60<=0 ||
+        path->count>SIZE_MAX/sizeof(MotionPoint)) return fail(e,0,"invalid direct motion");
+    MotionPoint *points=malloc(path->count*sizeof(*points));
+    if (!points) return fail(e,0,"out of memory");
+    for (size_t i=0;i<path->count;i++)
+        points[i]=(MotionPoint){path->points[i].x/path->width*path->width_mm,
+                               path->points[i].y/path->height*path->height_mm};
+    int ok=EtchDeviceSubmit(device,points,path->count,feed/60);
+    free(points);
+    return ok ? 1 : fail(e,0,"device rejected direct motion");
+}
+static MotionPoint physical(const MachineStepProgram *p,const int64_t steps[2])
+{
+    return (MotionPoint){steps[0]/p->settings.steps_per_mm[0],
+                         steps[1]/p->settings.steps_per_mm[1]};
+}
