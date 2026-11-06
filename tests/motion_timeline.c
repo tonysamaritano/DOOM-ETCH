@@ -95,3 +95,22 @@ static void invalidInputAndFloatOverflow(void)
     assert(fabs(seconds / representable - 1) < 1e-12);
     free(records);
 }
+
+static void missingOutputsResetOtherValues(void)
+{
+    MotionPath path = hundred(); MotionTimedSegment sentinel = {0}, *records = &sentinel;
+    size_t count = 99; double seconds = 99;
+    assert(!MotionTimelineBuild(&path, 50, NULL, &count, &seconds));
+    assert(count == 0 && seconds == 0);
+    records = &sentinel; count = 99; seconds = 99;
+    assert(!MotionTimelineBuild(&path, 50, &records, NULL, &seconds));
+    assert(!records && seconds == 0);
+    records = &sentinel; count = 99; seconds = 99;
+    assert(!MotionTimelineBuild(&path, 50, &records, &count, NULL));
+    assert(!records && count == 0);
+}
+void MotionTimelineTests(void)
+{
+    exactHundredMillimetres(); connectorsAndDiagonal();
+    startOnlyAndStationary(); invalidInputAndFloatOverflow(); missingOutputsResetOtherValues();
+}
