@@ -75,3 +75,33 @@ static void occupiedDestinationIsUnchanged(void)
     assert(destination.segments == &guard && destination.count == 0 && destination.height == 17);
     assert(!R_EtchTakeSnapshot(&empty));
 }
+
+static void failuresConsumeAndRecover(void)
+{
+    EtchSnapshot destination = {.width = 13, .height = 17};
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(destination.width == 13 && destination.height == 17);
+    rectangle(1, 3); assert(!R_EtchTakeSnapshot(NULL));
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(R_EtchBegin(4, 4)); R_EtchWallBegin();
+    R_EtchWallColumn(0, 0, NAN, 3, 0, 0); R_EtchWallEnd();
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(!destination.segments && destination.count == 0);
+    assert(destination.width == 13 && destination.height == 17);
+    assert(!R_EtchTakeSnapshot(&destination));
+    assert(R_EtchBegin(4, 4)); R_EtchWallBegin();
+    assert(!R_EtchTakeSnapshot(&destination)); /* An unfinished wall cannot transfer. */
+    assert(destination.width == 13 && destination.height == 17);
+    assert(R_EtchBegin(4, 4));
+    assert(R_EtchTakeSnapshot(&destination));
+    assert(!destination.count && destination.width == 4 && destination.height == 4);
+    MotionPath empty = plan(&destination);
+    assert(empty.count == 1 && empty.kinds[0] == MOTION_START);
+    free(destination.segments); MotionFree(&empty);
+}
+
+int main(void)
+{
+    ownershipAndDirectParity(); occupiedDestinationIsUnchanged(); failuresConsumeAndRecover();
+    return 0;
+}
