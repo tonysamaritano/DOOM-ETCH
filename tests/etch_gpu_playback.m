@@ -110,3 +110,29 @@ static double darkening(const unsigned char *background, const unsigned char *in
     return ((int)background[index] - ink[index] + (int)background[index + 1] - ink[index + 1]
             + (int)background[index + 2] - ink[index + 2]) / 3.0;
 }
+
+static void ghostPixelsExcludeUndrawnGeometry(void)
+{
+    startFixture(); ghost = fixturePath(.15f); ghostTime = 2; advance(.5);
+    unsigned char *background = renderFrame([EtchGPUFrame new]);
+    unsigned char *before = renderFrame(EtchGPUFrameState());
+    EtchGPUErase(); EtchGPUTick(testClock, YES); advance(.325);
+    unsigned char *middle = renderFrame(EtchGPUFrameState());
+    assert(darkening(background, before, 60, 60) > 100);
+    assert(darkening(background, middle, 60, 60) > 30);
+    assert(darkening(background, middle, 60, 60) < darkening(background, before, 60, 60));
+    assert(darkening(background, before, 60, 36) >= 2);
+    assert(darkening(background, middle, 60, 36) < darkening(background, before, 60, 36));
+    advance(.326); pending = fixturePath(.2f); EtchGPUTick(testClock, YES);
+    unsigned char *after = renderFrame(EtchGPUFrameState());
+    double ghostDark = darkening(background, after, 60, 60);
+    assert(ghostDark >= 2 && ghostDark <= 10); /* Pale 2.5% ink, rather than the old dark line. */
+    assert(darkening(background, after, 60, 62) > 0); /* Soft fringe beyond the crisp radius. */
+    assert(fabs(darkening(background, after, 110, 60)) < .1); /* Unfinished first stroke. */
+    assert(fabs(darkening(background, after, 240, 180)) < .1); /* Unstarted second stroke. */
+    assert(fabs(darkening(background, after, 60, 36)) < .1); /* Older ghost has faded away. */
+    printf("Metal ghost: center %.3f/255, fringe %.3f/255; later geometry absent\n",
+           ghostDark, darkening(background, after, 60, 62));
+    free(background); free(before); free(middle); free(after);
+    EtchGPUShutdown();
+}
