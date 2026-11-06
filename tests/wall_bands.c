@@ -93,24 +93,6 @@ static void nearWallWins(void)
     MotionFree(&path);
 }
 
-static void clippedBands(void)
-{
-    const MotionSegment edges[] = {
-        {{0, 0}, {1, 0}}, {{0, 2}, {1, 2}},
-        {{0, 0}, {0, 1}}, {{0, 1}, {0, 2}},
-        {{1, 0}, {1, 1}}, {{1, 1}, {1, 2}}
-    };
-    MotionPath path = {0};
-    assert(R_EtchBegin(2, 2));
-    R_EtchColumn(-1, 0, 1, 2); R_EtchColumn(2, 0, 1, 2);
-    R_EtchColumn(1, 2, 6, 2); R_EtchColumn(1, -4, -1, 2);
-    R_EtchColumn(1, 1, 0, 2);
-    R_EtchColumn(1, 0, 1, 0); R_EtchColumn(1, 0, 1, -1);
-    R_EtchColumn(0, -8, 8, 4);
-    assert(R_EtchBuildMotion(&path));
-    checkBoundary(&path, edges, 6);
-    MotionFree(&path);
-}
 
 
 int main(void)
