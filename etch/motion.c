@@ -80,3 +80,23 @@ static void graph_free(Graph *graph)
     free(graph->stack);
     free(graph->used);
 }
+
+static int same_point(MotionPoint a, MotionPoint b)
+{
+    return a.x == b.x && a.y == b.y;
+}
+
+static int compare_endpoint(const void *left, const void *right)
+{
+    MotionPoint a = ((const Endpoint *)left)->point;
+    MotionPoint b = ((const Endpoint *)right)->point;
+    if (a.x != b.x) return a.x < b.x ? -1 : 1;
+    return a.y < b.y ? -1 : a.y > b.y;
+}
+
+static int compare_edge(const void *left, const void *right)
+{
+    const Edge *a = left, *b = right;
+    if (a->a != b->a) return a->a < b->a ? -1 : 1;
+    return a->b < b->b ? -1 : a->b > b->b;
+}
