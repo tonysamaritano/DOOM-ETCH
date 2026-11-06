@@ -31,23 +31,6 @@ def load_bands(filename):
     return cells
 
 
-def structural_edges(cells):
-    height, width = len(cells), len(cells[0])
-    edges = set()
-    for y in range(height):
-        for x in range(width):
-            surface = cells[y][x]
-            above = cells[y - 1][x] if y else 0
-            left = cells[y][x - 1] if x else 0
-            if surface != above:
-                edges.add(((x, y), (x + 1, y)))
-            if surface != left:
-                edges.add(((x, y), (x, y + 1)))
-            if y == height - 1 and surface:
-                edges.add(((x, y + 1), (x + 1, y + 1)))
-            if x == width - 1 and surface:
-                edges.add(((x + 1, y), (x + 1, y + 1)))
-    return edges
 
 
 
