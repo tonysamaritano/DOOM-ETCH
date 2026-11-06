@@ -32,6 +32,7 @@ static id<MTLTexture> indices;
 static byte colors[256 * 4];
 static BOOL held[256];
 static unsigned presentedFrames, runFrames;
+static BOOL fileMode, fileClosed;
 static BOOL gpuEtch, capturePending;
 static BOOL GPUActive(void)
 { return gpuEtch && gamestate == GS_LEVEL && !menuactive && !automapactive; }
@@ -50,7 +51,8 @@ static void PostKey(int key, BOOL down)
 - (BOOL)windowShouldClose:(NSWindow *)sender
 {
     (void)sender;
-    I_Quit();
+    if (fileMode) fileClosed = YES;
+    else I_Quit();
     return NO;
 }
 - (void)windowDidResignKey:(NSNotification *)note
@@ -354,7 +356,7 @@ static BOOL DrawGPU(void)
     return YES;
 }
 
-void I_FinishUpdate(void)
+static void FinishUpdate(const byte *frame)
 {
     if (!window || !window.isVisible || window.isMiniaturized) return;
     @autoreleasepool {
@@ -365,7 +367,7 @@ void I_FinishUpdate(void)
         id<CAMetalDrawable> drawable = [layer nextDrawable];
         if (!drawable) return;
         [indices replaceRegion:MTLRegionMake2D(0, 0, 320, 200) mipmapLevel:0
-            withBytes:screens[0] bytesPerRow:320];
+            withBytes:frame bytesPerRow:320];
         MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
         pass.colorAttachments[0].texture = drawable.texture;
         pass.colorAttachments[0].loadAction = MTLLoadActionClear;
@@ -383,6 +385,8 @@ void I_FinishUpdate(void)
         if (command.status != MTLCommandBufferStatusCompleted)
             I_Error("Metal rendering failed: %s", command.error.localizedDescription.UTF8String);
         presentedFrames++;
-        if (runFrames && presentedFrames == runFrames) I_Quit();
+        if (!fileMode && runFrames && presentedFrames == runFrames) I_Quit();
     }
 }
+
+void I_FinishUpdate(void) { FinishUpdate(screens[0]); }
