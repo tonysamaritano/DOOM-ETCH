@@ -19,10 +19,11 @@ function fail(error) {
 function read(name) {
   return new Promise((resolve,reject)=>{
     const xhr=new XMLHttpRequest();request=xhr;
-    xhr.open('GET',new URL(name,location.href).href);xhr.responseType='arraybuffer';
+    xhr.open('GET',new URL(name,location.href).href);xhr.responseType='arraybuffer';xhr.timeout=15000;
     const release=()=>{if(request===xhr)request=null;};
     xhr.onload=()=>{release();if((xhr.status&&xhr.status!==200)||!(xhr.response instanceof ArrayBuffer))reject(Error('Could not read '+name+' (HTTP '+xhr.status+')'));else resolve(xhr.response);};
     xhr.onerror=()=>{release();reject(Error('Could not read '+name));};
+    xhr.ontimeout=()=>{release();reject(Error('Timed out reading '+name));};
     xhr.onabort=()=>{release();reject(Error('Read cancelled: '+name));};xhr.send();
   });
 }
