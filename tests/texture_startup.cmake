@@ -5,7 +5,7 @@ if(BUILD_TESTING)
         ${PROJECT_SOURCE_DIR}/engine/render ${PROJECT_SOURCE_DIR}/engine/ui
         ${PROJECT_SOURCE_DIR}/engine/sound ${PROJECT_SOURCE_DIR}/engine/wad)
     target_compile_definitions(texture-startup-test PRIVATE NORMALUNIX)
-    target_compile_options(texture-startup-test PRIVATE -fwrapv -fno-strict-aliasing)
+    target_compile_options(texture-startup-test PRIVATE -UNDEBUG -fwrapv -fno-strict-aliasing)
     foreach(case record tables colormap)
         add_test(NAME texture-startup-${case} COMMAND texture-startup-test ${case})
         set_tests_properties(texture-startup-${case} PROPERTIES TIMEOUT 10)
