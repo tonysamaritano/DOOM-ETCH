@@ -60,3 +60,36 @@ static void respectsOpacity(const SilLines *strokes, const SilRects *fill)
         }
     }
 }
+
+static int compareDouble(const void *left, const void *right)
+{
+    double a = *(const double *)left, b = *(const double *)right;
+    return (a > b) - (a < b);
+}
+static void physicalSpacing(const SilLines *lines, double minimum)
+{
+    double intercept[3][2048], slopes[3] = {0}; size_t count[3] = {0};
+    for (size_t i = 0; i < lines->count; ++i) {
+        MotionSegment line = lines->data[i];
+        double dx = (line.b.x - line.a.x) * (170.15 / 320);
+        double dy = (line.b.y - line.a.y) * (127.6 / 200);
+        assert(fabs(dx) > 1e-9);
+        int family = fabs(dy) < 1e-9 ? 0 : dy / dx > 0 ? 1 : 2;
+        double slope = dy / dx;
+        if (count[family]) assert(fabs(slope - slopes[family]) < 1e-8);
+        slopes[family] = slope;
+        assert(count[family] < 2048);
+        intercept[family][count[family]++] = line.a.y * (127.6 / 200)
+                                           - slope * line.a.x * (170.15 / 320);
+    }
+    for (int family = 0; family < 3; ++family) {
+        qsort(intercept[family], count[family], sizeof(double), compareDouble);
+        unsigned distinct = 0;
+        for (size_t i = 1; i < count[family]; ++i) {
+            double gap = intercept[family][i] - intercept[family][i - 1];
+            if (gap < 1e-8) continue; /* Fragmented strokes can share one hatch row. */
+            assert(gap / hypot(1, slopes[family]) >= minimum - 1e-8); ++distinct;
+        }
+        if (count[family]) assert(distinct > 0);
+    }
+}
