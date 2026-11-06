@@ -71,9 +71,10 @@ static int position(FILE *stream, const char *command, const MotionPath *path, s
     return length > 0 && length <= 81 && fputs(line, stream) >= 0;
 }
 
-int MotionWriteGCode(FILE *stream, const MotionPath *path, double feed_mm_min)
+int MotionWriteGCodeFrame(FILE *stream, const MotionPath *path, double feed_mm_min, int first, int last)
 {
-    if (!stream || ferror(stream) || !MotionValid(path)
+    if ((first != 0 && first != 1) || (last != 0 && last != 1)
+        || !stream || ferror(stream) || !MotionValid(path)
         || !isfinite(feed_mm_min) || feed_mm_min <= 0
         || !isfinite(path->width_mm / step_mm) || !isfinite(path->height_mm / step_mm))
         return 0;
@@ -81,15 +82,22 @@ int MotionWriteGCode(FILE *stream, const MotionPath *path, double feed_mm_min)
     if (!number(feed, feed_mm_min) || strlen(feed) + 1 > 80
         || !coordinate(width, path->width_mm, path->width_mm)
         || !coordinate(height, path->height_mm, path->height_mm)) return 0;
-    fputs("; Continuous pen-down drawing; work origin bottom-left, +Y up.\n"
-        "; Jog to ETCH_START before running; no automatic positioning or pen lift.\n"
-        "; ASSUMPTION: 0.05 mm step grid on both device axes.\n", stream);
-    fprintf(stream, "; ETCH_SIZE X%s Y%s\n", width, height);
-    if (!position(stream, "; ETCH_START", path, 0)) return 0;
-    fputs("G21\nG90\nG94\nG61\n", stream);
+    if (first) {
+        fputs("; Continuous pen-down drawing; work origin bottom-left, +Y up.\n"
+            "; Jog to ETCH_START before running; no automatic positioning or pen lift.\n"
+            "; ASSUMPTION: 0.05 mm step grid on both device axes.\n", stream);
+        fprintf(stream, "; ETCH_SIZE X%s Y%s\n", width, height);
+        if (!position(stream, "; ETCH_START", path, 0)) return 0;
+        fputs("G21\nG90\nG94\nG61\n", stream);
+    } else fputs("M0 ; shake to erase\n", stream);
     fprintf(stream, "F%s\n", feed);
     for (size_t i = 1; i < path->count; i++)
         if (!position(stream, "G1", path, i)) return 0;
-    fputs("M2\n", stream);
+    if (last) fputs("M2\n", stream);
     return !ferror(stream) && fflush(stream) == 0;
+}
+
+int MotionWriteGCode(FILE *stream, const MotionPath *path, double feed_mm_min)
+{
+    return MotionWriteGCodeFrame(stream, path, feed_mm_min, 1, 1);
 }
