@@ -93,3 +93,27 @@ static void physicalSpacing(const SilLines *lines, double minimum)
         if (count[family]) assert(distinct > 0);
     }
 }
+
+static void patternsAndPhysicalSpacing(void)
+{
+    Silhouette shape = ring();
+    SilRects fill = {0}; SilLines boundary = {0};
+    project(&shape, 0.5, &fill, &boundary); /* Narrow X scale exposes pixel-spacing errors. */
+    for (int pattern = 0; pattern < HATCH_PATTERN_COUNT; ++pattern) {
+        SilLines ink = {0};
+        assert(SilHatch(&shape, &fill, 20, 10, 0.5, 1,
+                        light, palette, translation, pattern, &ink));
+        respectsOpacity(&ink, &fill); physicalSpacing(&ink, 1.914);
+        unsigned positive = 0, negative = 0;
+        for (size_t i = 0; i < ink.count; ++i) {
+            MotionSegment line = ink.data[i];
+            double slope = (line.b.y - line.a.y) / (line.b.x - line.a.x);
+            positive += slope > 1e-8; negative += slope < -1e-8;
+            if (pattern == HATCH_HORIZONTAL) assert(fabs(slope) < 1e-8);
+        }
+        if (pattern == HATCH_DIAGONAL) assert(positive && !negative);
+        if (pattern == HATCH_CROSS) assert(positive && negative);
+        SilLinesFree(&ink);
+    }
+    SilRectsFree(&fill); SilLinesFree(&boundary); SilhouetteFree(&shape);
+}
