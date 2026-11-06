@@ -2,9 +2,12 @@
 #ifndef DOOM_MACHINE_PLAYBACK_H
 #define DOOM_MACHINE_PLAYBACK_H
 #include "bridge.h"
+#include "trace.h"
 typedef struct MachinePlayback MachinePlayback;
 /* Owns a complete compiled-program copy and newly configured physical device. */
 MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *, MachineParseError *);
+/* Trace must be empty and outlive playback; free it even after creation failure. */
+MachinePlayback *MachinePlaybackCreateTraced(const MachineStepProgram *,EtchTrace *,MachineParseError *);
 void MachinePlaybackDestroy(MachinePlayback *);
 /* Borrowed read-only device; only playback may advance or mutate it. */
 const EtchDevice *MachinePlaybackDevice(const MachinePlayback *);
