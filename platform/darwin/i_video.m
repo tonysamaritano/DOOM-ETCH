@@ -327,10 +327,23 @@ static void PublishCapture(BOOL active)
     free(snapshot.segments);
 }
 
+static NSString *LayerState(int enabled) { return enabled ? @"on" : @"off"; }
+static void UpdateGPUTitle(void)
+{
+    static NSString *patterns[] = {@"horizontal", @"diagonal", @"cross"};
+    window.title = [NSString stringWithFormat:
+        @"doom-etch · %@ · F2 %@ · F3 %@ · F4 %@ · F5 %@ · H %@ · G %@ · J %@",
+        EtchGPUStatus(), patterns[R_EtchHatchPatternValue()],
+        LayerState(R_EtchSpriteTexturesEnabled()), LayerState(R_EtchTexturesEnabled()),
+        LayerState(R_EtchSpritesEnabled()), LayerState(R_EtchHUDEnabled()),
+        LayerState(R_EtchWeaponEnabled()), LayerState(R_EtchWeaponTexturesEnabled())];
+}
+
 static BOOL DrawGPU(void)
 {
     BOOL active = GPUActive();
     PublishCapture(active);
+    UpdateGPUTitle();
     const char *error = EtchGPUError();
     if (error) I_Error("Etch GPU: %s", error);
     if (!active) return NO;
