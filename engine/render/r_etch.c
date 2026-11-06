@@ -245,15 +245,37 @@ void R_EtchWallEnd(void)
     wall_open = 0;
 }
 
+static int hud_features(SpriteFrame *frame, double ox, double oy, double sx, double sy,
+    const unsigned char *palette, SilLines *outline)
+{
+    if (!frame->features_ready) {
+        if (!SilFeatures(&frame->shape, palette, &frame->features)) return 0;
+        frame->features_ready = 1;
+    }
+    for (size_t i = 0; i < frame->features.count; ++i) {
+        MotionSegment edge = frame->features.data[i];
+        edge.a = (MotionPoint){ox + edge.a.x * sx, oy + edge.a.y * sy};
+        edge.b = (MotionPoint){ox + edge.b.x * sx, oy + edge.b.y * sy};
+        if (edge.a.x < 0 || edge.b.x < 0 || edge.a.x > 320 || edge.b.x > 320
+            || edge.a.y < 168 || edge.b.y < 168 || edge.a.y > 200 || edge.b.y > 200)
+            continue;
+        if (!SilLineAdd(outline, edge.a, edge.b)) return 0;
+    }
+    return 1;
+}
+
 static int capture_patch(SpriteFrame *frame,
     double origin_x, double origin_y, double scale_x, double scale_y,
-    int first, int last, const short *top, const short *bottom)
+    int first, int last, const short *top, const short *bottom,
+    const unsigned char *palette)
 {
     SilRects fill = {0};
     SilLines outline = {0};
     SilLines scene = {walls, wall_count, wall_capacity};
     int success = SilProject(&frame->shape, origin_x, origin_y, scale_x, scale_y,
         first, last, top, bottom, (unsigned)width, (unsigned)height, &fill, &outline);
+    if (success && palette)
+        success = hud_features(frame, origin_x, origin_y, scale_x, scale_y, palette, &outline);
     if (success) success = SilComposite(&scene, &fill, &outline);
     walls = scene.data;
     wall_count = scene.count;
@@ -272,5 +294,5 @@ int R_EtchSpritePatch(int lump, const void *patch, size_t bytes,
     SpriteFrame *frame = sprite_frame(lump, patch, bytes);
     if (!frame) { failed = 1; return 0; }
     return capture_patch(frame, origin_x, origin_y, scale_x, scale_y,
-        first, last, top, bottom);
+        first, last, top, bottom, NULL);
 }
