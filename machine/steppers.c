@@ -88,7 +88,15 @@ static int target(const MachineSettings *s,MotionPoint cnc,int64_t steps[2])
     double physical[2]={cnc.x,s->height_mm-cnc.y};
     for (unsigned a=0;a<2;a++) {
         double rate=s->steps_per_mm[a],extent=a ? s->height_mm : s->width_mm;
-        double index=fmin(round(physical[a]*rate),floor(extent*rate));
+        double index=round(physical[a]*rate);
+        if (a==1) {
+            /* Compare in CNC space: subtraction roundoff must not turn an
+             * exact half-step into the lower step or swallow its neighbours. */
+            double lower=floor(physical[a]*rate);
+            double boundary=extent-(lower+.5)/rate;
+            index=lower+(cnc.y<=boundary);
+        }
+        index=fmin(index,floor(extent*rate));
         if (index/rate>extent) index=fmax(0,index-1);
         steps[a]=(int64_t)index;
     }
