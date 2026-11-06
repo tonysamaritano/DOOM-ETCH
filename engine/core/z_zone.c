@@ -192,7 +192,11 @@ Z_Malloc
     memblock_t* newblock;
     memblock_t*	base;
 
-    size = (size + 3) & ~3;
+    // The next block header contains native pointers, even for a one-byte lump.
+    const int alignment = _Alignof(memblock_t);
+    if (size < 0 || size > MAXINT - (int)sizeof(memblock_t) - (alignment - 1))
+        I_Error("Z_Malloc: invalid allocation size %i", size);
+    size = (size + alignment - 1) & ~(alignment - 1);
     
     // scan through the block list,
     // looking for the first free block
