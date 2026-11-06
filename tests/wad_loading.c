@@ -25,3 +25,39 @@ byte *I_ZoneBase(int *size)
     *size = sizeof(arena);
     return arena;
 }
+
+static void writeWad(char *name, const char *mode, int payload)
+{
+    unsigned char bytes[] = {
+        'P','W','A','D', 1,0,0,0, 13,0,0,0,
+        0,
+        12,0,0,0, 1,0,0,0, 'T','E','S','T','D','A','T','A'
+    };
+    size_t length = sizeof(bytes);
+    bytes[12] = payload;
+    if (!strcmp(mode, "header")) length = 5;
+    if (!strcmp(mode, "directory")) bytes[8] = 100;
+    if (!strcmp(mode, "count")) memset(bytes + 4, 255, 4);
+    if (!strcmp(mode, "payload")) bytes[17] = 70;
+    int fd = mkstemps(name, 4);
+    assert(fd >= 0);
+    assert(write(fd, bytes, length) == (ssize_t)length);
+    assert(close(fd) == 0);
+}
+
+static void readWads(char **paths, const char *mode)
+{
+    Z_Init();
+    W_InitMultipleFiles(paths);
+    if (!strcmp(mode, "index"))
+        (void)W_LumpLength(-1);
+    if (strcmp(mode, "valid"))
+        return;
+    int lump = W_GetNumForName("testdata");
+    assert(lump == 1 && W_LumpLength(lump) == 1);
+    byte *cached = W_CacheLumpNum(lump, PU_STATIC);
+    assert(cached[0] == 22 && W_CacheLumpNum(lump, PU_STATIC) == cached);
+    byte first;
+    W_ReadLump(0, &first);
+    assert(first == 11);
+}
