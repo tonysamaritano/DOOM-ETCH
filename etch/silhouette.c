@@ -276,3 +276,32 @@ static MotionPoint along(MotionSegment segment, double t)
     return (MotionPoint){segment.a.x + (segment.b.x - segment.a.x) * t,
         segment.a.y + (segment.b.y - segment.a.y) * t};
 }
+
+static size_t covered_intervals(MotionSegment s, const SilRects *mask, Interval *intervals)
+{
+    size_t count = 0;
+    double dx = s.b.x - s.a.x, dy = s.b.y - s.a.y;
+    for (size_t j = 0; j < mask->count; j++) {
+        SilRect r = mask->data[j];
+        if (fmax(s.a.x, s.b.x) < r.x0 || fmin(s.a.x, s.b.x) > r.x1
+            || fmax(s.a.y, s.b.y) < r.y0 || fmin(s.a.y, s.b.y) > r.y1) continue;
+        double low = 0, high = 1;
+        if (clip_interval(-dx, s.a.x - r.x0, &low, &high)
+            && clip_interval(dx, r.x1 - s.a.x, &low, &high)
+            && clip_interval(-dy, s.a.y - r.y0, &low, &high)
+            && clip_interval(dy, r.y1 - s.a.y, &low, &high) && high > low)
+            intervals[count++] = (Interval){low, high};
+    }
+    if (count) qsort(intervals, count, sizeof(*intervals), compare_interval);
+    return count;
+}
+static int uncovered_lines(SilLines *result, MotionSegment s, const Interval *intervals, size_t count)
+{
+    double at = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (intervals[i].low > at
+            && !SilLineAdd(result, along(s, at), along(s, intervals[i].low))) return 0;
+        at = fmax(at, intervals[i].high);
+    }
+    return at >= 1 || SilLineAdd(result, along(s, at), s.b);
+}
