@@ -41,6 +41,12 @@ if(BUILD_TESTING)
     target_compile_options(rig-keys-test PRIVATE -fobjc-arc -UNDEBUG)
     target_link_libraries(rig-keys-test PRIVATE "-framework AppKit")
     add_test(NAME machine-rig-keys COMMAND rig-keys-test)
+    add_executable(rig-lifecycle-test tests/rig_lifecycle.m
+        platform/darwin/etch_packet.m platform/darwin/etch_resources.m)
+    target_include_directories(rig-lifecycle-test PRIVATE platform/darwin)
+    target_compile_options(rig-lifecycle-test PRIVATE -fobjc-arc -UNDEBUG)
+    target_link_libraries(rig-lifecycle-test PRIVATE "-framework Foundation")
+    add_test(NAME machine-rig-lifecycle COMMAND rig-lifecycle-test)
 endif()
 
 if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
