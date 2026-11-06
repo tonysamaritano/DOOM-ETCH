@@ -15,7 +15,7 @@ static inline MachinePlayback *play_text(const char *text, MachineSettings *sett
     return play;
 }
 
-static inline void compare_devices(EtchDevice *a, EtchDevice *b)
+static inline void compare_devices(const EtchDevice *a, const EtchDevice *b)
 {
     EtchStatus x = EtchDeviceGetStatus(a), y = EtchDeviceGetStatus(b);
     machine_point(x.cursor_mm, y.cursor_mm.x, y.cursor_mm.y);
