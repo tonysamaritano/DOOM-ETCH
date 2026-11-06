@@ -100,3 +100,33 @@ static int compare_edge(const void *left, const void *right)
     if (a->a != b->a) return a->a < b->a ? -1 : 1;
     return a->b < b->b ? -1 : a->b > b->b;
 }
+
+static int graph_vertices(Graph *graph, const MotionSegment *segments, size_t count)
+{
+    if (!count) return 1;
+    size_t endpoints = count * 2;
+    graph->vertices = malloc(endpoints * sizeof(*graph->vertices));
+    graph->edges = malloc(count * sizeof(*graph->edges));
+    size_t *ids = malloc(endpoints * sizeof(*ids));
+    if (!graph->vertices || !graph->edges || !ids) { free(ids); return 0; }
+    for (size_t i = 0; i < count; i++) {
+        graph->vertices[2 * i] = (Endpoint){segments[i].a, 2 * i};
+        graph->vertices[2 * i + 1] = (Endpoint){segments[i].b, 2 * i + 1};
+    }
+    qsort(graph->vertices, endpoints, sizeof(*graph->vertices), compare_endpoint);
+    for (size_t i = 0; i < endpoints; i++) {
+        Endpoint endpoint = graph->vertices[i];
+        size_t n = graph->vertex_count;
+        if (!n || !same_point(endpoint.point, graph->vertices[n - 1].point)) {
+            graph->vertices[n].point = endpoint.point;
+            graph->vertex_count++;
+        }
+        ids[endpoint.input] = graph->vertex_count - 1;
+    }
+    for (size_t i = 0; i < count; i++) {
+        size_t a = ids[2 * i], b = ids[2 * i + 1];
+        graph->edges[i] = a < b ? (Edge){a, b} : (Edge){b, a};
+    }
+    free(ids);
+    return 1;
+}
