@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 
 static void near(double actual, double expected)
@@ -149,7 +150,7 @@ static void invalid_idle(void)
     assert(!EtchDeviceSubmit(d, p, 2, -1));
     assert(!EtchDeviceSubmitHardware(d, NULL, 2));
     assert(!EtchDeviceSubmitHardware(d, p, 0));
-    assert(!EtchDeviceSubmitHardware(d, p, ETCH_MAX_POINTS + 1));
+    assert(!EtchDeviceSubmitHardware(d, p, SIZE_MAX));
     p[0].x = 1;
     assert(!EtchDeviceSubmitHardware(d, p, 2));
     p[0].x = 0; p[1].x = c.width_mm + 1;
