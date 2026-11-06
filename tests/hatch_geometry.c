@@ -166,3 +166,33 @@ static void flippedTextureAndDenseSpacing(void)
     SilLinesFree(&normal); SilLinesFree(&flipped); SilLinesFree(&dense);
     SilRectsFree(&fill); SilLinesFree(&boundary); SilhouetteFree(&shape);
 }
+
+static void clipAndFailureCases(void)
+{
+    double low, high;
+    assert(HatchClip(-1, 3, 0, 0, 2, 2, &low, &high));
+    assert(fabs(low - 0.25) < 1e-9 && fabs(high - 0.75) < 1e-9);
+    assert(HatchClip(1, 1, 0, 2, 2, 4, &low, &high));
+    assert(fabs(low) < 1e-9 && fabs(high - 0.5) < 1e-9);
+    assert(!HatchClip(5, 5, 0, 0, 2, 2, &low, &high));
+    Silhouette shape = ring(); SilRects fill = {0}; SilLines boundary = {0}, ink = {0};
+    project(&shape, 1, &fill, &boundary);
+    assert(SilLineAdd(&ink, (MotionPoint){1, 2}, (MotionPoint){3, 4}));
+    MotionSegment *owned = ink.data;
+    assert(!SilHatch(&shape, &fill, 20, 10, 1, 1, light, palette, NULL, 3, &ink));
+    assert(!SilHatchDetail(&shape, &fill, 20, 10, 1, 1, light, palette, NULL, 0, 0, &ink));
+    assert(!SilHatchDetail(&shape, &fill, 20, 10, 1, 1, light, palette, NULL, 0, NAN, &ink));
+    assert(ink.data == owned && ink.count == 1 && ink.data[0].a.x == 1);
+    light[0] = 255;
+    assert(SilHatch(&shape, &fill, 20, 10, 1, 1, light, palette, NULL, 0, &ink));
+    assert(ink.count == 1); /* Bright success appends nothing and retains previous strokes. */
+    SilLinesFree(&ink); SilRectsFree(&fill); SilLinesFree(&boundary); SilhouetteFree(&shape);
+}
+
+int main(void)
+{
+    patternsAndPhysicalSpacing(); mappedBrightness();
+    flippedTextureAndDenseSpacing(); clipAndFailureCases();
+    puts("Hatch geometry: mapped brightness, opacity, flips and physical spacing passed");
+    return 0;
+}
