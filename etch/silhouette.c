@@ -363,3 +363,25 @@ static int feature_run(const Silhouette *shape, const double tone[256],
     }
     return 1;
 }
+
+int SilFeatures(const Silhouette *shape, const unsigned char *palette, SilLines *outline)
+{
+    if (!shape_valid(shape) || !shape->texels || !palette || !outline) return 0;
+    for (size_t i = 0; i < (size_t)shape->width * shape->height; i++)
+        if (shape->texels[i] > 256) return 0;
+    double tone[256];
+    for (unsigned i = 0; i < 256; i++)
+        tone[i] = .2126 * palette[3 * i] + .7152 * palette[3 * i + 1] + .0722 * palette[3 * i + 2];
+    SilLines result = {0};
+    for (int axis = 0; axis < 2; axis++) {
+        unsigned limit = axis ? shape->width : shape->height;
+        for (unsigned fixed = 1; fixed < limit; fixed++) {
+            if (!feature_run(shape, tone, axis, fixed, &result)) {
+                SilLinesFree(&result);
+                return 0;
+            }
+        }
+    }
+    SilLinesFree(outline); *outline = result;
+    return 1;
+}
