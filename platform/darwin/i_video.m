@@ -244,9 +244,11 @@ void I_InitGraphics(void)
 {
     presentedFrames = runFrames = 0;
     ReadFrameLimit();
-    gpuEtch = M_CheckParm("--etch-gpu") != 0;
+    playOnEtch=M_CheckParm("--play-on-etch")!=0;
+    physicalRig=playOnEtch && M_CheckParm("--etch-via-gcode");
+    gpuEtch = (playOnEtch && !physicalRig) || M_CheckParm("--etch-gpu") != 0;
     double gpuRate = ReadGPURate();
-    BOOL gpuInstant = M_CheckParm("--etch-gpu-instant") != 0;
+    BOOL gpuInstant = (playOnEtch && !physicalRig) || M_CheckParm("--etch-gpu-instant") != 0;
     if (!gpuEtch && (M_CheckParm("--etch-gpu-rate") || gpuInstant))
         I_Error("--etch-gpu-rate and --etch-gpu-instant require --etch-gpu");
     capturePending = NO;
@@ -262,6 +264,11 @@ void I_InitGraphics(void)
             if (EtchGPUError()) I_Error("Etch GPU: %s", EtchGPUError());
             R_SetViewSize(10, 0);
         }
+        if (physicalRig) {
+            live=MachineLiveCreate(NULL,(MotionPoint){0,0});
+            if (!live) I_Error("Cannot create the physical live rig");
+            R_SetViewSize(10,0);
+        }
         NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
             NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
         window = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 960, 720)
@@ -271,16 +278,27 @@ void I_InitGraphics(void)
         window.releasedWhenClosed = NO;
         windowDelegate = [DoomWindowDelegate new];
         window.delegate = windowDelegate;
-        layer = [CAMetalLayer layer];
-        layer.device = device;
-        layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-        layer.framebufferOnly = YES;
-        window.contentView.wantsLayer = YES;
-        window.contentView.layer = layer;
+        if (playOnEtch) {
+            playView=[[EtchPlayView alloc] initWithFrame:window.contentView.bounds limit:runFrames];
+            window.contentView=playView;
+            window.collectionBehavior |= NSWindowCollectionBehaviorFullScreenPrimary;
+        } else {
+            layer = [CAMetalLayer layer];
+            layer.device = device;
+            layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+            layer.framebufferOnly = YES;
+            window.contentView.wantsLayer = YES;
+            window.contentView.layer = layer;
+        }
         [window center];
         [window makeKeyAndOrderFront:nil];
         [NSApp finishLaunching];
         [NSApp activateIgnoringOtherApps:YES];
+        if (playView) {
+            [playView waitForModel];
+            if (M_CheckParm("--fullscreen")) [window toggleFullScreen:nil];
+        }
+        livePrevious=CACurrentMediaTime();
     }
 }
 
