@@ -37,3 +37,32 @@ static int executable(const char *p)
     }
     return 0;
 }
+static int metadata(const char *text,MachineSettings *s,MachineParseOptions *start,
+                    MachineParseError *e)
+{
+    int has_size=0,has_start=0,commands=0; size_t line=1;
+    for (const char *p=text;*p;line++) {
+        const char *end=strchr(p,'\n'); size_t n=end ? (size_t)(end-p) : strlen(p);
+        if (n && p[n-1]=='\r') n--;
+        if (n>80) return fail(e,line,"line exceeds 80 bytes");
+        char row[81]; memcpy(row,p,n); row[n]=0;
+        char *q=row; while (*q==' ' || *q=='\t') q++;
+        int size=!strncmp(q,"; ETCH_SIZE",11),position=!strncmp(q,"; ETCH_START",12);
+        if ((size && (q[11]==' ' || !q[11])) || (position && (q[12]==' ' || !q[12]))) {
+            if (commands) return fail(e,line,"metadata must precede commands");
+            if (size ? has_size++ : has_start++) return fail(e,line,"duplicate machine metadata");
+            const char *values=q+(size ? 11 : 12); double x,y; int used=0;
+            if (sscanf(values," X%lf Y%lf %n",&x,&y,&used)!=2 || !used || values[used] ||
+                !isfinite(x) || !isfinite(y)) return fail(e,line,"invalid machine metadata");
+            if (size) {
+                s->width_mm=x; s->height_mm=y;
+                if (!has_start) start->start_cnc_mm.y=y;
+                if (!MachineSettingsValidate(s,e)) { if (e) e->line=line; return 0; }
+            } else start->start_cnc_mm=(MotionPoint){x,y};
+        }
+        if (executable(q)) commands=1;
+        if (!end) break;
+        p=end+1;
+    }
+    return 1;
+}
