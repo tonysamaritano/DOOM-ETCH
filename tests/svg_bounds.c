@@ -68,6 +68,7 @@ static size_t validatePath(const char *text)
     const char *data = attribute(path, "d");
     char quote = data[-1];
     size_t points = 0;
+    double previousX = 0, previousY = 0;
     for (;;) {
         while (isspace((unsigned char)*data)) ++data;
         if (*data == quote) break;
@@ -75,6 +76,8 @@ static size_t validatePath(const char *text)
         double x = number(&data), y = number(&data);
         assert(x >= -1e-8 && x <= 170.15 + 1e-8);
         assert(y >= -1e-8 && y <= 127.6 + 1e-8);
+        if (points) countArtwork(previousX, previousY, x, y);
+        previousX = x; previousY = y;
         ++points;
     }
     assert(points > 1);
@@ -83,7 +86,7 @@ static size_t validatePath(const char *text)
 
 int main(int argc, char **argv)
 {
-    assert(argc == 2);
+    assert(argc == 2 || (argc == 3 && !strcmp(argv[2], "--hud-regions")));
     char *text = readSVG(argv[1]);
     const char *root = strstr(text, "<svg"); assert(root);
     const char *box = attribute(root, "viewBox");
@@ -92,6 +95,12 @@ int main(int argc, char **argv)
     assert(fabs(number(&box) - 127.6) < 1e-8);
     size_t moves = validatePath(text);
     printf("%zu moves within 170.15 x 127.6 mm\n", moves);
+    if (argc == 3) {
+        for (size_t i = 0; i < sizeof(artwork) / sizeof(*artwork); ++i) {
+            printf("HUD %s detail: %zu short interior strokes\n", artwork[i].name, artwork[i].strokes);
+            assert(artwork[i].strokes >= 8);
+        }
+    }
     free(text);
     return 0;
 }
