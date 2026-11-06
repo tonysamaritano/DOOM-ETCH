@@ -62,7 +62,7 @@ if(BUILD_TESTING)
     set_tests_properties(pen-down-planner PROPERTIES ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
 endif()
 
-add_library(etch-motion STATIC etch/motion.c)
+add_library(etch-motion STATIC etch/motion.c etch/svg.c etch/gcode_writer.c)
 target_include_directories(etch-motion PUBLIC etch)
 if(BUILD_TESTING)
     add_executable(motion-ir-test tests/motion_ir.c)
