@@ -464,3 +464,15 @@ BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingS
     });
     return YES;
 }
+
+NSString *EtchGPUStatus(void)
+{
+    static NSString *cached = @"1× · timed";
+    if (!os_unfair_lock_trylock(&stateLock)) return cached;
+    EtchGPUControls();
+    double rate = drawRate;
+    NSString *mode = paused ? @"paused" : instant ? @"instant" : erasing ? @"erasing" : @"timed";
+    os_unfair_lock_unlock(&stateLock);
+    cached = [NSString stringWithFormat:@"%.3g× · %@", rate, mode];
+    return cached;
+}
