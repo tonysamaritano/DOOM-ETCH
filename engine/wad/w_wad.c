@@ -168,11 +168,11 @@ static filelump_t *ReadDirectory(int handle, int *count)
 
 void W_AddFile (char *filename)
 {
-    wadinfo_t		header;
+    filelump_t*         directory = NULL;
     lumpinfo_t*		lump_p;
     unsigned		i;
     int			handle;
-    int			length;
+    int                 count;
     int			startlump;
     filelump_t*		fileinfo;
     filelump_t		singleinfo;
@@ -197,7 +197,7 @@ void W_AddFile (char *filename)
     printf (" adding %s\n",filename);
     startlump = numlumps;
 	
-    if (strcmpi (filename+strlen(filename)-3 , "wad" ) )
+    if (strlen(filename) < 3 || strcmpi(filename + strlen(filename) - 3, "wad"))
     {
 	// single lump file
 	fileinfo = &singleinfo;
@@ -208,26 +208,11 @@ void W_AddFile (char *filename)
     }
     else 
     {
-	// WAD file
-	read (handle, &header, sizeof(header));
-	if (strncmp(header.identification,"IWAD",4))
-	{
-	    // Homebrew levels?
-	    if (strncmp(header.identification,"PWAD",4))
-	    {
-		I_Error ("Wad file %s doesn't have IWAD "
-			 "or PWAD id\n", filename);
-	    }
-	    
-	    // ???modifiedgame = true;		
-	}
-	header.numlumps = LONG(header.numlumps);
-	header.infotableofs = LONG(header.infotableofs);
-	length = header.numlumps*sizeof(filelump_t);
-	fileinfo = alloca (length);
-	lseek (handle, header.infotableofs, SEEK_SET);
-	read (handle, fileinfo, length);
-	numlumps += header.numlumps;
+        directory = ReadDirectory(handle, &count);
+        if (count > INT_MAX - numlumps)
+            I_Error("Too many WAD lumps");
+        fileinfo = directory;
+        numlumps += count;
     }
 
     
@@ -249,6 +234,7 @@ void W_AddFile (char *filename)
 	strncpy (lump_p->name, fileinfo->name, 8);
     }
 	
+    free(directory);
     if (reloadname)
 	close (handle);
 }
