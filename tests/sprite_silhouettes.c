@@ -142,3 +142,30 @@ static void wallClippedProjection(void)
     assert(!fill.count && !lines.count);
     SilRectsFree(&fill); SilLinesFree(&lines); SilhouetteFree(&shape);
 }
+
+static void holeRevealsEarlierLine(void)
+{
+    unsigned char patch[128]; size_t bytes = ringPatch(patch);
+    Silhouette shape = {0}; assert(SilhouetteDecode(&shape, patch, bytes));
+    SilLines scene = {0}, noOutline = {0};
+    assert(SilLineAdd(&scene, (MotionPoint){-1, 1.5}, (MotionPoint){4, 1.5}));
+    assert(SilComposite(&scene, &shape.fill, &noOutline));
+    const MotionSegment visible[] = {
+        {{-1, 1.5}, {0, 1.5}}, {{1, 1.5}, {2, 1.5}}, {{3, 1.5}, {4, 1.5}}
+    };
+    expectedContour(&scene, visible, 3);
+    assert(hasLineAt(&scene, 1.5, 1.5));
+    assert(!hasLineAt(&scene, 0.5, 1.5) && !hasLineAt(&scene, 2.5, 1.5));
+    SilLinesFree(&scene); SilhouetteFree(&shape);
+}
+static void overlappingMasks(void)
+{
+    SilRects mask = {0}; SilLines scene = {0}, noOutline = {0};
+    assert(SilRectAdd(&mask, (SilRect){0, 0, 3, 2}));
+    assert(SilRectAdd(&mask, (SilRect){2, 0, 5, 2}));
+    assert(SilLineAdd(&scene, (MotionPoint){-1, 1}, (MotionPoint){6, 1}));
+    assert(SilComposite(&scene, &mask, &noOutline));
+    const MotionSegment visible[] = {{{-1, 1}, {0, 1}}, {{5, 1}, {6, 1}}};
+    expectedContour(&scene, visible, 2);
+    SilRectsFree(&mask); SilLinesFree(&scene);
+}
