@@ -11,11 +11,12 @@ if(NOT result EQUAL 0)
     message(FATAL_ERROR "Canonical short-file run failed: ${output}${errors}")
 endif()
 machine_summary("${output}" canonical)
-file(MAKE_DIRECTORY "${PREFIX}-home")
+file(MAKE_DIRECTORY "${PREFIX}-work")
 foreach(rate 1 1000)
-    execute_process(COMMAND "${CMAKE_COMMAND}" -E env "HOME=${PREFIX}-home"
+    execute_process(COMMAND "${CMAKE_COMMAND}" -E env --unset=DOOMWADDIR
         "${GAME}" --etch-gcode "${PREFIX}.gcode"
         --etch-time-scale "${rate}" --run-frames 120
+        WORKING_DIRECTORY "${PREFIX}-work"
         RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 30)
     file(WRITE "${PREFIX}-rate-${rate}.log" "${output}${errors}")
     if(NOT result EQUAL 0)
@@ -28,8 +29,9 @@ foreach(rate 1 1000)
 endforeach()
 message(STATUS "Actual native completion at rates1/1000 matches exact CLI physical report: ${canonical}")
 file(WRITE "${PREFIX}-end.gcode" "M2\n")
-execute_process(COMMAND "${CMAKE_COMMAND}" -E env "HOME=${PREFIX}-home"
+execute_process(COMMAND "${CMAKE_COMMAND}" -E env --unset=DOOMWADDIR
     "${GAME}" --etch-gcode "${PREFIX}-end.gcode" --run-frames 30
+    WORKING_DIRECTORY "${PREFIX}-work"
     RESULT_VARIABLE result OUTPUT_VARIABLE zero ERROR_VARIABLE errors TIMEOUT 15)
 file(WRITE "${PREFIX}-end.log" "${zero}${errors}")
 if(NOT result EQUAL 0)
