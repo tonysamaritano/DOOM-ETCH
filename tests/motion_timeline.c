@@ -52,3 +52,27 @@ static void connectorsAndDiagonal(void)
     assert(kinds[1] == MOTION_CONNECTOR && points[2].y == 40);
     free(records);
 }
+
+static void startOnlyAndStationary(void)
+{
+    MotionPath path = hundred(); path.count = 1;
+    MotionTimedSegment sentinel = {0}, *records = &sentinel;
+    size_t count = 99; double seconds = 99;
+    assert(MotionTimelineBuild(&path, 50, &records, &count, &seconds));
+    assert(!records && count == 0 && seconds == 0);
+    MotionPoint points[] = {{0, 0}, {0, 0}, {100, 0}};
+    unsigned char kinds[] = {MOTION_START, MOTION_OUTLINE, MOTION_CONNECTOR};
+    path = hundred(); path.points = points; path.kinds = kinds; path.count = 3;
+    assert(MotionTimelineBuild(&path, 50, &records, &count, &seconds));
+    assert(count == 2 && seconds == 2);
+    assert(records[0].timing[0] == 0 && records[0].timing[1] == 0);
+    assert(records[1].timing[0] == 0 && records[1].timing[1] == 2);
+    free(records);
+}
+static void rejects(const MotionPath *path, double speed)
+{
+    MotionTimedSegment sentinel = {0}, *records = &sentinel;
+    size_t count = 99; double seconds = 99;
+    assert(!MotionTimelineBuild(path, speed, &records, &count, &seconds));
+    assert(!records && count == 0 && seconds == 0);
+}
