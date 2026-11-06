@@ -173,7 +173,9 @@ static void rateBoundsAndQueuedOrder(void)
     startFixture();
     for (int i = 0; i < 20; ++i) EtchGPUAction('+');
     EtchGPUTick(testClock, YES); assert(drawRate == 1024);
-    assert([EtchGPUStatus() containsString:@"1024"]);
+    NSString *status = EtchGPUStatus();
+    assert([status containsString:@"×"] && [status containsString:@"timed"]);
+    assert(fabs(strtod(status.UTF8String, NULL) / drawRate - 1) < .01);
     for (int i = 0; i < 30; ++i) EtchGPUAction('-');
     EtchGPUTick(testClock, YES); assert(drawRate == 1.0 / 64);
     EtchGPUSetRate(1024); EtchGPUAction('+'); EtchGPUAction('-');
