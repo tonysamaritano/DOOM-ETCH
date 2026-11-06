@@ -125,3 +125,28 @@ static int compile_move(MachineStepProgram *p,const MachineMove *move,size_t i,
     }
     return 1;
 }
+int MachineSteppersCompile(MachineStepProgram *out,const MachineProgram *in,
+                           const MachineSettings *settings,MachineParseError *e)
+{
+    if (!out || !in || (in->count && !in->moves) ||
+        in->count>SIZE_MAX/sizeof(MachineStep)) return fail(e,0,"invalid program");
+    if (!MachineSettingsValidate(settings,e)) return 0;
+    MachineStepProgram next={.settings=*settings,.count=in->count};
+    if (!target(settings,in->start_cnc_mm,next.start_steps))
+        return fail(e,0,"required start outside travel");
+    memcpy(next.final_steps,next.start_steps,sizeof(next.start_steps));
+    next.moves=in->count ? calloc(in->count,sizeof(*next.moves)) : NULL;
+    if (in->count && !next.moves) return fail(e,0,"out of memory");
+    int direction[2]={0};
+    for (size_t i=0;i<in->count;i++) {
+        if ((i && in->moves[i-1].kind==MACHINE_MOVE_END) ||
+            !compile_move(&next,&in->moves[i],i,direction,e)) {
+            if (i && in->moves[i-1].kind==MACHINE_MOVE_END)
+                fail(e,in->moves[i].line,"move after end");
+            MachineStepProgramFree(&next); return 0;
+        }
+    }
+    MachineStepProgramFree(out); *out=next;
+    if (e) *e=(MachineParseError){0};
+    return 1;
+}
