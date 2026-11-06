@@ -5,12 +5,14 @@
 void P_RunThinkers(void);
 typedef struct { thinker_t link; int number; thinker_t *remove; } Actor;
 static int order[16], count, frees;
+static Actor *spawn(int number);
 void Z_Free(void *memory) { ++frees; free(memory); }
 static void tick(void *memory)
 {
     Actor *actor = memory;
     order[count++] = actor->number;
     if (actor->remove) P_RemoveThinker(actor->remove);
+    if (actor->number == 70) { actor->number = 71; spawn(90); }
 }
 static Actor *spawn(int number)
 {
@@ -58,6 +60,13 @@ int main(void)
     P_RemoveThinker(&last->link);
     P_RunThinkers();
     assert(frees == 6);
+    spawn(70); spawn(80); count = 0;
+    P_RunThinkers();
+    assert(count == 3 && order[0] == 70 && order[1] == 80 && order[2] == 90);
+    for (thinker_t *p = thinkercap.next; p != &thinkercap; p = p->next)
+        P_RemoveThinker(p);
+    P_RunThinkers();
+    assert(frees == 9);
     checkLinks();
     return 0;
 }
