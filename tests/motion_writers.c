@@ -169,6 +169,22 @@ static void sameTrace(const MotionPoint *svg, const ParsedCode *code, size_t cou
         if (machine.y == 0) assert(!signbit(machine.y));
     }
 }
+static void svgCanvas(const char *svg)
+{
+    char box[128];
+    attribute(strstr(svg, "<svg"), "viewBox", box, sizeof(box));
+    const double expected[] = {0, 0, 170.15, 127.6};
+    char *cursor = box;
+    for (int i = 0; i < 4; ++i) {
+        while (isspace((unsigned char)*cursor) || *cursor == ',') ++cursor;
+        char *end;
+        double actual = strtod(cursor, &end);
+        assert(end != cursor && fabs(actual - expected[i]) < 1e-7);
+        cursor = end;
+    }
+    while (isspace((unsigned char)*cursor)) ++cursor;
+    assert(!*cursor);
+}
 static void emittedFormatsAgree(void)
 {
     MotionPath path = writerFixture();
@@ -179,6 +195,7 @@ static void emittedFormatsAgree(void)
     char *svg = readOutput(svgStream), *gcode = readOutput(codeStream);
     MotionPoint points[16];
     size_t count = svgPoints(svg, points);
+    svgCanvas(svg);
     physicalPoints(&path, points, count);
     connectorStyle(svg, points);
     assert(strstr(gcode, "assum") && strstr(gcode, "0.05"));
