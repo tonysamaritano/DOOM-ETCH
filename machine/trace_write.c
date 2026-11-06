@@ -36,3 +36,38 @@ static int valid(const MachineStepProgram *p,const EtchTrace *t,double seconds)
     }
     return segment==t->count && erase==t->erase_count && isfinite(end) && fabs(end-t->clock)<=1e-9;
 }
+static void string(FILE *f,const char *text)
+{
+    fputc('"',f);
+    for (const unsigned char *p=(const unsigned char *)(text ? text : "");*p;p++) {
+        if (*p=='"' || *p=='\\') fprintf(f,"\\%c",*p);
+        else if (*p=='\n') fputs("\\n",f);
+        else if (*p=='\r') fputs("\\r",f);
+        else if (*p=='\t') fputs("\\t",f);
+        else if (*p<32) fprintf(f,"\\u%04x",*p);
+        else fputc(*p,f);
+    }
+    fputc('"',f);
+}
+static void settings(FILE *f,const MachineSettings *s)
+{
+    fprintf(f,"\"settings\":{\"assumed\":true,\"width_mm\":%.17g,\"height_mm\":%.17g,"
+        "\"steps_per_mm\":[%.17g,%.17g],\"max_rate_mm_min\":[%.17g,%.17g],"
+        "\"acceleration_mm_s2\":[%.17g,%.17g],\"backlash_mm\":%.17g,"
+        "\"erase_seconds\":%.17g,\"ghost_fraction\":%.17g,\"knob_mm_turn\":%.17g},\n",
+        s->width_mm,s->height_mm,s->steps_per_mm[0],s->steps_per_mm[1],
+        s->max_rate_mm_min[0],s->max_rate_mm_min[1],s->acceleration_mm_s2[0],
+        s->acceleration_mm_s2[1],s->backlash_mm,s->erase_seconds,s->ghost_fraction,s->knob_mm_turn);
+}
+static void segments(FILE *f,const EtchTrace *t)
+{
+    fputs("\"segment_fields\":[\"t0\",\"duration\",\"ramp\",\"peak\",\"accel\",\"slack\",\"length\","
+        "\"x0\",\"y0\",\"ux\",\"uy\",\"motor_x0\",\"motor_y0\",\"line\",\"frame\"],\n\"segments\":[",f);
+    for (size_t i=0;i<t->count;i++) {
+        const EtchTraceSegment *s=&t->segments[i];
+        fprintf(f,"%s%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%.17g,%zu,%zu",
+            i ? ",\n" : "\n",s->t0,s->duration,s->ramp,s->peak,s->accel,s->slack,s->length,
+            s->x0,s->y0,s->ux,s->uy,s->motor_x0,s->motor_y0,s->line,s->frame);
+    }
+    fputs("],\n",f);
+}
