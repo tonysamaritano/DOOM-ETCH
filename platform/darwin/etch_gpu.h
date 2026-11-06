@@ -8,6 +8,12 @@ void EtchGPUInit(id<MTLDevice> device, double visual_speed_mm_s);
 void EtchGPUShutdown(void);
 void EtchGPUTick(double now, BOOL active);
 void EtchGPUErase(void);
+/* Main-thread controls are queued and applied in order at the next playback entry. */
+void EtchGPUSetRate(double rate);
+void EtchGPUSetInstant(BOOL enabled);
+void EtchGPUAction(int key);
+void EtchGPUInvalidate(void);
+NSString *EtchGPUStatus(void);
 BOOL EtchGPUNeedsPath(void);
 /* YES transfers and clears the snapshot; NO leaves ownership with the caller. */
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot);
