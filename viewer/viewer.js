@@ -27,7 +27,7 @@ async function loadRig(){
   evidence.assetLoaded=true;evidence.nodes=gltf.parser.json.nodes.length;optics.setModel(model);return {model,area};
 }
 async function loadDrawing(rig) {
-  const url=new URLSearchParams(location.search).get('trace');
+  const url=new URLSearchParams(location.search).get('trace') ?? '../build/viewer/e1m1.json';
   if(!url){evidence.state='awaiting-trace';publish();return;}
   evidence.traceURL=new URL(url,location.href).href;
   const response=await fetch(evidence.traceURL,{cache:'no-store'});if(!response.ok)throw Error('Trace HTTP '+response.status);
