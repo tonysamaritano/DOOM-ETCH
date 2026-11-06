@@ -8,11 +8,9 @@
 
 void IdentifyVersion(void);
 extern char *wadfiles[];
-char basedefault[1024];
 GameMode_t gamemode;
 GameMission_t gamemission;
 Language_t language;
-boolean devparm;
 static const char *available;
 int M_CheckParm(char *argument) { (void)argument; return 0; }
 void I_Error(char *format, ...) { (void)format; abort(); }
