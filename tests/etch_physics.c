@@ -196,3 +196,25 @@ static void shake_retention(void)
     assert(marks(d, ETCH_INK_GHOST) == (size_t)floor(fresh * .03));
     EtchDestroy(d);
 }
+
+static void chunk_invariance(void)
+{
+    MotionPoint p[] = {{0, 0}, {100, 0}, {0, 0}, {0, 100}};
+    EtchDevice *a = EtchCreate(EtchAssumedDefaults(), p[0]);
+    EtchDevice *b = EtchCreate(EtchAssumedDefaults(), p[0]);
+    assert(a && b);
+    assert(EtchDeviceSubmitHardware(a, p, 4));
+    assert(EtchDeviceSubmitHardware(b, p, 4));
+    assert(EtchDeviceTick(a, 10));
+    for (int i = 0; i < 10000; ++i) assert(EtchDeviceTick(b, .001));
+    same_status(EtchDeviceGetStatus(a), EtchDeviceGetStatus(b));
+    assert(!memcmp(EtchDeviceInk(a), EtchDeviceInk(b), 320 * 200));
+    for (int shake = 0; shake < 2; ++shake) {
+        assert(EtchDeviceRequestErase(a) && EtchDeviceRequestErase(b));
+        assert(EtchDeviceTick(a, 3));
+        for (int i = 0; i < 3000; ++i) assert(EtchDeviceTick(b, .001));
+        same_status(EtchDeviceGetStatus(a), EtchDeviceGetStatus(b));
+        assert(!memcmp(EtchDeviceInk(a), EtchDeviceInk(b), 320 * 200));
+    }
+    EtchDestroy(a); EtchDestroy(b);
+}
