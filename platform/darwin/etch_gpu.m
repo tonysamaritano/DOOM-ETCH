@@ -289,8 +289,14 @@ BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
         || !snapshot->width || !snapshot->height) return NO;
     if (!os_unfair_lock_trylock(&stateLock)) return NO;
     EtchGPUControls();
-    if (!running || paused || !needsPath || planning || pending || failure[0]) {
+    if (!running || paused || failure[0] || (!instant && (!needsPath || planning || pending))) {
         os_unfair_lock_unlock(&stateLock); return NO;
+    }
+    if (planning) {
+        EtchGPUFreeLatest();
+        latestSnapshot = *snapshot; latestGeneration = generation;
+        *snapshot = (EtchSnapshot){0};
+        os_unfair_lock_unlock(&stateLock); return YES;
     }
     EtchSnapshot transferred = *snapshot;
     *snapshot = (EtchSnapshot){0};
@@ -301,19 +307,7 @@ BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
     dispatch_queue_t queue = plannerQueue;
     os_unfair_lock_unlock(&stateLock);
     dispatch_async(queue, ^{
-        @autoreleasepool {
-            const char *message = NULL;
-            EtchGPUPath *bundle = EtchGPUBuildPath(transferred, gpu, drawingSpeed, &message);
-            os_unfair_lock_lock(&stateLock);
-            if (running && acceptedGeneration == generation) {
-                if (bundle) {
-                    pending = bundle;
-                    atomic_fetch_add(&uploads, 1);
-                } else if (message && !failure[0]) snprintf(failure, sizeof(failure), "%s", message);
-            }
-            planning = NO;
-            os_unfair_lock_unlock(&stateLock);
-        }
+        EtchGPUPlanSnapshots(transferred, acceptedGeneration, gpu, drawingSpeed);
     });
     return YES;
 }
@@ -322,7 +316,8 @@ BOOL EtchGPUNeedsPath(void)
 {
     if (!os_unfair_lock_trylock(&stateLock)) return NO;
     EtchGPUControls();
-    BOOL requested = running && !paused && needsPath && !planning && !pending && !failure[0];
+    BOOL requested = running && !paused && !failure[0]
+        && (instant || (needsPath && !planning && !pending));
     os_unfair_lock_unlock(&stateLock);
     return requested;
 }
