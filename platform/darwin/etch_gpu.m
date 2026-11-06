@@ -507,3 +507,13 @@ NSString *EtchGPUStatus(void)
     cached = [NSString stringWithFormat:@"%.3g× · %@", rate, mode];
     return cached;
 }
+
+static void EtchGPUReadStorage(id<MTLCommandQueue> queue)
+{
+    if (readTarget) return;
+    MTLTextureDescriptor *desc=[MTLTextureDescriptor texture2DDescriptorWithPixelFormat:
+        MTLPixelFormatBGRA8Unorm width:768 height:576 mipmapped:NO];
+    desc.usage=MTLTextureUsageRenderTarget; desc.storageMode=MTLStorageModePrivate;
+    readTarget=[queue.device newTextureWithDescriptor:desc];
+    readBuffer=[queue.device newBufferWithLength:768*576*4 options:MTLResourceStorageModeShared];
+}
