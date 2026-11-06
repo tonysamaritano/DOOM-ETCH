@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 import assert from 'node:assert/strict';
-import {decodeFrame} from '../platform/darwin/etch_play/decoder.js';
+import {decodeFrame,frameRGBA} from '../platform/darwin/etch_play/decoder.js';
 const game={version:1,sequence:1,kind:'indexed',width:320,height:200,mode:'game'};
 const visual={...game,kind:'bgra',width:768,height:576,mode:'visual'};
 const physical={...game,mode:'physical',cursor_mm:[10,20],motor_mm:[-0.15,130],
@@ -54,4 +54,9 @@ const reversed=valid.slice(0),size=new DataView(valid).getUint32(0,true);
 new DataView(reversed).setUint32(0,size,false);
 assert.throws(()=>decodeFrame(reversed));
 assert.throws(()=>decodeFrame(new Uint8Array(valid)));
-console.log('PASS live packet colors, state, bounds, lengths and malformed input');
+assert.deepEqual([...frameRGBA(first).slice(0,4)],[11,22,33,255]);
+assert.deepEqual([...frameRGBA(first).slice(-4)],[44,55,66,255]);
+assert.deepEqual([...frameRGBA(second).slice(0,4)],[33,22,11,255]);
+assert.deepEqual([...frameRGBA(second).slice(-4)],[99,88,77,255]);
+assert.deepEqual([...second.pixels.slice(0,4)],[11,22,33,255]);
+console.log('PASS live decoding, actual color conversion and malformed input');
