@@ -8,8 +8,16 @@ python3 viewer/capture_server.py --three /absolute/path/to/three-0.163.0/package
 
 The dependency directory must be the complete three.js **0.163.0** package.
 It is served through the import map; no bundler, HDRI or remote textures are used.
-Open `http://127.0.0.1:8770/viewer/index.html?trace=/path/to/trace.json`.
-There is deliberately no default trace. Add `&t=SECONDS` for a paused physical-time view.
+Build the test preset and put shareware `doom1.wad` in ignored `test-data/`, then run:
+
+```sh
+tools/rig_frame.sh
+```
+
+The script exports E1M1, runs the controller and writes `build/viewer/e1m1.json`.
+Open its printed URL and press Play. The viewer defaults to this complete frame.
+Use `?trace=/path/to/trace.json` to select another drawing, or `?t=SECONDS` to hold
+an exact physical moment in the default drawing (`&t=SECONDS` after another query).
 Play advances at real **1×**, with pause, restart and seek. There is no rate control.
 Camera lens, aperture and focus change the rendered optics; Reset camera restores framing.
 
