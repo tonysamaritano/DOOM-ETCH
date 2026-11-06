@@ -3,7 +3,7 @@ foreach(argument EXPORTER WAD PREFIX VALIDATOR)
         message(FATAL_ERROR "etch-walls requires ${argument}")
     endif()
 endforeach()
-execute_process(COMMAND "${EXPORTER}" "${WAD}" "${PREFIX}"
+execute_process(COMMAND "${EXPORTER}" "${WAD}" "${PREFIX}" --no-sprites
     RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE errors)
 if(NOT result EQUAL 0)
     message(FATAL_ERROR "Wall export failed (${result}): ${output}${errors}")
