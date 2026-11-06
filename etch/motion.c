@@ -228,3 +228,40 @@ static void walk_component(Graph *graph, MotionPath *path, size_t root)
         append_move(path, graph->vertices[next].point, MOTION_OUTLINE);
     }
 }
+
+int MotionPlanSegments(MotionPath *path, const MotionSegment *segments, size_t count,
+                       unsigned width, unsigned height, MotionPoint start)
+{
+    /* Match the reference's finite limit and bound every allocation product. */
+    if (!path || (!segments && count) || count > 400000 || !width || !height
+        || !in_bounds(start, width, height)) return 0;
+    for (size_t i = 0; i < count; i++)
+        if (!in_bounds(segments[i].a, width, height)
+            || !in_bounds(segments[i].b, width, height)) return 0;
+    Graph graph = {0};
+    MotionPath result = {.width = width, .height = height,
+        .width_mm = MOTION_WIDTH_MM, .height_mm = MOTION_HEIGHT_MM};
+    int success = 0;
+    if (!graph_vertices(&graph, segments, count)) goto done;
+    graph_unique_edges(&graph, count);
+    if (!graph_adjacency(&graph)) goto done;
+    size_t capacity = 3 * graph.edge_count + 1;
+    result.points = malloc(capacity * sizeof(*result.points));
+    result.kinds = malloc(capacity * sizeof(*result.kinds));
+    if (!result.points || !result.kinds) goto done;
+    result.points[0] = start; result.kinds[0] = MOTION_START; result.count = 1;
+    while (graph.edge_count) {
+        size_t root = closest_vertex(&graph, result.points[result.count - 1]);
+        if (root == graph.vertex_count) break;
+        append_move(&result, graph.vertices[root].point, MOTION_CONNECTOR);
+        walk_component(&graph, &result, root);
+    }
+    MotionFree(path);
+    *path = result;
+    result = (MotionPath){0};
+    success = 1;
+done:
+    graph_free(&graph);
+    MotionFree(&result);
+    return success;
+}
