@@ -103,6 +103,21 @@ static void ToggleGPULayer(int key)
     EtchGPUInvalidate();
 }
 
+static BOOL HandleGPUKey(int key, BOOL pressed)
+{
+    if (!gpuEtch) return NO;
+    BOOL layerKey = key == KEY_F2 || key == KEY_F3 || key == KEY_F4 || key == KEY_F5
+        || key == 'h' || key == 'g' || key == 'j';
+    BOOL playbackKey = key == KEY_F7 || key == KEY_F8 || key == KEY_F9
+        || key == '+' || key == '=' || key == '-' || key == '_';
+    if (!layerKey && !playbackKey) return NO;
+    if (pressed) {
+        if (layerKey) ToggleGPULayer(key);
+        else EtchGPUAction(key);
+    }
+    return YES;
+}
+
 void I_StartTic(void)
 {
     if (!window) return;
@@ -120,10 +135,8 @@ void I_StartTic(void)
                     continue;
                 }
                 int key = DoomKeyForEvent(event);
-                if (gpuEtch && key == KEY_F7) {
-                    if (event.type == NSEventTypeKeyDown && !event.isARepeat) EtchGPUErase();
+                if (HandleGPUKey(key, event.type == NSEventTypeKeyDown && !event.isARepeat))
                     continue;
-                }
                 if (!event.isARepeat)
                     PostKey(key, event.type == NSEventTypeKeyDown);
                 continue;
