@@ -66,8 +66,18 @@ if(BUILD_TESTING)
 endif()
 
 if(BUILD_TESTING)
-    add_executable(wall-bands-test tests/wall_bands.c)
-    target_link_libraries(wall-bands-test PRIVATE doom-engine)
-    target_compile_options(wall-bands-test PRIVATE -UNDEBUG)
-    add_test(NAME wall-bands COMMAND wall-bands-test)
+    add_executable(projected-walls-test tests/projected_walls.c)
+    target_link_libraries(projected-walls-test PRIVATE doom-engine)
+    target_compile_options(projected-walls-test PRIVATE -UNDEBUG)
+    add_test(NAME projected-walls COMMAND projected-walls-test)
+    add_executable(svg-bounds-test tests/svg_bounds.c)
+    target_compile_options(svg-bounds-test PRIVATE -UNDEBUG)
+    if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+        add_test(NAME etch-walls COMMAND "${CMAKE_COMMAND}"
+            "-DEXPORTER=$<TARGET_FILE:etch-export>"
+            "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+            "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/etch-walls"
+            "-DVALIDATOR=$<TARGET_FILE:svg-bounds-test>"
+            -P "${PROJECT_SOURCE_DIR}/tests/etch_walls.cmake")
+    endif()
 endif()
