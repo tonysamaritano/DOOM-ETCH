@@ -210,7 +210,7 @@ Z_Malloc
     //  back up over them
     base = mainzone->rover;
     
-    if (!base->prev->user)
+    while (!base->prev->user || base->prev->tag >= PU_PURGELEVEL)
 	base = base->prev;
 	
     rover = base;
