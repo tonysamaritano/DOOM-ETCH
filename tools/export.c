@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
+#include "export_files.h"
 #include "doomstat.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -21,7 +23,21 @@
 void D_CheckNetGame(void);
 void R_ExecuteSetViewSize(void);
 
-int WriteMotionOutput(const char *prefix, const char *extension, const MotionPath *path);
+
+static void ReportMotion(const MotionPath *path)
+{
+    printf("%zu moves at %.2f x %.2f mm (assumed feed 3600 mm/min)\n",
+           path->count - 1, path->width_mm, path->height_mm);
+    double length_mm = 0;
+    for (size_t i = 1; i < path->count; ++i) {
+        double dx = (path->points[i].x - path->points[i - 1].x) * path->width_mm / path->width;
+        double dy = (path->points[i].y - path->points[i - 1].y) * path->height_mm / path->height;
+        length_mm += hypot(dx, dy);
+    }
+    /* Ideal constant-speed estimate, with the feed assumed to be 60 mm/s. */
+    printf("PATH length_mm=%.9f estimate_seconds=%.9f\n", length_mm, length_mm / 60);
+    puts("Estimate assumes constant 60 mm/s, excluding acceleration and backlash.");
+}
 
 int main(int argc, char **argv)
 {
@@ -84,17 +100,7 @@ int main(int argc, char **argv)
     if (!R_EtchBuildMotion(&path)) I_Error("Cannot plan the captured frame");
     if (!WriteMotionOutput(argv[2], "svg", &path)) I_Error("Cannot write %s.svg", argv[2]);
     if (!WriteMotionOutput(argv[2], "gcode", &path)) I_Error("Cannot write %s.gcode", argv[2]);
-    printf("%zu moves at %.2f x %.2f mm (assumed feed 3600 mm/min)\n",
-           path.count - 1, path.width_mm, path.height_mm);
-    double length_mm = 0;
-    for (size_t i = 1; i < path.count; ++i) {
-        double dx = (path.points[i].x - path.points[i - 1].x) * path.width_mm / path.width;
-        double dy = (path.points[i].y - path.points[i - 1].y) * path.height_mm / path.height;
-        length_mm += hypot(dx, dy);
-    }
-    /* Ideal constant-speed estimate, with the feed assumed to be 60 mm/s. */
-    printf("PATH length_mm=%.9f estimate_seconds=%.9f\n", length_mm, length_mm / 60);
-    puts("Estimate assumes constant 60 mm/s, excluding acceleration and backlash.");
+    ReportMotion(&path);
     MotionFree(&path);
     R_EtchResetSprites();
     return 0;
