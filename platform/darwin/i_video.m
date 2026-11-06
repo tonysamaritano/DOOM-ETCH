@@ -304,6 +304,8 @@ void I_InitGraphics(void)
 
 void I_ShutdownGraphics(void)
 {
+    [playView stop]; playView=nil;
+    MachineLiveDestroy(live); live=NULL;
     if (gpuEtch) {
         EtchGPUShutdown();
         fprintf(stderr, "Etch GPU: frames=%u uploads=%u\n",
