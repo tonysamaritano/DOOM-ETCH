@@ -2,6 +2,7 @@
 #define DOOM_ETCH_MOTION_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 #define MOTION_WIDTH_MM 170.15
 #define MOTION_HEIGHT_MM 127.6
@@ -25,5 +26,7 @@ int MotionPlanSegments(MotionPath *path, const MotionSegment *segments, size_t c
 int MotionValid(const MotionPath *path);
 int MotionCopy(MotionPath *destination, const MotionPath *source);
 void MotionFree(MotionPath *path);
+int MotionWriteSVG(FILE *stream, const MotionPath *path);
+int MotionWriteGCode(FILE *stream, const MotionPath *path, double feed_mm_min);
 
 #endif
