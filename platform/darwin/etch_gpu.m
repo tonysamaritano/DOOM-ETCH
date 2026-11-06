@@ -245,6 +245,18 @@ static EtchGPUFrame *EtchGPUFrameState(void)
     return frame;
 }
 
+static void EtchGPUEncodeLayer(id<MTLRenderCommandEncoder> encoder, EtchGPUPath *path,
+    double clock, float opacity, float blur, double width, double height, double backingScale)
+{
+    if (!path.buffer || !path.count || opacity <= 0) return;
+    float uniforms[8] = {(float)width, (float)height, (float)(.65 * backingScale),
+        (float)clock, opacity, (float)(blur * backingScale), 0, 0};
+    [encoder setVertexBuffer:path.buffer offset:0 atIndex:0];
+    [encoder setVertexBytes:uniforms length:sizeof(uniforms) atIndex:1];
+    [encoder setFragmentBytes:uniforms length:sizeof(uniforms) atIndex:0];
+    [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:path.count];
+}
+
 static BOOL EtchGPUEncode(id<MTLCommandBuffer> command, id<MTLTexture> target,
     EtchGPUPath *path, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
     double clock, double backingScale)
