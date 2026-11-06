@@ -13,5 +13,11 @@ void R_EtchWallColumn(int tier, int x, double top, double bottom,
 void R_EtchClipPlane(int x, double top, double topstep, double bottom, double bottomstep);
 void R_EtchWallEnd(void);
 int R_EtchBuildMotion(MotionPath *path);
+void R_EtchSprites(int enabled);
+int R_EtchSpritesActive(void);
+int R_EtchSpritePatch(int lump, const void *patch, size_t bytes,
+    double origin_x, double origin_y, double scale_x, double scale_y,
+    int first, int last, const short *top, const short *bottom);
+void R_EtchResetSprites(void);
 
 #endif
