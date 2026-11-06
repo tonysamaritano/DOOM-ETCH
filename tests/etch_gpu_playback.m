@@ -180,6 +180,8 @@ static void rateBoundsAndQueuedOrder(void)
     EtchGPUTick(testClock, YES); assert(drawRate == 512);
     EtchGPUSetRate(1.0 / 64); EtchGPUAction('-'); EtchGPUAction('+');
     EtchGPUTick(testClock, YES); assert(drawRate == 1.0 / 32);
+    EtchGPUAction('='); EtchGPUTick(testClock, YES); assert(drawRate == 1.0 / 16);
+    EtchGPUAction('_'); EtchGPUTick(testClock, YES); assert(drawRate == 1.0 / 32);
     EtchGPUShutdown();
 }
 
@@ -203,7 +205,7 @@ static void pauseAndManualErase(void)
     startFixture(); advance(.5);
     EtchGPUAction(KEY_F9); EtchGPUTick(testClock, YES);
     assert(paused); advance(.25); assert(fabs(playhead - .5) < 1e-9);
-    EtchGPUErase(); EtchGPUTick(testClock, YES);
+    EtchGPUAction(KEY_F7); EtchGPUTick(testClock, YES);
     assert(erasing && eraseTime == 0);
     advance(.25); assert(eraseTime == 0 && fabs(playhead - .5) < 1e-9);
     EtchGPUAction(KEY_F9); EtchGPUTick(testClock, YES); assert(!paused);
