@@ -106,3 +106,24 @@ static void fillAudio(void *context, AudioQueueRef queue,
     buffer->mAudioDataByteSize = AUDIO_FRAMES * 4;
     if (running) AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
 }
+
+void I_ShutdownSound(void)
+{
+    pthread_mutex_lock(&soundLock);
+    soundRunning = 0;
+    AudioQueueRef previous = soundQueue;
+    soundQueue = NULL;
+    pthread_mutex_unlock(&soundLock);
+    /* Dispose synchronously: callbacks finish before samples are freed. */
+    if (previous) {
+        AudioQueueStop(previous, true);
+        AudioQueueDispose(previous, true);
+    }
+    pthread_mutex_lock(&soundLock);
+    memset(voices, 0, sizeof(voices));
+    for (int i = 0; i < NUMSFX; ++i) {
+        free(samples[i].pcm);
+        samples[i] = (SoundSample){0};
+    }
+    pthread_mutex_unlock(&soundLock);
+}
