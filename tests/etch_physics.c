@@ -104,3 +104,35 @@ static void quantized_extent(void)
     point(EtchDeviceGetStatus(d).cursor_mm, 1, 1);
     EtchDestroy(d);
 }
+
+static void same_status(EtchStatus a, EtchStatus b)
+{
+    point(a.cursor_mm, b.cursor_mm.x, b.cursor_mm.y);
+    point(a.motor_mm, b.motor_mm.x, b.motor_mm.y);
+    point(a.motor_velocity_mm_s, b.motor_velocity_mm_s.x, b.motor_velocity_mm_s.y);
+    near(a.elapsed_s, b.elapsed_s); near(a.remaining_s, b.remaining_s);
+    near(a.erase_left_s, b.erase_left_s);
+    assert(a.completed == b.completed && a.count == b.count);
+    assert(a.drawing == b.drawing && a.erasing == b.erasing);
+}
+
+static void transactional(void)
+{
+    MotionPoint p[] = {{0, 0}, {100, 0}, {100, 10}};
+    EtchDevice *d = EtchCreate(EtchAssumedDefaults(), p[0]);
+    assert(d && EtchDeviceSubmitHardware(d, p, 3));
+    p[1].x = NAN; p[2].y = NAN; /* Submission must own its copy. */
+    assert(EtchDeviceTick(d, .2));
+    EtchStatus before = EtchDeviceGetStatus(d);
+    unsigned char ink[ETCH_INK_WIDTH * ETCH_INK_HEIGHT];
+    memcpy(ink, EtchDeviceInk(d), sizeof ink);
+    assert(!EtchDeviceSubmitHardware(d, p, 3));
+    assert(!EtchDeviceTick(d, NAN));
+    assert(!EtchDeviceTick(d, INFINITY));
+    assert(!EtchDeviceTick(d, -.1));
+    same_status(before, EtchDeviceGetStatus(d));
+    assert(!memcmp(ink, EtchDeviceInk(d), sizeof ink));
+    assert(EtchDeviceTick(d, 10));
+    point(EtchDeviceGetStatus(d).cursor_mm, 100, 10);
+    EtchDestroy(d);
+}
