@@ -110,7 +110,10 @@ void P_RunThinkers (void)
 	    // time to remove it
 	    currentthinker->next->prev = currentthinker->prev;
 	    currentthinker->prev->next = currentthinker->next;
+	    thinker_t *next = currentthinker->next;
 	    Z_Free (currentthinker);
+	    currentthinker = next;
+	    continue;
 	}
 	else
 	{
