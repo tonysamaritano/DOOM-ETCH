@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "doomstat.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -25,13 +26,25 @@ int WriteMotionOutput(const char *prefix, const char *extension, const MotionPat
 int main(int argc, char **argv)
 {
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites] [--no-hud] [--no-weapon]\n", argv[0]);
+        fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites] [--no-hud] [--no-weapon]\n"
+            "  [--no-textures] [--no-sprite-textures] [--no-weapon-textures] [--hatch-pattern 0..2]\n", argv[0]);
         return 2;
     }
     for (int argument = 3; argument < argc; ++argument) {
         if (!strcmp(argv[argument], "--no-sprites")) R_EtchSprites(0);
         else if (!strcmp(argv[argument], "--no-hud")) R_EtchHUD(0);
         else if (!strcmp(argv[argument], "--no-weapon")) R_EtchWeapon(0);
+        else if (!strcmp(argv[argument], "--no-textures")) R_EtchTextures(0);
+        else if (!strcmp(argv[argument], "--no-sprite-textures")) R_EtchSpriteTextures(0);
+        else if (!strcmp(argv[argument], "--no-weapon-textures")) R_EtchWeaponTextures(0);
+        else if (!strcmp(argv[argument], "--hatch-pattern") && argument + 1 < argc) {
+            const char *pattern = argv[++argument];
+            if (pattern[0] < '0' || pattern[0] > '2' || pattern[1]) {
+                fprintf(stderr, "Hatch pattern must be 0, 1 or 2\n");
+                return 2;
+            }
+            R_EtchHatchPattern(pattern[0] - '0');
+        }
         else {
             fprintf(stderr, "Unknown export option: %s\n", argv[argument]);
             return 2;
