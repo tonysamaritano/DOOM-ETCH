@@ -116,7 +116,9 @@ int MachinePlaybackTick(MachinePlayback *p,double seconds)
         EtchStatus after=EtchDeviceGetStatus(p->device);
         double elapsed=p->active==2 ? p->program.settings.erase_seconds-after.erase_left_s : after.elapsed_s;
         double clock=p->completed_seconds+elapsed;
-        if (!isfinite(clock) || clock<p->seconds) return runtime_fail(p,0,"invalid playback clock");
+        if (!isfinite(clock) || clock<p->seconds ||
+            (elapsed>0 && clock<=p->completed_seconds))
+            return runtime_fail(p,0,"unrepresentable positive playback clock");
         p->seconds=clock; seconds=fmax(0,seconds-slice);
         if (EtchDeviceReady(p->device)) {
             p->completed_seconds=clock;
