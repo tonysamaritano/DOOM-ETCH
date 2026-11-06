@@ -215,6 +215,10 @@ void I_InitGraphics(void)
     presentedFrames = runFrames = 0;
     ReadFrameLimit();
     gpuEtch = M_CheckParm("--etch-gpu") != 0;
+    double gpuRate = ReadGPURate();
+    BOOL gpuInstant = M_CheckParm("--etch-gpu-instant") != 0;
+    if (!gpuEtch && (M_CheckParm("--etch-gpu-rate") || gpuInstant))
+        I_Error("--etch-gpu-rate and --etch-gpu-instant require --etch-gpu");
     capturePending = NO;
     @autoreleasepool {
         [NSApplication sharedApplication];
@@ -223,6 +227,8 @@ void I_InitGraphics(void)
         if (gpuEtch) {
             // Visual playback speed, independent of the later physical simulator.
             EtchGPUInit(device, 1200);
+            EtchGPUSetRate(gpuRate);
+            EtchGPUSetInstant(gpuInstant);
             if (EtchGPUError()) I_Error("Etch GPU: %s", EtchGPUError());
             R_SetViewSize(10, 0);
         }
