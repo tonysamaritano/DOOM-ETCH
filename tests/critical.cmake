@@ -17,3 +17,5 @@ target_compile_options(wad-loading-test PRIVATE -UNDEBUG)
 foreach(case valid header directory count payload index)
     add_test(NAME wad-loading-${case} COMMAND wad-loading-test ${case})
 endforeach()
+
+include(tests/save_roundtrip.cmake)
