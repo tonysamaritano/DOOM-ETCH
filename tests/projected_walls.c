@@ -93,3 +93,26 @@ static void slopingClip(void)
     outlines(&path, expected, 4);
     MotionFree(&path);
 }
+
+static void offscreenAndClosed(void)
+{
+    const MotionSegment expected[] = {
+        {{0, 0}, {1, 0}}, {{1, 0}, {1, 4}}, {{1, 4}, {0, 4}}, {{0, 4}, {0, 0}}
+    };
+    assert(R_EtchBegin(2, 4)); R_EtchFrameBegin(2, 4);
+    R_EtchWallBegin();
+    R_EtchWallColumn(-1, 0, 0, 4, 0, 0);
+    R_EtchWallColumn(3, 0, 0, 4, 0, 0);
+    R_EtchWallColumn(0, -1, 0, 4, 0, 0);
+    R_EtchWallColumn(0, 2, 0, 4, 0, 0);
+    R_EtchWallColumn(0, 0, -1, 5, -1, 1);
+    R_EtchWallEnd();
+    MotionPath path = {0}; assert(R_EtchBuildMotion(&path));
+    outlines(&path, expected, 4); MotionFree(&path);
+    assert(R_EtchBegin(2, 4)); R_EtchFrameBegin(2, 4);
+    R_EtchClipPlane(0, 2, 0, 2, 0);
+    R_EtchWallBegin(); R_EtchWallColumn(0, 0, 0, 4, 0, 0); R_EtchWallEnd();
+    assert(R_EtchBuildMotion(&path));
+    assert(MotionValid(&path) && path.count == 1);
+    MotionFree(&path);
+}
