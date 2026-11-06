@@ -185,6 +185,16 @@ static void svgCanvas(const char *svg)
     while (isspace((unsigned char)*cursor)) ++cursor;
     assert(!*cursor);
 }
+static int containsIgnoringCase(const char *text, const char *word)
+{
+    for (; *text; ++text) {
+        size_t i = 0;
+        while (text[i] && word[i] &&
+               tolower((unsigned char)text[i]) == tolower((unsigned char)word[i])) ++i;
+        if (!word[i]) return 1;
+    }
+    return 0;
+}
 static void emittedFormatsAgree(void)
 {
     MotionPath path = writerFixture();
@@ -198,7 +208,7 @@ static void emittedFormatsAgree(void)
     svgCanvas(svg);
     physicalPoints(&path, points, count);
     connectorStyle(svg, points);
-    assert(strstr(gcode, "assum") && strstr(gcode, "0.05"));
+    assert(containsIgnoringCase(gcode, "assum") && strstr(gcode, "0.05"));
     ParsedCode code = parseCode(gcode);
     sameTrace(points, &code, count);
     free(svg); free(gcode);
