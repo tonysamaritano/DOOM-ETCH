@@ -33,3 +33,38 @@ int MachineRun(MachinePlayback *play)
     }
     return 1;
 }
+static int calibration(FILE *f,const MachineSettings *s)
+{
+    return fprintf(f,"\"calibration\":{\"steps_per_mm\":[%.17g,%.17g],"
+        "\"rate_mm_min\":[%.17g,%.17g],\"acceleration_mm_s2\":[%.17g,%.17g],"
+        "\"travel_mm\":[%.17g,%.17g],\"backlash_mm\":%.17g,\"erase_seconds\":%.17g,"
+        "\"ghost_fraction\":%.17g,\"knob_mm_turn\":%.17g}",
+        s->steps_per_mm[0],s->steps_per_mm[1],s->max_rate_mm_min[0],s->max_rate_mm_min[1],
+        s->acceleration_mm_s2[0],s->acceleration_mm_s2[1],s->width_mm,s->height_mm,
+        s->backlash_mm,s->erase_seconds,s->ghost_fraction,s->knob_mm_turn)>0;
+}
+int MachineReport(FILE *f,const MachineStepProgram *p,double seconds,int json)
+{
+    if (!f || !p || !isfinite(seconds) || seconds<0 ||
+        !MachineSettingsValidate(&p->settings,NULL)) return 0;
+    size_t moves=0,erases=0;
+    for (size_t i=0;i<p->count;i++) {
+        moves+=p->moves[i].kind==MACHINE_MOVE_DRAW || p->moves[i].kind==MACHINE_MOVE_RAPID;
+        erases+=p->moves[i].kind==MACHINE_MOVE_PAUSE;
+    }
+    if (json) {
+        fprintf(f,"{\"type\":\"machine-summary\",\"moves\":%zu,\"erases\":%zu,"
+            "\"steps_x\":%" PRIu64 ",\"steps_y\":%" PRIu64 ","
+            "\"reversals_x\":%" PRIu64 ",\"reversals_y\":%" PRIu64 ","
+            "\"simulated_seconds\":%.17g,\"assumed\":true,",moves,erases,
+            p->total_steps[0],p->total_steps[1],p->reversals[0],p->reversals[1],seconds);
+        if (!calibration(f,&p->settings)) return 0;
+        fputs("}\n",f);
+    } else {
+        fprintf(f,"Completed file: %zu moves, %zu erases, %.17g simulated seconds\n"
+            "Steps X/Y: %" PRIu64 "/%" PRIu64 "; reversals X/Y: %" PRIu64 "/%" PRIu64 "\n",
+            moves,erases,seconds,p->total_steps[0],p->total_steps[1],p->reversals[0],p->reversals[1]);
+        fputs("ASSUMED calibration: ",f); if (!calibration(f,&p->settings)) return 0; fputc('\n',f);
+    }
+    return !ferror(f) && fflush(f)==0;
+}
