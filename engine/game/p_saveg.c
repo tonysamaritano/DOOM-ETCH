@@ -384,6 +384,17 @@ void P_ArchiveSpecials (void)
 		save_p += sizeof(*ceiling);
 		ceiling->sector = (sector_t *)(ceiling->sector - sectors);
 	    }
+            for (i = 0; i < MAXPLATS; i++)
+                if (activeplats[i] == (plat_t *)th) break;
+            if (i < MAXPLATS)
+            {
+                *save_p++ = tc_plat;
+                PADSAVEP();
+                plat = (plat_t *)save_p;
+                memcpy(plat, th, sizeof(*plat));
+                save_p += sizeof(*plat);
+                plat->sector = (sector_t *)(plat->sector - sectors);
+            }
 	    continue;
 	}
 			
