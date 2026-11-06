@@ -165,3 +165,17 @@ static void drainRetainsSubmittedResources(void)
     EtchGPUShutdown(); /* Also drains a pending background plan without a window. */
     assert(!planning && !current && !pending && !ghost && !plannerQueue);
 }
+
+int main(void)
+{
+    @autoreleasepool {
+        if (!MTLCreateSystemDefaultDevice()) {
+            fputs("Metal device required: enable this test only with DOOM_ENABLE_GPU_TESTS\n", stderr);
+            return EXIT_FAILURE;
+        }
+        manualEraseFreezesRevealedPrefix(); automaticHoldAndErase();
+        ghostPixelsExcludeUndrawnGeometry(); drainRetainsSubmittedResources();
+        puts("GPU ghost timing, prefix clipping, Metal pixels and resource lifetimes passed");
+    }
+    return EXIT_SUCCESS;
+}
