@@ -509,9 +509,12 @@ static void DrawPhysicalRig(BOOL active,double seconds)
 }
 static void FinishRig(void)
 {
-    if (!window.isVisible || window.isMiniaturized) {
-        livePrevious=CACurrentMediaTime(); return;
-    }
+    double clock=CACurrentMediaTime();
+    BOOL visible=window.isVisible && !window.isMiniaturized &&
+        (window.occlusionState & NSWindowOcclusionStateVisible)!=0;
+    [playView updateVisibility:visible now:clock];
+    if (playView.failure) I_Error("Live rig: %s",playView.failure.UTF8String);
+    if (!visible) { livePrevious=clock; return; }
     [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate date]];
     if (playView.failure) I_Error("Live rig: %s",playView.failure.UTF8String);
     presentedFrames=playView.presented;
