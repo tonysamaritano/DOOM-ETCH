@@ -208,7 +208,8 @@ int EtchDeviceRequestErase(EtchDevice *d)
 static void position_at(EtchDevice *d,const Segment *s)
 {
     double velocity, distance=distance_at(s,d->segment_time,&velocity);
-    double drawn=fmin(s->length,fmax(0,distance-s->slack));
+    double drawn=d->segment_time>=s->duration ? s->length :
+        fmin(s->length,fmax(0,distance-s->slack));
     MotionPoint cursor={s->start.x+s->unit.x*drawn,s->start.y+s->unit.y*drawn};
     d->status.cursor_mm=(MotionPoint){quantize(cursor.x,d->config.x.step_mm,d->config.width_mm),
         quantize(cursor.y,d->config.y.step_mm,d->config.height_mm)};
