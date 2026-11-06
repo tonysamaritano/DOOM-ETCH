@@ -140,7 +140,7 @@ static int advance(Presentation *p,double seconds)
 static void title(Presentation *p,NSWindow *window)
 {
     NSString *state=p->paused ? @"paused" : p->shaking ? @"presentation shake" :
-        p->interrupted ? @"file interrupted · F6 to replay" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
+        p->interrupted ? @"stopped" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
     NSString *interrupted=p->interrupted ? @" · file interrupted · F6 to replay" : @"";
     window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@%@ · F6 replay · F7 shake · F9 pause",
         p->rate,MachinePlaybackSeconds(p->play),state,interrupted];
