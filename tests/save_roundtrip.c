@@ -30,3 +30,36 @@ void I_Error(char *format, ...)
     va_list args; va_start(args, format); vfprintf(stderr, format, args);
     va_end(args); abort();
 }
+void *Z_Malloc(int size, int tag, void *owner)
+{
+    assert(tag == PU_LEVEL && owner == NULL && size > 0);
+    void *ptr = calloc(1, (size_t)size);
+    assert(ptr); live++; return ptr;
+}
+void Z_Free(void *ptr) { assert(ptr && live); live--; free(ptr); }
+void P_InitThinkers(void) { thinkercap.next = thinkercap.prev = &thinkercap; }
+void P_AddThinker(thinker_t *th)
+{
+    th->next = &thinkercap; th->prev = thinkercap.prev;
+    thinkercap.prev->next = th; thinkercap.prev = th;
+}
+void P_RemoveMobj(mobj_t *mo) { Z_Free(mo); }
+void P_SetThingPosition(mobj_t *mo)
+{
+    placement.sector = &sectors[0]; mo->subsector = &placement;
+    mo->snext = mo->sprev = mo->bnext = mo->bprev = NULL;
+}
+void P_MobjThinker(mobj_t *mo) { (void)mo; }
+void T_MoveCeiling(ceiling_t *obj) { (void)obj; }
+void T_VerticalDoor(vldoor_t *obj) { (void)obj; }
+void T_MoveFloor(floormove_t *obj) { (void)obj; }
+void T_PlatRaise(plat_t *obj) { (void)obj; }
+void T_LightFlash(lightflash_t *obj) { (void)obj; }
+void T_StrobeFlash(strobe_t *obj) { (void)obj; }
+void T_Glow(glow_t *obj) { (void)obj; }
+void P_AddActiveCeiling(ceiling_t *obj)
+{
+    for (int i = 0; i < MAXCEILINGS; i++)
+        if (!activeceilings[i]) { activeceilings[i] = obj; return; }
+    abort();
+}
