@@ -242,6 +242,25 @@ static void instantGhostCadenceIgnoresDrawingRate(void)
     }
 }
 
+static void modeSwitchesClearPauseAndResetTimedDrawing(void)
+{
+    startFixture(); advance(.25);
+    EtchGPUAction(KEY_F9); EtchGPUTick(testClock, YES); assert(paused);
+    EtchGPUAction(KEY_F8); EtchGPUTick(testClock, YES);
+    assert(instant && !paused && playhead == current.duration);
+    publishInstantFixture(.2f);
+    EtchGPUAction(KEY_F9); EtchGPUTick(testClock, YES); assert(paused);
+    double elapsed = instantGhostElapsed;
+    advance(.1); assert(instantGhostElapsed == elapsed && !EtchGPUNeedsPath());
+    EtchGPUAction(KEY_F8); EtchGPUTick(testClock, YES);
+    assert(!instant && !paused && EtchGPUNeedsPath());
+    pending = fixturePath(.15f); needsPath = NO;
+    EtchGPUTick(testClock, YES);
+    assert(playhead == 0);
+    advance(.125); assert(fabs(playhead - .125) < 1e-9);
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
