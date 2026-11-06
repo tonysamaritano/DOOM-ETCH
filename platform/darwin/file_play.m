@@ -76,9 +76,11 @@ static int control(Presentation *p,int key)
     p->rate=EtchVisualRateKey(p->rate,key);
     if (key==KEY_F6 && !replay(p)) return 0;
     if (key==KEY_F9) { p->paused=!p->paused; p->reset_clock=YES; }
-    if (key==KEY_F7 && !p->shaken && !p->shaking) {
-        p->interrupted=YES; p->shaking=YES; p->shake_time=0;
-        memcpy(p->retained,EtchDeviceInk(MachinePlaybackDevice(p->play)),sizeof(p->retained));
+    if (key==KEY_F7 && !p->shaking) {
+        if (!p->interrupted)
+            memcpy(p->retained,EtchDeviceInk(MachinePlaybackDevice(p->play)),sizeof(p->retained));
+        p->interrupted=YES; p->shaking=YES; p->shaken=NO;
+        p->shake_time=0; p->reset_clock=YES;
     }
     return 1;
 }
@@ -104,17 +106,19 @@ static int events(Presentation *p,NSWindow *window,BOOL *quit)
 }
 static void retain_ghost(Presentation *p)
 {
-    const unsigned char *ink=EtchDeviceInk(MachinePlaybackDevice(p->play));
+    const unsigned char *ink=p->retained;
     const unsigned cells=ETCH_INK_WIDTH*ETCH_INK_HEIGHT;
     unsigned marks=0;
     for (unsigned i=0;i<cells;i++) marks+=ink[i]!=ETCH_INK_EMPTY;
     double fraction=MachinePlaybackProgram(p->play)->settings.ghost_fraction;
     unsigned keep=(unsigned)floor(marks*fraction);
-    memset(p->retained,0,sizeof(p->retained));
     /* Stable permutation distributes the assumed retained fraction spatially. */
-    for (unsigned i=0;i<cells && keep;i++) {
+    for (unsigned i=0;i<cells;i++) {
         unsigned at=(i*9973+7919)%cells;
-        if (ink[at]) { p->retained[at]=ETCH_INK_GHOST; keep--; }
+        if (ink[at]) {
+            p->retained[at]=keep ? ETCH_INK_GHOST : ETCH_INK_EMPTY;
+            if (keep) keep--;
+        }
     }
     p->shaking=NO; p->shaken=YES;
 }
