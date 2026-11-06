@@ -64,9 +64,25 @@ static void zero_motion_program(void)
     MachinePlaybackDestroy(p);
 }
 
+static void cumulative_wall_clock(void)
+{
+    MachineSettings s; MachineSettingsDefault(&s);
+    s.max_rate_mm_min[0] = 6e-9;
+    s.max_rate_mm_min[1] = 6e151; s.acceleration_mm_s2[1] = 1e300;
+    MachinePlayback *p = play_text("; ETCH_START X0 Y127.6\n"
+        "F0.000000006\nG1 X100\nG0 Y127.55\nM2", &s);
+    assert(!MachinePlaybackTick(p, 1e13));
+    const MachineParseError *e = MachinePlaybackError(p);
+    assert(e && e->message[0]);
+    double failed_clock = MachinePlaybackSeconds(p);
+    assert(!MachinePlaybackTick(p, 1));
+    machine_near(MachinePlaybackSeconds(p), failed_clock);
+    MachinePlaybackDestroy(p);
+}
+
 int main(void)
 {
-    shake_clock(); playback_partition(); zero_motion_program();
+    shake_clock(); playback_partition(); zero_motion_program(); cumulative_wall_clock();
     puts("machine-playback: copied program, M0 clock and chunk invariance passed");
     return 0;
 }
