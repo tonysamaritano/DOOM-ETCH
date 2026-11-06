@@ -12,7 +12,7 @@ Built from id Software's 1997 source release; see LICENSE.TXT.
 - `engine/sound/`: engine sound management and sound definitions.
 - `engine/wad/`: WAD loading and resource caching.
 
-The remaining folders will arrive as the port and drawing system are built:
+Platform, test and drawing code use the following folders as the project grows:
 
 - `platform/darwin/`: native macOS window, Metal, input, sound and main.
 - `etch/`: continuous motion paths, silhouettes, hatching and output writers.
@@ -23,13 +23,18 @@ The remaining folders will arrive as the port and drawing system are built:
 - `assets/rig/`: the rig model.
 - `test-data/`: ignored local shareware `doom1.wad`; game data is not included.
 
-Build the engine library on macOS with the active Xcode command-line tools:
+## Build and play on macOS
+
+With the Xcode command-line tools, CMake and a local shareware `doom1.wad` in `test-data/`:
 
 ```sh
-cmake --preset test
-cmake --build --preset test --target doom-engine
+cmake --preset test -DDOOM_TEST_WAD_DIRECTORY="$PWD/test-data"
+cmake --build --preset test
 ctest --preset test
+DOOMWADDIR=test-data ./build/test/doom-metal -warp 1 1
 ```
 
 The `sanitize` and `coverage` presets instrument the engine separately.
-CTest has no tests yet; native macOS platform code and tests follow.
+The unit tests use synthetic fixtures. With the shareware file configured,
+`level-smoke` also plays 120 frames of E1M1. Arrow keys move and turn,
+Control fires, Space opens doors, and Command-Q quits.
