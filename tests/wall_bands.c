@@ -111,3 +111,36 @@ static void clippedBands(void)
     checkBoundary(&path, edges, 6);
     MotionFree(&path);
 }
+
+static void captureLifecycle(void)
+{
+    MotionPath path = {0};
+    R_EtchColumn(0, 0, 0, 1); /* Ordinary rendering without capture is harmless. */
+    assert(!R_EtchBuildMotion(&path) && !path.count);
+    assert(!R_EtchBegin(0, 2) && !R_EtchBegin(2, 0));
+    assert(!R_EtchBegin(-1, 2) && !R_EtchBegin(321, 200));
+    assert(!R_EtchBegin(320, 201));
+    const MotionSegment square[] = {
+        {{0, 0}, {1, 0}}, {{0, 1}, {1, 1}}, {{0, 0}, {0, 1}}, {{1, 0}, {1, 1}}
+    };
+    for (int run = 0; run < 4; ++run) {
+        assert(R_EtchBegin(1, 1));
+        assert(!R_EtchBegin(2, 2)); /* An active capture is not replaced. */
+        assert(!R_EtchBegin(0, 0));
+        R_EtchColumn(0, 0, 0, 1);
+        assert(R_EtchBuildMotion(&path));
+        assert(path.width == 1 && path.height == 1);
+        checkBoundary(&path, square, 4);
+        MotionPoint *owned = path.points;
+        size_t count = path.count;
+        assert(!R_EtchBuildMotion(&path));
+        assert(path.points == owned && path.count == count && MotionValid(&path));
+    }
+    assert(R_EtchBegin(320, 200));
+    assert(R_EtchBuildMotion(&path));
+    assert(MotionValid(&path) && path.count == 1);
+    assert(path.width == 320 && path.height == 200);
+    assert(path.kinds[0] == MOTION_START);
+    MotionFree(&path);
+    assert(!R_EtchBuildMotion(NULL));
+}
