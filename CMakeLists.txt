@@ -36,6 +36,7 @@ add_executable(doom-metal
     platform/darwin/i_net.c
     platform/darwin/keyboard.m
     platform/darwin/i_video.m
+    platform/darwin/etch_gpu.m
     platform/darwin/i_sound.c)
 target_compile_options(doom-metal PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
 target_link_libraries(doom-metal PRIVATE doom-engine
@@ -124,5 +125,22 @@ if(BUILD_TESTING)
             "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/etch-hatching"
             "-DVALIDATOR=$<TARGET_FILE:svg-bounds-test>"
             -P "${PROJECT_SOURCE_DIR}/tests/etch_hatching.cmake")
+    endif()
+endif()
+
+option(DOOM_ENABLE_GPU_TESTS "Run native Metal window tests" OFF)
+if(BUILD_TESTING)
+    add_executable(capture-snapshot-test tests/capture_snapshot.c)
+    target_link_libraries(capture-snapshot-test PRIVATE doom-engine)
+    target_compile_options(capture-snapshot-test PRIVATE -UNDEBUG)
+    add_test(NAME capture-snapshot COMMAND capture-snapshot-test)
+    if(DOOM_ENABLE_GPU_TESTS AND DOOM_TEST_WAD_DIRECTORY
+       AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+        add_test(NAME etch-gpu COMMAND "${CMAKE_COMMAND}"
+            "-DGAME=$<TARGET_FILE:doom-metal>"
+            "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
+            "-DCONFIG=${CMAKE_CURRENT_BINARY_DIR}/etch-gpu.cfg"
+            -P "${PROJECT_SOURCE_DIR}/tests/etch_gpu.cmake")
+        set_tests_properties(etch-gpu PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
     endif()
 endif()
