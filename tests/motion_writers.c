@@ -92,3 +92,25 @@ static void physicalPoints(const MotionPath *path, const MotionPoint *actual, si
         assert(fabs(actual[i].y - path->points[i].y * 127.6 / 200) < 0.00001);
     }
 }
+
+static void connectorStyle(const char *svg, const MotionPoint *points)
+{
+    char outline[64], connector[64], value[64];
+    attribute(strstr(svg, "<path"), "stroke", outline, sizeof(outline));
+    const char *line = strstr(svg, "<line");
+    assert(line && !strstr(line + 5, "<line"));
+    attribute(line, "stroke", connector, sizeof(connector));
+    assert(strcmp(outline, connector) && strcmp(connector, "none"));
+    const char *names[] = {"x1", "y1", "x2", "y2"};
+    double expected[] = {points[1].x, points[1].y, points[2].x, points[2].y};
+    for (int i = 0; i < 4; ++i) {
+        attribute(line, names[i], value, sizeof(value));
+        assert(fabs(strtod(value, NULL) - expected[i]) < 0.00001);
+    }
+}
+static void assertGridPoint(MotionPoint point)
+{
+    assert(point.x >= 0 && point.x <= 170.15 && point.y >= 0 && point.y <= 127.6);
+    assert(fabs(point.x / 0.05 - round(point.x / 0.05)) < 1e-7);
+    assert(fabs(point.y / 0.05 - round(point.y / 0.05)) < 1e-7);
+}
