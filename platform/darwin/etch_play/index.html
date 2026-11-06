@@ -6,4 +6,14 @@
 <body><div id="status" role="status">Loading the rig…</div>
 <output id="physical-mode" hidden>Physical · 1×</output>
 <pre id="play-evidence" hidden></pre>
+<script>
+function bootError(message){
+  if(document.documentElement.dataset.failed)return;document.documentElement.dataset.failed='true';
+  const status=document.getElementById('status');status.hidden=false;status.className='error';status.textContent=message;
+  document.getElementById('play-evidence').textContent=JSON.stringify({state:'error',error:message});
+  window.webkit?.messageHandlers?.presentation?.postMessage({type:'error',message});
+}
+window.addEventListener('error',event=>bootError(event.message||'Could not load '+(event.target.src||event.target.href||'page resource')),true);
+window.addEventListener('unhandledrejection',event=>bootError(String(event.reason)));
+</script>
 <script type="module" src="game.js"></script></body></html>
