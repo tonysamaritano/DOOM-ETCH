@@ -50,7 +50,7 @@ static int number(const char **cursor,double *value)
     *cursor=p;
     return 1;
 }
-static int words(const char *row,double values[5],unsigned *seen)
+static int words(const char *row,double values[5],unsigned *seen,unsigned *codes)
 {
     for (const char *p=row;*p;) {
         if (*p==' ' || *p=='\t') { p++; continue; }
@@ -60,10 +60,22 @@ static int words(const char *row,double values[5],unsigned *seen)
             if (!*p) return 0;
             p++; continue;
         }
-        const char *word=strchr("GMXYF",*p);
+        const char *letters="GMXYF";
+        const char *word=strchr(letters,toupper((unsigned char)*p));
         if (!word) return 0;
-        unsigned index=(unsigned)(word-"GMXYF"); p++;
-        if ((*seen & (1u<<index)) || !number(&p,&values[index])) return 0;
+        unsigned index=(unsigned)(word-letters); p++;
+        double value;
+        if (!number(&p,&value)) return 0;
+        if (index==0) {
+            unsigned bit=value==0 ? 1 : value==1 ? 2 : value==21 ? 4 :
+                value==90 ? 8 : value==94 ? 16 : value==61 ? 32 : 0;
+            if (!bit || (*codes & bit) || (bit<=2 && (*codes & 3))) return 0;
+            *codes|=bit;
+            if (bit<=2) values[0]=value;
+        } else {
+            if (*seen & (1u<<index)) return 0;
+            values[index]=value;
+        }
         *seen|=1u<<index;
     }
     return 1;
