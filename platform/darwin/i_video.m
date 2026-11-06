@@ -183,14 +183,14 @@ void I_StartTic(void)
                     if (event.type == NSEventTypeKeyDown &&
                         [event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"q"])
                         I_Quit();
+                    DoomDispatchKeyEvent(event,held,^(int key,BOOL down) { PostKey(key,down); });
                     [NSApp sendEvent:event];
                     continue;
                 }
                 int key = DoomKeyForEvent(event);
                 if (HandleGPUKey(key, event.type == NSEventTypeKeyDown && !event.isARepeat))
                     continue;
-                if (!event.isARepeat)
-                    PostKey(key, event.type == NSEventTypeKeyDown);
+                DoomDispatchKeyEvent(event,held,^(int code,BOOL down) { PostKey(code,down); });
                 continue;
             }
             if (event.window == window && event.type == NSEventTypeFlagsChanged) {
