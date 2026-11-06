@@ -48,6 +48,8 @@ static double run(EtchConfig c, MotionPoint end, double feed)
                 : EtchDeviceSubmitHardware(d, p, 2));
     EtchStatus s = EtchDeviceGetStatus(d);
     double duration = s.remaining_s;
+    printf("physics endpoint_mm=%.9g,%.9g feed_mm_s=%.9g seconds=%.17g\n",
+           end.x, end.y, feed, duration);
     assert(s.count == 1 && s.completed == 0 && s.drawing);
     assert(EtchDeviceTick(d, duration + 1));
     s = EtchDeviceGetStatus(d);
