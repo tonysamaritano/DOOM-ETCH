@@ -164,3 +164,35 @@ static void invalid_idle(void)
     c = EtchAssumedDefaults(); c.ghost_fraction = 1.01;
     assert(!EtchCreate(c, (MotionPoint){0, 0}));
 }
+
+static size_t marks(EtchDevice *d, unsigned char kind)
+{
+    const unsigned char *ink = EtchDeviceInk(d);
+    size_t n = 0;
+    for (size_t i = 0; i < ETCH_INK_WIDTH * ETCH_INK_HEIGHT; ++i) {
+        assert(ink[i] <= ETCH_INK_GHOST);
+        n += ink[i] == kind;
+    }
+    return n;
+}
+
+static void shake_retention(void)
+{
+    EtchDevice *d = EtchCreate(EtchAssumedDefaults(), (MotionPoint){0, 0});
+    MotionPoint p[] = {{0, 0}, {100, 0}, {100, 100}};
+    assert(d && EtchDeviceSubmitHardware(d, p, 3));
+    assert(EtchDeviceTick(d, 10));
+    size_t fresh = marks(d, ETCH_INK_FRESH);
+    assert(fresh > 100 && marks(d, ETCH_INK_GHOST) == 0);
+    assert(EtchDeviceRequestErase(d));
+    assert(EtchDeviceTick(d, 1));
+    assert(!EtchDeviceReady(d));
+    near(EtchDeviceGetStatus(d).erase_left_s, 1.5);
+    assert(EtchDeviceRequestErase(d));
+    assert(EtchDeviceTick(d, 1.5));
+    assert(EtchDeviceReady(d));
+    point(EtchDeviceGetStatus(d).cursor_mm, 100, 100);
+    assert(marks(d, ETCH_INK_FRESH) == 0);
+    assert(marks(d, ETCH_INK_GHOST) == (size_t)floor(fresh * .03));
+    EtchDestroy(d);
+}
