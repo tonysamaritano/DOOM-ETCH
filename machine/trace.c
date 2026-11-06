@@ -26,8 +26,10 @@ int EtchTraceRecordErase(EtchTrace *t,double duration)
 {
     if (!t || t->failed || t->completed || !isfinite(duration) || duration<=0 ||
         !isfinite(t->clock+duration) || t->clock+duration<=t->clock) return 0;
-    if (t->erase_count==SIZE_MAX || !reserve((void **)&t->erases,&t->erase_capacity,
+    void *allocation=t->erases;
+    if (t->erase_count==SIZE_MAX || !reserve(&allocation,&t->erase_capacity,
         t->erase_count+1,sizeof(*t->erases))) { t->failed=1; return 0; }
+    t->erases=allocation;
     t->erases[t->erase_count++]=(EtchTraceErase){t->clock,duration};
     t->clock+=duration; return 1;
 }
@@ -39,9 +41,11 @@ int EtchTraceRecordDevice(EtchTrace *t,const EtchDevice *d,const MachineStep *st
         count!=status.count || count>SIZE_MAX-t->count) return 0;
     double duration=status.elapsed_s+status.remaining_s,finish=t->clock+duration;
     if (!isfinite(finish) || (duration>0 && finish<=t->clock)) { t->failed=1; return 0; }
-    if (!reserve((void **)&t->segments,&t->capacity,t->count+count,sizeof(*t->segments))) {
+    void *allocation=t->segments;
+    if (!reserve(&allocation,&t->capacity,t->count+count,sizeof(*t->segments))) {
         t->failed=1; return 0;
     }
+    t->segments=allocation;
     for (size_t i=0;i<count;i++) {
         EtchTraceSegment segment;
         if (!EtchDeviceProfile(d,i,&segment)) { t->failed=1; return 0; }
