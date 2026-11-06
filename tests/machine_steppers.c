@@ -40,3 +40,28 @@ static void compile_rejection(void)
     assert(out.moves == owned);
     MachineProgramFree(&p); MachineStepProgramFree(&out);
 }
+
+static void device_grid_phase(void)
+{
+    MachineSettings s; MachineSettingsDefault(&s);
+    s.width_mm = 1.023; s.height_mm = 1.037;
+    MachineParseOptions options = {{0, 1.037}};
+    MachineProgram p = {0}; MachineStepProgram out = {0}; MachineParseError e = {0};
+    const char *text = "F60\nG1 X0.025 Y1.012\nX0.024999999 Y1.012000001\n"
+        "X0.025000001 Y1.011999999\nX1.023 Y0\nM2";
+    assert(MachineGCodeParse(&p, text, &options, &e));
+    assert(MachineSteppersCompile(&out, &p, &s, &e));
+    assert(out.start_steps[0] == 0 && out.start_steps[1] == 0);
+    assert(out.moves[0].target_steps[0] == 1 && out.moves[0].target_steps[1] == 1);
+    assert(out.moves[1].target_steps[0] == 0 && out.moves[1].target_steps[1] == 0);
+    assert(out.moves[2].target_steps[0] == 1 && out.moves[2].target_steps[1] == 1);
+    assert(out.moves[3].target_steps[0] == 20 && out.moves[3].target_steps[1] == 20);
+    MachineProgramFree(&p); MachineStepProgramFree(&out);
+}
+
+int main(void)
+{
+    counters(); compile_rejection(); device_grid_phase();
+    puts("machine-steppers: device grid, counts and transactional compilation passed");
+    return 0;
+}
