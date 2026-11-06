@@ -153,7 +153,10 @@ static BOOL HandleGPUKey(int key, BOOL pressed)
         if (layerKey) ToggleGPULayer(key);
         else if (physicalRig) {
             if (key==KEY_F7) { sceneGeneration++; MachineLiveErase(live); }
-            if (key==KEY_F9) MachineLivePause(live,!MachineLivePaused(live));
+            if (key==KEY_F9) {
+                MachineLivePause(live,!MachineLivePaused(live));
+                livePrevious=CACurrentMediaTime();
+            }
         } else EtchGPUAction(key);
     }
     return YES;
@@ -506,7 +509,9 @@ static void DrawPhysicalRig(BOOL active,double seconds)
 }
 static void FinishRig(void)
 {
-    if (!window.isVisible || window.isMiniaturized) return;
+    if (!window.isVisible || window.isMiniaturized) {
+        livePrevious=CACurrentMediaTime(); return;
+    }
     [NSRunLoop.currentRunLoop runMode:NSDefaultRunLoopMode beforeDate:[NSDate date]];
     if (playView.failure) I_Error("Live rig: %s",playView.failure.UTF8String);
     presentedFrames=playView.presented;
