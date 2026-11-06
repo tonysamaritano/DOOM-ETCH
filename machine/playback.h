@@ -6,7 +6,8 @@ typedef struct MachinePlayback MachinePlayback;
 /* Owns a complete compiled-program copy and newly configured physical device. */
 MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *, MachineParseError *);
 void MachinePlaybackDestroy(MachinePlayback *);
-EtchDevice *MachinePlaybackDevice(MachinePlayback *);
+/* Borrowed read-only device; only playback may advance or mutate it. */
+const EtchDevice *MachinePlaybackDevice(const MachinePlayback *);
 const MachineStepProgram *MachinePlaybackProgram(const MachinePlayback *);
 /* Finite nonnegative wall-clock seconds. Surplus crosses feed groups and M0
  * shakes; Seconds excludes idle surplus after end and includes erase time. */
