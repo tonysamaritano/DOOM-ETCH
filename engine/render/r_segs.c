@@ -302,6 +302,12 @@ void R_RenderSegLoop (void)
 	    if (toptexture)
 	    {
 		// top wall
+		projectedTop = (double)pixhigh / HEIGHTUNIT;
+		projectedTopStep = (double)pixhighstep / HEIGHTUNIT;
+		if (projectedTop < (double)topfrac / HEIGHTUNIT) {
+		    projectedTop = (double)topfrac / HEIGHTUNIT;
+		    projectedTopStep = (double)topstep / HEIGHTUNIT;
+		}
 		mid = pixhigh>>HEIGHTBITS;
 		pixhigh += pixhighstep;
 
@@ -314,7 +320,9 @@ void R_RenderSegLoop (void)
 		    dc_yh = mid;
 		    dc_texturemid = rw_toptexturemid;
 		    dc_source = R_GetColumn(toptexture,texturecolumn);
-		    R_EtchColumn(rw_x, dc_yl, dc_yh, (int)(linedef - lines) + 1);
+		    R_EtchWallColumn(1, rw_x, (double)topfrac / HEIGHTUNIT,
+		        (double)(pixhigh - pixhighstep) / HEIGHTUNIT,
+		        (double)topstep / HEIGHTUNIT, (double)pixhighstep / HEIGHTUNIT);
 		    colfunc ();
 		    ceilingclip[rw_x] = mid;
 		}
@@ -324,8 +332,11 @@ void R_RenderSegLoop (void)
 	    else
 	    {
 		// no top wall
-		if (markceiling)
+		if (markceiling) {
+		    projectedTop = (double)topfrac / HEIGHTUNIT;
+		    projectedTopStep = (double)topstep / HEIGHTUNIT;
 		    ceilingclip[rw_x] = yl-1;
+		}
 	    }
 			
 	    if (bottomtexture)
