@@ -41,3 +41,32 @@ int R_EtchBuildMotion(MotionPath *path)
     wall_count = wall_capacity = 0;
     return success;
 }
+
+void R_EtchFrameBegin(int w, int h)
+{
+    if (!active) return;
+    failed = 0; wall_open = 0; wall_count = 0;
+    if (w <= 0 || w > CAPTURE_WIDTH || h <= 0 || h > CAPTURE_HEIGHT) {
+        failed = 1;
+        return;
+    }
+    width = w; height = h;
+    memset(samples, 0, sizeof(samples));
+    for (int x = 0; x < width; x++) {
+        clip_top[x] = clip_top_step[x] = clip_bottom_step[x] = 0;
+        clip_bottom[x] = height;
+    }
+}
+
+void R_EtchWallBegin(void)
+{
+    if (!active || failed) return;
+    if (wall_open) { failed = 1; return; }
+    memset(samples, 0, sizeof(samples));
+    wall_open = 1;
+}
+
+static double clamp(double value, double low, double high)
+{
+    return fmin(high, fmax(low, value));
+}
