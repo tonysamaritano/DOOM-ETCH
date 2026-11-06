@@ -12,7 +12,11 @@ function(check_overlay mode)
         message(FATAL_ERROR "${mode} export did not report moves: ${output}")
     endif()
     set(expected_moves "${CMAKE_MATCH_1}")
-    execute_process(COMMAND "${VALIDATOR}" "${PREFIX}-${mode}.svg"
+    set(validation_options)
+    if(mode STREQUAL "default" OR mode STREQUAL "no-weapon")
+        list(APPEND validation_options --hud-regions)
+    endif()
+    execute_process(COMMAND "${VALIDATOR}" "${PREFIX}-${mode}.svg" ${validation_options}
         RESULT_VARIABLE result OUTPUT_VARIABLE validation ERROR_VARIABLE errors)
     if(NOT result EQUAL 0)
         message(FATAL_ERROR "${mode} overlay SVG is invalid: ${validation}${errors}")
