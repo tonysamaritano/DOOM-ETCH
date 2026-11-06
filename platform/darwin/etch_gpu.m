@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #import "etch_gpu.h"
 #include "timeline.h"
+#include "doomdef.h"
+#include <stdint.h>
 #include <dispatch/dispatch.h>
 #include <os/lock.h>
 #include <stdatomic.h>
@@ -33,7 +35,15 @@ static id<MTLRenderPipelineState> linePipeline, backgroundPipeline;
 static EtchGPUPath *current, *pending, *ghost;
 static double ghostTime, holdTime, eraseTime;
 static BOOL erasing;
-static atomic_bool eraseRequested;
+static BOOL instant, paused, replaceRequested, controlClockReset;
+static double drawRate = 1, instantGhostElapsed;
+static const double ghostInterval = 1.0 / 30;
+static uint64_t generation;
+enum { EtchRate, EtchInstant, EtchAction, EtchInvalidate, CONTROL_CAPACITY = 256 };
+typedef struct { int kind; double value; } EtchGPUControl;
+static EtchGPUControl controls[CONTROL_CAPACITY];
+static atomic_uint controlRead, controlWrite;
+static atomic_bool controlOverflow;
 static const double holdSeconds = .6, eraseSeconds = .65, ghostOpacity = .025;
 static dispatch_queue_t plannerQueue, renderQueue;
 static dispatch_semaphore_t renderGate;
