@@ -7,7 +7,7 @@ export function validateTrace(data) {
   if(!s||![s.width_mm,s.height_mm,s.knob_mm_turn,...(s.steps_per_mm||[])].every(x=>Number.isFinite(x)&&x>0)||
     s.steps_per_mm.length!==2)throw Error('Invalid physical dimensions or calibration');
   if(!Array.isArray(data.start)||data.start.length!==2||!data.start.every(Number.isFinite)||
-    !Number.isFinite(data.duration)||data.duration<0||data.duration!==data.simulated_seconds)
+    !Number.isFinite(data.duration)||!Number.isFinite(data.simulated_seconds)||data.duration<0||Math.abs(data.duration-data.simulated_seconds)>1e-9)
     throw Error('Invalid trace start or completed clock');
   if(!Array.isArray(data.segments)||data.segments.length%15||!data.segments.every(Number.isFinite))
     throw Error('Invalid segment records');
