@@ -17,22 +17,6 @@ int R_EtchBegin(int w, int h)
     return 1;
 }
 
-void R_EtchColumn(int x, int top, int bottom, int surface)
-{
-    if (!active || x < 0 || x >= width || surface <= 0) return;
-    if (top < 0) top = 0;
-    if (bottom >= height) bottom = height - 1;
-    // BSP rendering reaches the nearest visible wall first.
-    for (int y = top; y <= bottom; y++)
-        if (!cells[y * width + x]) cells[y * width + x] = surface;
-}
-
-static int surface_at(int x, int y)
-{
-    if (x < 0 || x >= width || y < 0 || y >= height) return 0;
-    return cells[y * width + x];
-}
-
 /* Count first, then fill the same bounded boundary list without reallocations. */
 static size_t boundary_segments(MotionSegment *segments)
 {
