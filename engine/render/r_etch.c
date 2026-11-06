@@ -3,6 +3,7 @@
 #include <string.h>
 #include <math.h>
 #include "r_etch.h"
+#include "silhouette.h"
 
 enum { CAPTURE_WIDTH = 320, CAPTURE_HEIGHT = 200 };
 enum { MAX_SEGMENTS = 400000 };
@@ -18,6 +19,26 @@ static size_t wall_count, wall_capacity;
 static int failed, wall_open;
 static int active;
 static int width, height;
+typedef struct SpriteFrame {
+    int lump;
+    Silhouette shape;
+    struct SpriteFrame *next;
+} SpriteFrame;
+static SpriteFrame *sprite_frames;
+static int sprites_enabled = 1;
+
+void R_EtchSprites(int enabled) { sprites_enabled = enabled != 0; }
+int R_EtchSpritesActive(void) { return active && !failed && sprites_enabled; }
+
+void R_EtchResetSprites(void)
+{
+    while (sprite_frames) {
+        SpriteFrame *next = sprite_frames->next;
+        SilhouetteFree(&sprite_frames->shape);
+        free(sprite_frames);
+        sprite_frames = next;
+    }
+}
 int R_EtchBegin(int w, int h)
 {
     if (active || w <= 0 || w > CAPTURE_WIDTH || h <= 0 || h > CAPTURE_HEIGHT)
