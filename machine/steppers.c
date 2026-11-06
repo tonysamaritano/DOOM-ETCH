@@ -94,3 +94,34 @@ static int target(const MachineSettings *s,MotionPoint cnc,int64_t steps[2])
     }
     return 1;
 }
+static int compile_move(MachineStepProgram *p,const MachineMove *move,size_t i,
+                        int direction[2],MachineParseError *e)
+{
+    MachineStep *step=&p->moves[i];
+    if (move->kind<MACHINE_MOVE_DRAW || move->kind>MACHINE_MOVE_END ||
+        !isfinite(move->feed_mm_s) ||
+        (move->kind==MACHINE_MOVE_DRAW ? move->feed_mm_s<=0 : move->feed_mm_s!=0))
+        return fail(e,move->line,"invalid move kind or feed");
+    *step=(MachineStep){.feed_mm_s=move->feed_mm_s,.kind=move->kind,.line=move->line};
+    if (!target(&p->settings,move->cnc_mm,step->target_steps))
+        return fail(e,move->line,"target outside physical travel");
+    for (unsigned a=0;a<2;a++) {
+        int64_t delta=step->target_steps[a]-p->final_steps[a];
+        if (move->kind>=MACHINE_MOVE_PAUSE && delta)
+            return fail(e,move->line,"pause/end changes cursor");
+        uint64_t magnitude=(uint64_t)(delta<0 ? -delta : delta);
+        if (UINT64_MAX-p->total_steps[a]<magnitude)
+            return fail(e,move->line,"step counter overflow");
+        p->total_steps[a]+=magnitude;
+        if (delta) {
+            int sign=delta>0 ? 1 : -1;
+            if (direction[a] && direction[a]!=sign) {
+                if (p->reversals[a]==UINT64_MAX) return fail(e,move->line,"reversal overflow");
+                p->reversals[a]++;
+            }
+            direction[a]=sign;
+        }
+        p->final_steps[a]=step->target_steps[a];
+    }
+    return 1;
+}
