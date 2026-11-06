@@ -1,0 +1,6 @@
+add_executable(core-primitives-test tests/core_primitives.c)
+target_link_libraries(core-primitives-test PRIVATE doom-engine)
+target_compile_options(core-primitives-test PRIVATE -UNDEBUG)
+foreach(case fixed boxes random endian)
+    add_test(NAME core-${case} COMMAND core-primitives-test ${case})
+endforeach()
