@@ -34,7 +34,7 @@ rcsid[] = "$Id: w_wad.c,v 1.5 1997/02/03 16:47:57 b1 Exp $";
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-#include <alloca.h>
+#include <limits.h>
 #define O_BINARY		0
 #endif
 
@@ -78,7 +78,9 @@ int filelength (int handle)
     if (fstat (handle,&fileinfo) == -1)
 	I_Error ("Error fstating");
 
-    return fileinfo.st_size;
+    if (fileinfo.st_size > INT_MAX)
+        I_Error("WAD exceeds the supported 32-bit file size");
+    return (int)fileinfo.st_size;
 }
 
 
@@ -137,6 +139,32 @@ ExtractFileBase
 int			reloadlump;
 char*			reloadname;
 
+
+static filelump_t *ReadDirectory(int handle, int *count)
+{
+    wadinfo_t header;
+    int size = filelength(handle);
+    if (pread(handle, &header, sizeof(header), 0) != sizeof(header))
+        I_Error("Incomplete WAD header");
+    if (memcmp(header.identification, "IWAD", 4) && memcmp(header.identification, "PWAD", 4))
+        I_Error("Invalid WAD identification");
+    int offset = LONG(header.infotableofs);
+    *count = LONG(header.numlumps);
+    if (offset < 0 || offset > size || *count < 0 ||
+        (size_t)*count > (size_t)(size - offset) / sizeof(filelump_t))
+        I_Error("WAD directory outside file");
+    size_t bytes = (size_t)*count * sizeof(filelump_t);
+    filelump_t *entries = malloc(bytes ? bytes : 1);
+    if (!entries || pread(handle, entries, bytes, offset) != (ssize_t)bytes)
+        I_Error("Could not read the complete WAD directory");
+    for (int i = 0; i < *count; i++) {
+        int start = LONG(entries[i].filepos);
+        int length = LONG(entries[i].size);
+        if (length < 0 || (length && (start < 0 || start > size || length > size - start)))
+            I_Error("WAD lump %d lies outside file", i);
+    }
+    return entries;
+}
 
 void W_AddFile (char *filename)
 {
