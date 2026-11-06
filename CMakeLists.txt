@@ -27,3 +27,17 @@ target_include_directories(doom-engine PUBLIC
 target_compile_definitions(doom-engine PUBLIC NORMALUNIX)
 # Preserve the original engine's wrapping arithmetic and type punning.
 target_compile_options(doom-engine PRIVATE -fwrapv -fno-strict-aliasing)
+
+set(CMAKE_OBJC_COMPILER "${CMAKE_C_COMPILER}" CACHE FILEPATH "Objective-C compiler")
+enable_language(OBJC)
+add_executable(doom-metal
+    platform/darwin/main.m
+    platform/darwin/i_system.c
+    platform/darwin/i_net.c
+    platform/darwin/keyboard.m
+    platform/darwin/i_video.m
+    platform/darwin/i_sound.c)
+target_compile_options(doom-metal PRIVATE "$<$<COMPILE_LANGUAGE:OBJC>:-fobjc-arc>")
+target_link_libraries(doom-metal PRIVATE doom-engine
+    "-framework AppKit" "-framework Metal" "-framework QuartzCore"
+    "-framework AudioToolbox")
