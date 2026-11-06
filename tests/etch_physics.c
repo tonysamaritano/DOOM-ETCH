@@ -237,3 +237,12 @@ static void deferred_erase(void)
     assert(EtchDeviceReady(d));
     EtchDestroy(d);
 }
+
+int main(void)
+{
+    defaults(); analytical_profiles(); direction_memory(); quantized_extent();
+    transactional(); invalid_idle(); shake_retention(); chunk_invariance();
+    deferred_erase();
+    puts("etch-physics: independent per-axis, ownership, ink and shake checks passed");
+    return 0;
+}
