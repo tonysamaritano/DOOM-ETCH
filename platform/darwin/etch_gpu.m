@@ -254,7 +254,8 @@ BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
     if (!snapshot || (!snapshot->segments && snapshot->count) || snapshot->count > 400000
         || !snapshot->width || !snapshot->height) return NO;
     if (!os_unfair_lock_trylock(&stateLock)) return NO;
-    if (!running || !needsPath || planning || pending || failure[0]) {
+    EtchGPUControls();
+    if (!running || paused || !needsPath || planning || pending || failure[0]) {
         os_unfair_lock_unlock(&stateLock); return NO;
     }
     EtchSnapshot transferred = *snapshot;
@@ -262,15 +263,19 @@ BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
     planning = YES; needsPath = NO;
     id<MTLDevice> gpu = device;
     double drawingSpeed = speed;
+    uint64_t acceptedGeneration = generation;
     dispatch_queue_t queue = plannerQueue;
     os_unfair_lock_unlock(&stateLock);
     dispatch_async(queue, ^{
         @autoreleasepool {
-            EtchGPUPath *bundle = EtchGPUBuildPath(transferred, gpu, drawingSpeed);
+            const char *message = NULL;
+            EtchGPUPath *bundle = EtchGPUBuildPath(transferred, gpu, drawingSpeed, &message);
             os_unfair_lock_lock(&stateLock);
-            if (running && bundle) {
-                pending = bundle;
-                atomic_fetch_add(&uploads, 1);
+            if (running && acceptedGeneration == generation) {
+                if (bundle) {
+                    pending = bundle;
+                    atomic_fetch_add(&uploads, 1);
+                } else if (message && !failure[0]) snprintf(failure, sizeof(failure), "%s", message);
             }
             planning = NO;
             os_unfair_lock_unlock(&stateLock);
