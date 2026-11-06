@@ -145,3 +145,16 @@ static void add_segment(MotionPoint a, MotionPoint b)
     }
     walls[wall_count++] = (MotionSegment){a, b};
 }
+
+static void tier_edges(int tier)
+{
+    for (int side = 0; side < 2; side++) {
+        for (int x = 0; x < width; x++) {
+            WallSample sample = samples[tier][x];
+            if (!sample.valid) continue;
+            double from = side ? sample.bottom : sample.top;
+            double to = side ? sample.bottom_end : sample.top_end;
+            add_segment((MotionPoint){x, from}, (MotionPoint){x + 1, to});
+        }
+    }
+}
