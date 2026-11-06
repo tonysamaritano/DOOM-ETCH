@@ -69,3 +69,40 @@ static void loadSample(int id)
     memmove(raw, raw + offset, count);
     samples[id] = (SoundSample){raw, count, rate};
 }
+
+static void setVoiceParams(SoundVoice *voice, int volume, int pan, int pitch)
+{
+    volume = limit(volume, 0, 127);
+    pan = limit(pan, 0, 255) + 1;
+    voice->left = volume - ((volume * pan * pan) >> 16);
+    pan -= 257;
+    voice->right = volume - ((volume * pan * pan) >> 16);
+    voice->step = (double)voice->sample->rate / AUDIO_RATE *
+                 pow(2.0, (limit(pitch, 0, 255) - 128) / 64.0);
+}
+
+static void fillAudio(void *context, AudioQueueRef queue,
+                      AudioQueueBufferRef buffer)
+{
+    (void)context;
+    int16_t *output = buffer->mAudioData;
+    pthread_mutex_lock(&soundLock);
+    int running = soundRunning;
+    for (int frame = 0; frame < AUDIO_FRAMES; ++frame) {
+        int left = 0, right = 0;
+        for (int i = 0; i < AUDIO_VOICES; ++i) {
+            SoundVoice *voice = &voices[i];
+            if (!voice->sample) continue;
+            int amplitude = (voice->sample->pcm[(uint32_t)voice->cursor] - 128) * 256;
+            left += amplitude * voice->left / 127;
+            right += amplitude * voice->right / 127;
+            voice->cursor += voice->step;
+            if (voice->cursor >= voice->sample->count) voice->sample = NULL;
+        }
+        *output++ = (int16_t)limit(left, -32768, 32767);
+        *output++ = (int16_t)limit(right, -32768, 32767);
+    }
+    pthread_mutex_unlock(&soundLock);
+    buffer->mAudioDataByteSize = AUDIO_FRAMES * 4;
+    if (running) AudioQueueEnqueueBuffer(queue, buffer, 0, NULL);
+}
