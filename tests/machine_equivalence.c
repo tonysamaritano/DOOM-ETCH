@@ -73,6 +73,8 @@ static void raw_ties_and_extents(void)
     MotionPoint exact_ties[] = {{0, 0}, {.025, .025}, {.075, .075}, {.125, .125}};
     p = (MotionPath){exact_ties, kinds, 4, 100, 100, 100, 100};
     equivalent(p, -1);
+    p.points = &exact_ties[2]; p.count = 1;
+    equivalent(p, 0);
     MotionPoint neighbors[] = {{0, 0}, {nextafter(.075, 0), nextafter(.075, 0)},
         {.075, .075}, {nextafter(.075, 1), nextafter(.075, 1)}};
     p = (MotionPath){neighbors, kinds, 4, 1, 1, 1, 1};
