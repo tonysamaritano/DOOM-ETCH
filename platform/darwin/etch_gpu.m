@@ -240,11 +240,13 @@ BOOL EtchGPUNeedsPath(void)
     return requested;
 }
 
-void EtchGPUErase(void)
+void EtchGPUAction(int key)
 {
-    // Queue a key request rather than dropping it when the planner holds the lock.
-    atomic_store(&eraseRequested, YES);
+    if (key == '+' || key == '=' || key == '-' || key == '_'
+        || key == KEY_F7 || key == KEY_F8 || key == KEY_F9)
+        EtchGPUQueueControl(EtchAction, key);
 }
+void EtchGPUErase(void) { EtchGPUAction(KEY_F7); }
 
 static void EtchGPUAdvance(double dt)
 {
