@@ -4,7 +4,8 @@ attribute vec4 timing,profile,path;
 uniform float physicalTime,shakes;
 varying vec2 capsule,mm;varying float drawn,alpha;
 void main(){
- float t=clamp(physicalTime-timing.x,0.,timing.y),distance;
+ bool complete=physicalTime>=timing.x+timing.y;
+ float t=complete?timing.y:clamp(physicalTime-timing.x,0.,timing.y),distance;
  if(t>=timing.y)distance=profile.z+profile.y;
  else if(t<timing.z)distance=.5*profile.x*t*t;
  else if(timing.y-t<timing.z){float left=timing.y-t;distance=profile.z+profile.y-.5*profile.x*left*left;}
