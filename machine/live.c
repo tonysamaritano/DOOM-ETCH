@@ -70,3 +70,31 @@ int MachineLiveErase(MachineLive *live)
     live->needs_path=1;
     return EtchDeviceRequestErase(live->device);
 }
+int MachineLiveTick(MachineLive *live,double seconds,int active)
+{
+    if (!live || !isfinite(seconds) || seconds<0) return 0;
+    if (!active || live->paused) return 1;
+    while (seconds>0 && !EtchDeviceReady(live->device)) {
+        EtchStatus before=EtchDeviceGetStatus(live->device);
+        double left=before.drawing ? before.remaining_s : before.erase_left_s;
+        double slice=fmin(seconds,left);
+        if (!EtchDeviceTick(live->device,slice)) return 0;
+        EtchStatus after=EtchDeviceGetStatus(live->device);
+        double used=before.drawing ? after.elapsed_s-before.elapsed_s :
+                                     before.erase_left_s-after.erase_left_s;
+        double elapsed=before.drawing ? after.elapsed_s :
+            live->settings.erase_seconds-after.erase_left_s;
+        double clock=live->phase_start+elapsed;
+        if (!isfinite(clock) || clock<live->seconds ||
+            (elapsed>0 && clock<=live->phase_start)) return 0;
+        live->seconds=clock; seconds=fmax(0,seconds-used);
+        if (before.drawing && !after.drawing) live->phase_start=clock;
+        if (EtchDeviceReady(live->device)) {
+            if (before.erasing) { live->needs_path=1; break; }
+            live->phase_start=clock;
+            if (!EtchDeviceRequestErase(live->device)) return 0;
+        }
+        if (used<=0 && slice>0) return 0;
+    }
+    return 1;
+}
