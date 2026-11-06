@@ -108,27 +108,6 @@ def simplify(points, tolerance=SIMPLIFY_PIXELS):
     return [points[index] for index in sorted(keep)]
 
 
-def make_plan(cells):
-    edges = structural_edges(cells)
-    if not edges:
-        raise ValueError('Capture contains no wall outlines')
-    points, kinds = route_edges(edges)
-    result, result_kinds = [points[0]], []
-    start = 0
-    while start < len(kinds):
-        end = start + 1
-        while end < len(kinds) and kinds[end] == kinds[start]:
-            end += 1
-        run = points[start:end + 1]
-        if kinds[start] == 'outline':
-            run = simplify(run)
-        result.extend(run[1:])
-        result_kinds.extend([kinds[start]] * (len(run) - 1))
-        start = end
-    width, height = len(cells[0]), len(cells)
-    physical = [(x * TRAVEL_WIDTH / width, y * TRAVEL_HEIGHT / height)
-                for x, y in result]
-    return physical, result_kinds
 
 
 
