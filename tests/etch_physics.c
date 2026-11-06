@@ -278,11 +278,29 @@ static void persistent_submissions(void)
     EtchDestroy(d);
 }
 
+static void tiny_clock(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    c.x.step_mm = c.y.step_mm = 1e-12;
+    c.x.acceleration_mm_s2 = 1e300; c.x.speed_mm_s = 1e150;
+    EtchDevice *d = EtchCreate(c, (MotionPoint){0, 0});
+    MotionPoint p[] = {{0, 0}, {1e-12, 0}};
+    assert(d && EtchDeviceSubmitHardware(d, p, 2));
+    EtchStatus s = EtchDeviceGetStatus(d);
+    assert(s.drawing && s.remaining_s > 0 && s.elapsed_s == 0);
+    assert(fabs(s.remaining_s / 2e-156 - 1) < 1e-12);
+    assert(EtchDeviceTick(d, 0));
+    assert(EtchDeviceGetStatus(d).remaining_s == s.remaining_s);
+    assert(EtchDeviceTick(d, s.remaining_s));
+    assert(EtchDeviceReady(d));
+    EtchDestroy(d);
+}
+
 int main(void)
 {
     defaults(); analytical_profiles(); direction_memory(); quantized_extent();
     transactional(); invalid_idle(); shake_retention(); chunk_invariance();
-    deferred_erase(); persistent_submissions();
+    deferred_erase(); persistent_submissions(); tiny_clock();
     puts("etch-physics: independent per-axis, ownership, ink and shake checks passed");
     return 0;
 }
