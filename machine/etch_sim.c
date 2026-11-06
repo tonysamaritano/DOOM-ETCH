@@ -228,3 +228,30 @@ EtchStatus EtchDeviceGetStatus(const EtchDevice *d)
     return d ? d->status : (EtchStatus){0};
 }
 const unsigned char *EtchDeviceInk(const EtchDevice *d) { return d ? d->ink : NULL; }
+int EtchDeviceTick(EtchDevice *d,double seconds)
+{
+    if (!d || !isfinite(seconds) || seconds<0) return 0;
+    while (d->status.drawing) {
+        Segment *s=&d->segments[d->index];
+        double left=s->duration-d->segment_time;
+        int complete=seconds>=left || left-seconds<=1e-12*fmax(1,s->duration);
+        double used=complete ? left : seconds;
+        d->segment_time=complete ? s->duration : d->segment_time+used;
+        seconds=fmax(0,seconds-used);
+        position_at(d,s);
+        d->status.elapsed_s=s->begin+d->segment_time;
+        if (complete) complete_segment(d,s);
+        d->status.remaining_s=fmax(0,d->total-d->status.elapsed_s);
+        if (!complete) break;
+    }
+    if (d->status.erasing) {
+        double left=d->config.erase_seconds-d->erase_time;
+        if (seconds>=left || left-seconds<=1e-12*fmax(1,d->config.erase_seconds))
+            finish_erase(d);
+        else {
+            d->erase_time+=seconds;
+            d->status.erase_left_s=d->config.erase_seconds-d->erase_time;
+        }
+    }
+    return 1;
+}
