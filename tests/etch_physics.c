@@ -71,3 +71,22 @@ static void analytical_profiles(void)
     near(run(c, (MotionPoint){10, 10}, 0),
          profile(sqrt(200), 5 * sqrt(2), 10 * sqrt(2)));
 }
+
+static void direction_memory(void)
+{
+    EtchDevice *d = EtchCreate(EtchAssumedDefaults(), (MotionPoint){0, 0});
+    MotionPoint outward[] = {{0, 0}, {100, 0}, {100, 10}, {100, 10}};
+    assert(d && EtchDeviceSubmitHardware(d, outward, 4));
+    assert(EtchDeviceTick(d, 10));
+    EtchStatus s = EtchDeviceGetStatus(d);
+    assert(s.completed == 3);
+    near(s.elapsed_s, profile(100, 60, 250) + profile(10, 60, 250));
+    assert(EtchDeviceRequestErase(d));
+    assert(EtchDeviceTick(d, 2.5));
+    MotionPoint back[] = {{100, 10}, {0, 10}};
+    assert(EtchDeviceSubmitHardware(d, back, 2));
+    near(EtchDeviceGetStatus(d).remaining_s, profile(100.15, 60, 250));
+    assert(EtchDeviceTick(d, 10));
+    point(EtchDeviceGetStatus(d).cursor_mm, 0, 10);
+    EtchDestroy(d);
+}
