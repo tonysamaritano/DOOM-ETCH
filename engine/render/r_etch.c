@@ -383,18 +383,31 @@ static int hud_features(SpriteFrame *frame, double ox, double oy, double sx, dou
     return 1;
 }
 
+enum PatchLayer { PATCH_SPRITE, PATCH_WEAPON, PATCH_HUD };
+
 static int capture_patch(SpriteFrame *frame,
     double origin_x, double origin_y, double scale_x, double scale_y,
     int first, int last, const short *top, const short *bottom,
-    const unsigned char *palette)
+    const unsigned char *palette, const unsigned char *light,
+    const unsigned char *translation, enum PatchLayer layer)
 {
     SilRects fill = {0};
     SilLines outline = {0};
     SilLines scene = {walls, wall_count, wall_capacity};
     int success = SilProject(&frame->shape, origin_x, origin_y, scale_x, scale_y,
         first, last, top, bottom, (unsigned)width, (unsigned)height, &fill, &outline);
-    if (success && palette)
+    if (success && layer == PATCH_HUD)
         success = hud_features(frame, origin_x, origin_y, scale_x, scale_y, palette, &outline);
+    int shading = sprite_textures, pattern = hatch_pattern;
+    double spacing = HATCH_SPACING_MM;
+    if (layer == PATCH_WEAPON) {
+        shading = weapon_textures;
+        pattern = HATCH_CROSS;
+        spacing = HATCH_WEAPON_SPACING_MM;
+    }
+    if (success && layer != PATCH_HUD && shading && light && palette)
+        success = SilHatchDetail(&frame->shape, &fill, origin_x, origin_y, scale_x, scale_y,
+            light, palette, translation, pattern, spacing, &outline);
     if (success) success = SilComposite(&scene, &fill, &outline);
     walls = scene.data;
     wall_count = scene.count;
@@ -407,23 +420,24 @@ static int capture_patch(SpriteFrame *frame,
 
 int R_EtchSpritePatch(int lump, const void *patch, size_t bytes,
     double origin_x, double origin_y, double scale_x, double scale_y,
-    int first, int last, const short *top, const short *bottom)
+    int first, int last, const short *top, const short *bottom,
+    const unsigned char *light, const unsigned char *palette, const unsigned char *translation)
 {
     if (!R_EtchSpritesActive()) return 1;
     SpriteFrame *frame = sprite_frame(lump, patch, bytes);
     if (!frame) { failed = 1; return 0; }
     return capture_patch(frame, origin_x, origin_y, scale_x, scale_y,
-        first, last, top, bottom, NULL);
+        first, last, top, bottom, palette, light, translation, PATCH_SPRITE);
 }
 
 int R_EtchOverlayPatch(int lump, const void *patch, size_t bytes,
     double origin_x, double origin_y, double scale_x, double scale_y,
     int first, int last, const short *top, const short *bottom,
-    const unsigned char *palette, int hud)
+    const unsigned char *light, const unsigned char *palette, int hud)
 {
     if (hud ? !hud_capture : !R_EtchWeaponActive()) return 1;
     SpriteFrame *frame = sprite_frame(lump, patch, bytes);
     if (!frame || (hud && !palette)) { failed = 1; return 0; }
     return capture_patch(frame, origin_x, origin_y, scale_x, scale_y,
-        first, last, top, bottom, hud ? palette : NULL);
+        first, last, top, bottom, palette, light, NULL, hud ? PATCH_HUD : PATCH_WEAPON);
 }
