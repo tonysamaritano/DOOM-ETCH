@@ -28,3 +28,35 @@ static void finish(MachineLive *live,EtchDevice *direct)
     step(live,direct,20); // Idle surplus must not enter the physical clock.
     assert(MachineLiveNeedsPath(live) && EtchDeviceReady(direct));
 }
+int main(void)
+{
+    MachineSettings settings;MachineSettingsDefault(&settings);
+    MotionPoint start={10,20};
+    MachineLive *live=MachineLiveCreate(&settings,start);assert(live);
+    EtchDevice *direct=EtchCreate(MachineSettingsConfig(&settings),start);assert(direct);
+    MotionPoint out[]={{10,20},{110,20}};
+    submit(live,direct,out,2);step(live,direct,.5);
+    machine_near(MachineLiveSeconds(live),.5);
+    MachineLivePause(live,1);assert(MachineLivePaused(live));
+    assert(MachineLiveTick(live,1000,1));
+    assert(MachineLiveTick(live,1000,0));
+    compare_devices(MachineLiveDevice(live),direct);
+    machine_near(MachineLiveSeconds(live),.5);
+    MachineLivePause(live,0);assert(!MachineLivePaused(live));
+    assert(MachineLiveTick(live,1000,0)); // Inactive game time is discarded too.
+    compare_devices(MachineLiveDevice(live),direct);
+    finish(live,direct);
+    double total=100.0/60+60.0/250+2.5;
+    machine_near(MachineLiveSeconds(live),total);
+    MotionPoint back[]={{110,20},{10,20}};
+    submit(live,direct,back,2);step(live,direct,.01);
+    EtchStatus status=EtchDeviceGetStatus(MachineLiveDevice(live));
+    machine_point(status.cursor_mm,110,20);
+    assert(status.motor_mm.x<110); // Backlash moves the knob before the stylus.
+    finish(live,direct);
+    total+=100.15/60+60.0/250+2.5;
+    machine_near(MachineLiveSeconds(live),total);
+    MachineLiveDestroy(live);EtchDestroy(direct);
+    puts("machine-live: persistent G-code, backlash and pause agree");
+    return 0;
+}
