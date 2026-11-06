@@ -141,3 +141,31 @@ static void combinedFramesAndWrapper(void)
     assert(!strcmp(oldText, singleText));
     free(oldText); free(singleText); fclose(old); fclose(single);
 }
+
+static void invalidFrameArguments(void)
+{
+    MotionPoint points[] = {{0, 0}, {1, 1}};
+    unsigned char kinds[] = {MOTION_START, MOTION_OUTLINE};
+    MotionPath path = framePath(points, kinds, 2);
+    FILE *stream = tmpfile(); assert(stream);
+    assert(!MotionWriteGCodeFrame(NULL, &path, 3600, 1, 1));
+    assert(!MotionWriteGCodeFrame(stream, NULL, 3600, 1, 1));
+    assert(!MotionWriteGCodeFrame(stream, &path, NAN, 1, 1));
+    assert(!MotionWriteGCodeFrame(stream, &path, 3600, 2, 1));
+    assert(!MotionWriteGCodeFrame(stream, &path, 3600, 1, -1));
+    assert(ftell(stream) == 0); fclose(stream);
+}
+static MotionPoint svgStart(const char *filename)
+{
+    FILE *stream = fopen(filename, "r"); assert(stream);
+    char *svg = contents(stream); fclose(stream);
+    const char *path = strstr(svg, "<path"); assert(path);
+    const char *data = strstr(path, " d="); assert(data); data += 3;
+    assert(*data == '\'' || *data == '"'); ++data;
+    while (isspace((unsigned char)*data)) ++data;
+    assert(*data++ == 'M'); char *end;
+    double x = strtod(data, &end); assert(end != data); data = end;
+    while (isspace((unsigned char)*data) || *data == ',') ++data;
+    double y = strtod(data, &end); assert(end != data);
+    free(svg); return (MotionPoint){x, y};
+}
