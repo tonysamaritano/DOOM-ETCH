@@ -68,3 +68,38 @@ static void scene(int count, int special)
         cells[16 + i] = i;
     }
     cells[16 + count] = -1;
+    for (int i = 0; i < 16; ++i) cells[i] = 16;
+    blockmap = blockmaplump = cells;
+    blocklinks = links;
+    lines = walls; numlines = count;
+    body.x = -MM(64); body.radius = MM(16); body.height = MM(56);
+    body.ceilingz = MM(128); body.flags = MF_SOLID;
+    P_SetThingPosition(&body);
+}
+static void moveBoundaries(void)
+{
+    scene(1, 0);
+    walls[0].backsector = NULL;
+    walls[0].flags = 0;
+    assert(!P_TryMove(&body, -MM(8), 0));
+    assert(body.x == -MM(64));
+    assert(P_TryMove(&body, -MM(16), 0));
+    assert(!P_TryMove(&body, -MM(16) + 1, 0));
+    body.flags |= MF_NOCLIP;
+    assert(P_TryMove(&body, MM(8), 0));
+    assert(body.subsector == &areas[1] && rooms[0].thinglist == NULL);
+    for (int height = 55; height <= 57; ++height) {
+        scene(1, 0); rooms[1].ceilingheight = MM(height);
+        assert(P_TryMove(&body, MM(8), 0) == (height >= 56));
+    }
+    for (int step = 23; step <= 25; ++step) {
+        scene(1, 0); rooms[1].floorheight = MM(step);
+        body.flags |= MF_DROPOFF;
+        assert(P_TryMove(&body, MM(8), 0) == (step <= 24));
+    }
+    scene(1, 0); rooms[1].floorheight = MM(24) + 1;
+    body.flags |= MF_DROPOFF;
+    assert(!P_TryMove(&body, MM(8), 0));
+    scene(1, 0); walls[0].flags |= ML_BLOCKING;
+    assert(!P_TryMove(&body, MM(8), 0));
+    scene(0, 0);
