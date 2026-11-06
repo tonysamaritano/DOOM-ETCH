@@ -109,14 +109,16 @@ int R_EtchBegin(int w, int h)
     return 1;
 }
 
-int R_EtchBuildMotion(MotionPath *path)
+int R_EtchTakeSnapshot(EtchSnapshot *snapshot)
 {
     if (!active) return 0;
     active = 0;
-    int success = 0;
-    if (path && !failed && !wall_open && !hud_capture)
-        success = MotionPlanSegments(path, walls, wall_count,
-            (unsigned)width, (unsigned)height, (MotionPoint){0, 0});
+    int success = snapshot && !snapshot->segments && !snapshot->count
+        && !failed && !wall_open && !hud_capture;
+    if (success) {
+        *snapshot = (EtchSnapshot){walls, wall_count, (unsigned)width, (unsigned)height};
+        walls = NULL;
+    }
     free(walls);
     free(wall_hatches);
     wall_hatches = NULL;
@@ -124,6 +126,16 @@ int R_EtchBuildMotion(MotionPath *path)
     walls = NULL;
     wall_count = wall_capacity = 0;
     hud_capture = 0;
+    return success;
+}
+
+int R_EtchBuildMotion(MotionPath *path)
+{
+    EtchSnapshot snapshot = {0};
+    if (!R_EtchTakeSnapshot(path ? &snapshot : NULL)) return 0;
+    int success = MotionPlanSegments(path, snapshot.segments, snapshot.count,
+        snapshot.width, snapshot.height, (MotionPoint){0, 0});
+    free(snapshot.segments);
     return success;
 }
 
