@@ -172,22 +172,22 @@ void EtchGPUShutdown(void)
     linePipeline = backgroundPipeline = nil; device = nil;
 }
 
-static EtchGPUPath *EtchGPUBuildPath(EtchSnapshot snapshot, id<MTLDevice> gpu, double drawingSpeed)
+static EtchGPUPath *EtchGPUBuildPath(EtchSnapshot snapshot, id<MTLDevice> gpu, double drawingSpeed, const char **message)
 {
     MotionPath path = {0};
     int planned = MotionPlanSegments(&path, snapshot.segments, snapshot.count,
         snapshot.width, snapshot.height, (MotionPoint){0, 0});
     free(snapshot.segments);
-    if (!planned) { EtchGPUFail("Cannot plan captured wall and artwork segments"); return nil; }
+    if (!planned) { *message = "Cannot plan captured wall and artwork segments"; return nil; }
     MotionTimedSegment *data = NULL; size_t count = 0; double seconds = 0;
     int timed = MotionTimelineBuild(&path, drawingSpeed, &data, &count, &seconds);
     MotionFree(&path);
-    if (!timed) { EtchGPUFail("Cannot construct the captured path timeline"); return nil; }
+    if (!timed) { *message = "Cannot construct the captured path timeline"; return nil; }
     EtchGPUPath *bundle = [EtchGPUPath new];
     if (count && count <= gpu.maxBufferLength / sizeof(*data))
         bundle.buffer = [gpu newBufferWithBytes:data length:count * sizeof(*data) options:MTLResourceStorageModeShared];
     free(data);
-    if (count && !bundle.buffer) { EtchGPUFail("Cannot allocate the immutable timed path buffer"); return nil; }
+    if (count && !bundle.buffer) { *message = "Cannot allocate the immutable timed path buffer"; return nil; }
     bundle.count = count; bundle.duration = seconds;
     return bundle;
 }
