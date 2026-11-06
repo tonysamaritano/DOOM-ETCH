@@ -144,3 +144,13 @@ if(BUILD_TESTING)
         set_tests_properties(etch-gpu PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
     endif()
 endif()
+
+if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
+    add_executable(etch-gpu-playback-test tests/etch_gpu_playback.m)
+    target_compile_options(etch-gpu-playback-test PRIVATE -fobjc-arc -UNDEBUG)
+    target_include_directories(etch-gpu-playback-test PRIVATE engine/render)
+    target_link_libraries(etch-gpu-playback-test PRIVATE etch-motion
+        "-framework Foundation" "-framework Metal" "-framework QuartzCore")
+    add_test(NAME etch-gpu-playback COMMAND etch-gpu-playback-test)
+    set_tests_properties(etch-gpu-playback PROPERTIES TIMEOUT 30)
+endif()
