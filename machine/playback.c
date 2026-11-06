@@ -85,7 +85,8 @@ static int advance(MachinePlayback *p)
         p->next++;
     }
     if (!MachineSubmitBatch(p->device,&p->program,first,p->next-first,&p->error)) {
-        p->failed=1; return 0;
+        p->failed=1; if (p->trace) p->trace->failed=1;
+        return 0;
     }
     if (p->trace && !EtchTraceRecordDevice(p->trace,p->device,&p->program.moves[first],
                                          p->next-first,p->frame))
@@ -148,6 +149,11 @@ int MachinePlaybackTick(MachinePlayback *p,double seconds)
             if (!seconds) break;
             if (!slice) return runtime_fail(p,0,"device made no progress");
         }
+    }
+    if (p->done && p->trace) {
+        if (!isfinite(p->trace->clock) || fabs(p->trace->clock-p->seconds)>1e-9)
+            return runtime_fail(p,0,"trace clock disagrees with completed playback");
+        p->trace->completed=1;
     }
     return 1;
 }
