@@ -32,3 +32,36 @@ static BOOL valid(NSData *pixels,NSDictionary *m)
                !([mode isEqualToString:@"game"] && indexed)) return NO;
     return YES;
 }
+NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence)
+{
+    if (!sequence || sequence>9007199254740991ULL || !valid(pixels,metadata)) return nil;
+    NSMutableDictionary *m=[metadata mutableCopy];
+    m[@"version"]=@1; m[@"sequence"]=@(sequence);
+    if (![NSJSONSerialization isValidJSONObject:m]) return nil;
+    NSData *json=[NSJSONSerialization dataWithJSONObject:m options:0 error:nil];
+    if (!json.length || json.length>16384) return nil;
+    uint32_t length=(uint32_t)json.length;
+    unsigned char prefix[4]={length&255,(length>>8)&255,(length>>16)&255,(length>>24)&255};
+    NSMutableData *packet=[NSMutableData dataWithBytes:prefix length:4];
+    [packet appendData:json]; [packet appendData:pixels];
+    return [packet copy];
+}
+@implementation EtchFrameQueue {
+    NSData *_pixels,*_metadata;
+    uint64_t _delivered,_outstanding;
+    unsigned _limit,_presented;
+    BOOL _stopped;
+}
+- (instancetype)initWithLimit:(unsigned)limit
+{
+    if ((self=[super init])) _limit=limit;
+    return self;
+}
+- (BOOL)publishPixels:(NSData *)pixels metadata:(NSDictionary *)metadata
+{
+    if (_stopped || !valid(pixels,metadata) || ![NSJSONSerialization isValidJSONObject:metadata]) return NO;
+    NSData *json=[NSJSONSerialization dataWithJSONObject:metadata options:0 error:nil];
+    if (!json.length || json.length>16384) return NO;
+    _pixels=[pixels copy]; _metadata=json;
+    return YES;
+}
