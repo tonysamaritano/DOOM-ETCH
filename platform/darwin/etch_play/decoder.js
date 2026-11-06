@@ -9,7 +9,7 @@ function metadataValid(m) {
   const indexed=m.kind==='indexed',bgra=m.kind==='bgra';
   if((!indexed&&!bgra)||m.width!==(indexed?320:768)||m.height!==(indexed?200:576))
     throw Error('Invalid packed pixel dimensions or kind');
-  if((m.mode==='game')!==indexed)throw Error('Frame kind does not match mode');
+  if((m.mode==='game'&&!indexed)||(m.mode==='visual'&&!bgra))throw Error('Frame kind does not match mode');
   if(m.mode==='physical') {
     if(!pair(m.cursor_mm)||!pair(m.motor_mm)||!pair(m.travel_mm,true)||
       !Number.isFinite(m.physical_seconds)||m.physical_seconds<0||
