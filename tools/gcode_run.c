@@ -10,16 +10,19 @@ int main(int argc,char **argv)
     }
     const char **settings=calloc((size_t)argc,sizeof(*settings));
     if (!settings) return 1;
-    size_t count=0; int json=0,valid=1;
+    size_t count=0; int json=0; const char *invalid=NULL;
     for (int i=2;i<argc;i++) {
         if (!strcmp(argv[i],"--machine-readable")) json=1;
         else if (!strcmp(argv[i],"--settings")) {
             size_t before=count;
             while (i+1<argc && strncmp(argv[i+1],"--",2)) settings[count++]=argv[++i];
-            if (count==before) valid=0;
-        } else valid=0;
+            if (count==before) invalid="--settings";
+        } else invalid=argv[i];
     }
-    if (!valid) { fputs("Invalid option or missing setting\n",stderr); free(settings); return 2; }
+    if (invalid) {
+        fprintf(stderr,"Invalid option or missing setting: %s\n",invalid);
+        free(settings); return 2;
+    }
     MachineParseError error={0};
     MachinePlayback *play=MachineLoad(argv[1],settings,count,&error);
     free(settings);
