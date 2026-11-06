@@ -63,3 +63,38 @@ static double sample_grid(double value,double step,double extent)
     }
     return result;
 }
+static double profile_distance(const EtchTraceSegment *s,double time)
+{
+    double travel=s->slack+s->length;
+    if (time>=s->duration) return travel;
+    if (time<s->ramp) return s->accel*time*time/2;
+    double left=s->duration-time;
+    if (left<s->ramp) return travel-s->accel*left*left/2;
+    return s->peak*(time-s->ramp/2);
+}
+int EtchTraceSample(const EtchTrace *t,double time,MotionPoint *cursor,MotionPoint *motor)
+{
+    if (!t || !t->completed || t->failed || !isfinite(time) || time<0 ||
+        !isfinite(t->clock) || time>t->clock || (t->count && !t->segments) ||
+        !isfinite(t->config.x.step_mm) || t->config.x.step_mm<=0 ||
+        !isfinite(t->config.y.step_mm) || t->config.y.step_mm<=0) return 0;
+    MotionPoint c=t->start_mm,m=t->start_mm;
+    size_t lo=0,hi=t->count;
+    while (lo<hi) {
+        size_t mid=lo+(hi-lo)/2;
+        if (t->segments[mid].t0<=time) lo=mid+1; else hi=mid;
+    }
+    if (lo) {
+        const EtchTraceSegment *s=&t->segments[lo-1];
+        double local=fmin(s->duration,fmax(0,time-s->t0));
+        double distance=profile_distance(s,local);
+        double drawn=local>=s->duration ? s->length : fmin(s->length,fmax(0,distance-s->slack));
+        c=(MotionPoint){sample_grid(s->x0+s->ux*drawn,t->config.x.step_mm,t->config.width_mm),
+                        sample_grid(s->y0+s->uy*drawn,t->config.y.step_mm,t->config.height_mm)};
+        m=(MotionPoint){s->motor_x0+s->ux*distance,s->motor_y0+s->uy*distance};
+    }
+    if (!isfinite(c.x) || !isfinite(c.y) || !isfinite(m.x) || !isfinite(m.y)) return 0;
+    if (cursor) *cursor=c;
+    if (motor) *motor=m;
+    return 1;
+}
