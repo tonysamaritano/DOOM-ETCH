@@ -117,3 +117,30 @@ static void patternsAndPhysicalSpacing(void)
     }
     SilRectsFree(&fill); SilLinesFree(&boundary); SilhouetteFree(&shape);
 }
+
+static size_t hatchCount(const Silhouette *shape, const SilRects *fill)
+{
+    SilLines ink = {0};
+    assert(SilHatch(shape, fill, 20, 10, 1, 1, light, palette, translation,
+                    HATCH_HORIZONTAL, &ink));
+    size_t count = ink.count; SilLinesFree(&ink); return count;
+}
+static void mappedBrightness(void)
+{
+    Silhouette shape = ring(); SilRects fill = {0}; SilLines boundary = {0};
+    project(&shape, 1, &fill, &boundary);
+    assert(hatchCount(&shape, &fill) > 0);
+    light[0] = 255; assert(hatchCount(&shape, &fill) == 0);
+    light[0] = 0; translation[0] = 50; light[50] = 255;
+    assert(hatchCount(&shape, &fill) == 0); /* Translation precedes colormap lighting. */
+    translation[0] = 0; assert(hatchCount(&shape, &fill) > 0);
+    assert(shape.texels[0] == 0 && shape.texels[16 * 32 + 16] == 256);
+    SilRectsFree(&fill); SilLinesFree(&boundary); SilhouetteFree(&shape);
+}
+static double averageX(const SilLines *ink)
+{
+    assert(ink->count); double sum = 0;
+    for (size_t i = 0; i < ink->count; ++i)
+        sum += (ink->data[i].a.x + ink->data[i].b.x) * 0.5;
+    return sum / ink->count;
+}
