@@ -21,6 +21,8 @@ typedef struct {
 } EtchTrace;
 /* Zero-initialize owned traces. A traced playback borrows its trace. */
 void EtchTraceFree(EtchTrace *);
+/* Internal loader snapshot; returned stream is owned by the caller. */
+FILE *EtchTraceSource(FILE *,EtchTrace *,MachineParseError *);
 /* Current accepted submission profile; local t0, no line/frame metadata. */
 int EtchDeviceProfile(const EtchDevice *,size_t index,EtchTraceSegment *);
 /* Finite times in [0,clock], completed traces only. Optional outputs are
