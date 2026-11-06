@@ -103,3 +103,38 @@ static void moveBoundaries(void)
     scene(1, 0); walls[0].flags |= ML_BLOCKING;
     assert(!P_TryMove(&body, MM(8), 0));
     scene(0, 0);
+    crowd[0] = (mobj_t){.x = MM(24), .radius = MM(16), .flags = MF_SOLID};
+    P_SetThingPosition(&crowd[0]);
+    assert(P_TryMove(&body, -MM(8), 0));
+    assert(!P_TryMove(&body, -MM(8) + 1, 0));
+    P_UnsetThingPosition(&crowd[0]);
+    assert(P_TryMove(&body, 0, MM(64)));
+    P_UnsetThingPosition(&body);
+    for (int i = 0; i < 16; ++i) assert(links[i] == NULL);
+}
+static int hits;
+static fixed_t previousFraction;
+static boolean hit(intercept_t *entry)
+{
+    assert(entry->frac >= previousFraction && entry->frac <= FRACUNIT);
+    previousFraction = entry->frac; ++hits; return true;
+}
+static void traverse(int count, int things)
+{
+    scene(things ? 0 : count, 0);
+    if (things) {
+        P_UnsetThingPosition(&body);
+        memset(crowd, 0, sizeof(crowd));
+        for (int i = 0; i < count; ++i) {
+            crowd[i].x = -MM(4) + i * 1024;
+            crowd[i].y = MM(8); crowd[i].radius = MM(1);
+            P_SetThingPosition(&crowd[i]);
+        }
+    }
+    hits = 0; previousFraction = 0;
+    assert(P_PathTraverse(-MM(64), MM(8), MM(64), MM(8),
+                          things ? PT_ADDTHINGS : PT_ADDLINES, hit));
+    assert(hits == count);
+}
+static void overflowSpecials(void)
+{ scene(9, 1); (void)P_CheckPosition(&body, 0, MM(8)); }
