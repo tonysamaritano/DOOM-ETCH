@@ -316,6 +316,40 @@ static int wall_hatch_row(const WallTexture *texture, WallSample sample,
          {texture->x + high, y + (end - y) * high}}});
 }
 
+void R_EtchWallTexture(int tier, int x, const unsigned char *source,
+    const unsigned char *light, const unsigned char *palette,
+    double mid, double scale, double step, double center, double u, double u_end)
+{
+    if (!R_EtchTexturesActive() || !source || !light || !palette
+        || tier < 0 || tier > 2 || x < 0 || x >= width) return;
+    WallSample sample = samples[tier][x];
+    if (!sample.valid) return;
+    if (!isfinite(mid) || !isfinite(center) || !isfinite(scale) || !isfinite(scale + step)
+        || scale <= 0 || scale + step <= 0 || !isfinite(u) || !isfinite(u_end)
+        || fabs(u) > 1e9 || fabs(u_end) > 1e9) { failed = 1; return; }
+    WallTexture texture = {tier, x, source, light, palette,
+        mid, scale, scale + step, center, u, u_end};
+    for (int family = 0; family < HatchFamilies(hatch_pattern); ++family) {
+        double slope = HatchSlope(hatch_pattern, family);
+        double screen_slope = slope * (u_end - u) * scale;
+        double minimum = HATCH_SPACING_MM * hypot(1, screen_slope * HATCH_MM_Y / HATCH_MM_X);
+        int spacing = 1;
+        while (spacing * fmin(scale, scale + step) * HATCH_MM_Y < minimum
+               && spacing < 1048576) spacing *= 2;
+        double first = fmin((sample.top + 0.6 - center) / scale + mid - slope * u,
+            (sample.top_end + 0.6 - center) / (scale + step) + mid - slope * u_end);
+        double last = fmax((sample.bottom - 0.6 - center) / scale + mid - slope * u,
+            (sample.bottom_end - 0.6 - center) / (scale + step) + mid - slope * u_end);
+        if (!isfinite(first) || !isfinite(last) || fabs(first) > 1e9 || fabs(last) > 1e9) {
+            failed = 1; return;
+        }
+        for (double row = ceil(first / spacing) * spacing; row <= last; row += spacing)
+            if (!wall_hatch_row(&texture, sample, family, slope, row, spacing)) {
+                failed = 1; return;
+            }
+    }
+}
+
 void R_EtchWallEnd(void)
 {
     if (!active || failed) return;
