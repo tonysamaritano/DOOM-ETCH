@@ -167,6 +167,8 @@ static void invalid_idle(void)
     c.x.step_mm = 0; assert(!EtchCreate(c, (MotionPoint){0, 0}));
     c = EtchAssumedDefaults(); c.y.acceleration_mm_s2 = NAN;
     assert(!EtchCreate(c, (MotionPoint){0, 0}));
+    c = EtchAssumedDefaults(); c.x.step_mm = 1e-300;
+    assert(!EtchCreate(c, (MotionPoint){0, 0}));
     c = EtchAssumedDefaults(); c.ghost_fraction = 1.01;
     assert(!EtchCreate(c, (MotionPoint){0, 0}));
 }
