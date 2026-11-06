@@ -138,3 +138,36 @@ static void traverse(int count, int things)
 }
 static void overflowSpecials(void)
 { scene(9, 1); (void)P_CheckPosition(&body, 0, MM(8)); }
+static void overflowLines(void) { traverse(MAXINTERCEPTS + 1, 0); }
+static void overflowThings(void) { traverse(MAXINTERCEPTS + 1, 1); }
+static void expectFailure(void (*operation)(void), const char *message)
+{
+    int channel[2]; assert(pipe(channel) == 0);
+    pid_t child = fork(); assert(child >= 0);
+    if (child == 0) {
+        close(channel[0]); dup2(channel[1], STDERR_FILENO); close(channel[1]);
+        operation(); _exit(99);
+    }
+    close(channel[1]);
+    char text[8192]; size_t used = 0; ssize_t n;
+    while ((n = read(channel[0], text + used, sizeof(text) - used - 1)) > 0)
+        used += (size_t)n;
+    text[used] = 0; close(channel[0]);
+    int status; assert(waitpid(child, &status, 0) == child);
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 1 || !strstr(text, message))
+        fprintf(stderr, "Expected controlled engine error %s; got: %s\n", message, text);
+    assert(WIFEXITED(status) && WEXITSTATUS(status) == 1);
+    assert(strstr(text, message));
+    assert(!strstr(text, "AddressSanitizer") && !strstr(text, "runtime error"));
+}
+int main(void)
+{
+    moveBoundaries();
+    scene(8, 1); assert(P_CheckPosition(&body, 0, MM(8)));
+    expectFailure(overflowSpecials, "MAXSPECIALCROSS exceeded");
+    traverse(MAXINTERCEPTS, 0);
+    expectFailure(overflowLines, "MAXINTERCEPTS exceeded");
+    traverse(MAXINTERCEPTS, 1);
+    expectFailure(overflowThings, "MAXINTERCEPTS exceeded");
+    return 0;
+}
