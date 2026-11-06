@@ -171,10 +171,12 @@ static void failedCopyPreservesOutput(void)
 }
 
 void MotionWriterTests(void);
+void MotionTimelineTests(void);
 
 int main(void)
 {
     MotionWriterTests();
+    MotionTimelineTests();
     disconnectedRoute();
     duplicateAndStraightEdges();
     copyAndFree();
