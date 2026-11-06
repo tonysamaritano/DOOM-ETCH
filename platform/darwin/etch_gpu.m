@@ -1,3 +1,4 @@
+#include "rate.h"
 // SPDX-License-Identifier: GPL-2.0-or-later
 #import "etch_gpu.h"
 #include "timeline.h"
@@ -237,13 +238,12 @@ static void EtchGPUClearPaths(void)
 
 static void EtchGPUApplyControl(EtchGPUControl control)
 {
-    if (control.kind == EtchRate) drawRate = fmax(1.0 / 64, fmin(1024, control.value));
+    if (control.kind == EtchRate) drawRate = EtchVisualRateClamp(control.value);
     else if (control.kind == EtchInstant) EtchGPUChangeMode(control.value != 0);
     else if (control.kind == EtchInvalidate) EtchGPUClearPaths();
     else {
         int key = (int)control.value;
-        if (key == '+' || key == '=') drawRate = fmin(1024, drawRate * 2);
-        if (key == '-' || key == '_') drawRate = fmax(1.0 / 64, drawRate * .5);
+        drawRate = EtchVisualRateKey(drawRate, key);
         if (key == KEY_F8) EtchGPUChangeMode(!instant);
         if (key == KEY_F9) { paused = !paused; if (paused) EtchGPUFreeLatest(); }
         if (key == KEY_F7 && current && !instant && !erasing) {
