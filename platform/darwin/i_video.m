@@ -68,3 +68,39 @@ static void ReadFrameLimit(void)
         I_Error("--run-frames is outside 1..%u", UINT_MAX);
     runFrames = (unsigned)value;
 }
+
+void I_StartFrame(void) {}
+void I_StartTic(void)
+{
+    if (!window) return;
+    @autoreleasepool {
+        NSEvent *event;
+        while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                untilDate:[NSDate distantPast] inMode:NSDefaultRunLoopMode dequeue:YES])) {
+            BOOL keyEvent = event.type == NSEventTypeKeyDown || event.type == NSEventTypeKeyUp;
+            if (event.window == window && keyEvent) {
+                if (event.modifierFlags & NSEventModifierFlagCommand) {
+                    if (event.type == NSEventTypeKeyDown &&
+                        [event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"q"])
+                        I_Quit();
+                    [NSApp sendEvent:event];
+                    continue;
+                }
+                if (!event.isARepeat)
+                    PostKey(DoomKeyForEvent(event), event.type == NSEventTypeKeyDown);
+                continue;
+            }
+            if (event.window == window && event.type == NSEventTypeFlagsChanged) {
+                int key = DoomKeyForEvent(event);
+                NSEventModifierFlags mask = 0;
+                if (key == KEY_RSHIFT) mask = NSEventModifierFlagShift;
+                if (key == KEY_RCTRL) mask = NSEventModifierFlagControl;
+                if (key == KEY_RALT) mask = NSEventModifierFlagOption;
+                if (mask) PostKey(key, (event.modifierFlags & mask) != 0);
+                continue;
+            }
+            [NSApp sendEvent:event];
+        }
+        [NSApp updateWindows];
+    }
+}
