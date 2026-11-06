@@ -65,3 +65,29 @@ void I_Tactile(int on, int off, int total)
 {
     (void)on; (void)off; (void)total;
 }
+
+/* The game can request sound while we advance a tic. No voices are started. */
+void I_InitSound(void) {}
+void I_ShutdownSound(void) {}
+void I_SetChannels(void) {}
+void I_UpdateSound(void) {}
+void I_SubmitSound(void) {}
+int I_GetSfxLumpNum(sfxinfo_t *sound)
+{
+    char name[9];
+    if (sound->link)
+        sound = sound->link;
+    snprintf(name, sizeof(name), "ds%.6s", sound->name);
+    return W_CheckNumForName(name);
+}
+int I_StartSound(int id, int volume, int separation, int pitch, int priority)
+{
+    (void)id; (void)volume; (void)separation; (void)pitch; (void)priority;
+    return -1;
+}
+int I_SoundIsPlaying(int handle) { (void)handle; return 0; }
+void I_StopSound(int handle) { (void)handle; }
+void I_UpdateSoundParams(int handle, int volume, int separation, int pitch)
+{
+    (void)handle; (void)volume; (void)separation; (void)pitch;
+}
