@@ -197,3 +197,21 @@ BOOL EtchGPUNeedsPath(void)
     os_unfair_lock_unlock(&stateLock);
     return requested;
 }
+
+void EtchGPUTick(double now, BOOL active)
+{
+    if (!isfinite(now) || !os_unfair_lock_trylock(&stateLock)) return;
+    if (!running) { os_unfair_lock_unlock(&stateLock); return; }
+    double dt = clockStarted ? now - previous : 0;
+    previous = now; clockStarted = YES;
+    BOOL replaced = NO;
+    if (pending && (!current || playhead >= current.duration)) {
+        current = pending; pending = nil;
+        playhead = 0; replaced = YES;
+    }
+    if (active && current && !replaced && dt >= 0 && dt <= .5)
+        playhead = fmin(current.duration, playhead + dt);
+    if (current && playhead >= current.duration && !planning && !pending)
+        needsPath = YES;
+    os_unfair_lock_unlock(&stateLock);
+}
