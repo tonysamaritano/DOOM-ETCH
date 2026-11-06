@@ -45,6 +45,7 @@ target_link_libraries(doom-metal PRIVATE doom-engine
 if(BUILD_TESTING)
     include(tests/wad_path.cmake)
     include(tests/texture_startup.cmake)
+    include(tests/translation.cmake)
     add_executable(zone-startup-test tests/zone_startup.c)
     target_link_libraries(zone-startup-test PRIVATE doom-engine)
     add_test(NAME zone-startup-alignment COMMAND zone-startup-test)
