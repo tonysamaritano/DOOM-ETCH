@@ -234,7 +234,7 @@ V_DrawPatch
         double origin_x = x - SHORT(patch->leftoffset);
         double origin_y = y - SHORT(patch->topoffset) + (scrn == 4 ? 168 : 0);
         if (!R_EtchOverlayPatch(lump, patch, W_LumpLength(lump),
-                origin_x, origin_y, 1, 1, 0, 319, top, bottom, palette, 1))
+                origin_x, origin_y, 1, 1, 0, 319, top, bottom, NULL, palette, 1))
             I_Error("Cannot capture HUD patch %d", lump);
         return;
     }
