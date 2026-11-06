@@ -29,3 +29,5 @@ if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
         ENVIRONMENT "DOOMWADDIR=${DOOM_TEST_WAD_DIRECTORY}"
         TIMEOUT 60)
 endif()
+
+include(tests/play.cmake)
