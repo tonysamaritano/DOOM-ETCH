@@ -243,7 +243,7 @@ int EtchDeviceTick(EtchDevice *d,double seconds)
     while (d->status.drawing) {
         Segment *s=&d->segments[d->index];
         double left=s->duration-d->segment_time;
-        int complete=seconds>=left || left-seconds<=1e-12*fmax(1,s->duration);
+        int complete=seconds>=left || (seconds>0 && left-seconds<=1e-12*s->duration);
         double used=complete ? left : seconds;
         d->segment_time=complete ? s->duration : d->segment_time+used;
         seconds=fmax(0,seconds-used);
@@ -255,7 +255,7 @@ int EtchDeviceTick(EtchDevice *d,double seconds)
     }
     if (d->status.erasing) {
         double left=d->config.erase_seconds-d->erase_time;
-        if (seconds>=left || left-seconds<=1e-12*fmax(1,d->config.erase_seconds))
+        if (seconds>=left || (seconds>0 && left-seconds<=1e-12*d->config.erase_seconds))
             finish_erase(d);
         else {
             d->erase_time+=seconds;
