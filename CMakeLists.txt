@@ -193,7 +193,7 @@ if(BUILD_TESTING)
 endif()
 
 add_library(etch-controller STATIC machine/gcode.c machine/steppers.c
-    machine/bridge.c machine/playback.c)
+    machine/bridge.c machine/playback.c machine/run.c)
 target_include_directories(etch-controller PUBLIC machine)
 target_link_libraries(etch-controller PUBLIC etch-simulator)
 if(BUILD_TESTING)
@@ -204,3 +204,7 @@ if(BUILD_TESTING)
         add_test(NAME machine-${check} COMMAND machine-${check}-test)
     endforeach()
 endif()
+
+add_executable(etch-gcode-run tools/gcode_run.c)
+target_link_libraries(etch-gcode-run PRIVATE etch-controller)
+target_link_libraries(doom-metal PRIVATE etch-controller)
