@@ -668,6 +668,8 @@ boolean PIT_AddThingIntercepts (mobj_t* thing)
     if (frac < 0)
 	return true;		// behind source
 
+    if (intercept_p >= intercepts + MAXINTERCEPTS)
+        I_Error("PIT_AddThingIntercepts: MAXINTERCEPTS exceeded (%i)", MAXINTERCEPTS);
     intercept_p->frac = frac;
     intercept_p->isaline = false;
     intercept_p->d.thing = thing;
