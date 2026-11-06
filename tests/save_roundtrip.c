@@ -201,3 +201,25 @@ static void RoundTrip(unsigned offset)
         assert(players[i].psprites[0].state == &states[7 + i]);
         assert(!players[i].message && !players[i].attacker);
     }
+    for (int i = 0; i < 10; i++) {
+        assert(restored[i].floorheight == (-48 + i) * FRACUNIT);
+        assert(restored[i].ceilingheight == (96 + 3 * i) * FRACUNIT);
+        assert(restored[i].lightlevel == 200 - i && restored[i].tag == 70 + i);
+        assert(restored[i].floorpic == 11 + i && restored[i].ceilingpic == 31 + i);
+    }
+    assert(restoredLine[0].flags == 9 && restoredLine[0].tag == 85);
+    assert(restoredSides[0].textureoffset == -7 * FRACUNIT);
+    assert(restoredSides[1].midtexture == 42);
+    CheckObjects();
+    thinker_t *th = thinkercap.next;
+    while (th != &thinkercap) {
+        thinker_t *next = th->next; Z_Free(th); th = next;
+    }
+    assert(live == 0); free(buffer); free(copy);
+}
+int main(void)
+{
+    for (unsigned offset = 0; offset < 8; offset++) RoundTrip(offset);
+    puts("Save codec round trip: players, relocated world, actors and nine specials passed");
+    return 0;
+}
