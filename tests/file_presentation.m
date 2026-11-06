@@ -47,7 +47,12 @@ static void pause_and_interrupt(void)
         assert(p.retained[i] == 0 || p.retained[i] == ETCH_INK_GHOST);
     }
     assert(marks > 0 && ghosts == (size_t)floor(marks * .03));
-    assert(control(&p, KEY_F7) && !p.shaking && p.shaken);
+    assert(control(&p, KEY_F7) && p.shaking);
+    assert(advance(&p, 2.5) && p.shaken);
+    size_t twice = 0;
+    for (size_t i = 0; i < sizeof p.retained; ++i) twice += p.retained[i] != 0;
+    assert(twice == (size_t)floor(ghosts * .03));
+    machine_near(MachinePlaybackSeconds(p.play), .3);
     MachinePlaybackDestroy(p.play);
 }
 
