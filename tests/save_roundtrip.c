@@ -131,3 +131,39 @@ static void BuildObjects(void)
     paused->sector = &sectors[9]; paused->oldstatus = down;
     P_AddActivePlat(paused);
 }
+static void CheckObjects(void)
+{
+    thinker_t *th = thinkercap.next;
+    for (int i = 0; i < MAXPLAYERS; i += 2) {
+        mobj_t *mo = (mobj_t *)th; th = th->next;
+        assert(mo->player == &players[i] && players[i].mo == mo);
+        assert(mo->state == &states[23 + i] && mo->info == &mobjinfo[MT_PLAYER]);
+        assert(mo->x == (18 + i) * FRACUNIT && mo->z == 6 * FRACUNIT);
+        assert(mo->health == 81 - i && mo->target == NULL);
+        assert(mo->floorz == sectors[0].floorheight);
+    }
+    ceiling_t *ceiling = (ceiling_t *)th; th = th->next;
+    assert(ceiling->sector == &sectors[1] && ceiling->speed == 3 * FRACUNIT);
+    assert(sectors[1].specialdata == ceiling);
+    vldoor_t *door = (vldoor_t *)th; th = th->next;
+    assert(door->sector == &sectors[2] && door->topwait == 37);
+    floormove_t *floor = (floormove_t *)th; th = th->next;
+    assert(floor->sector == &sectors[3] && floor->floordestheight == 29 * FRACUNIT);
+    plat_t *plat = (plat_t *)th; th = th->next;
+    assert(plat->sector == &sectors[4] && plat->count == 19);
+    lightflash_t *flash = (lightflash_t *)th; th = th->next;
+    assert(flash->sector == &sectors[5] && flash->count == 43);
+    strobe_t *strobe = (strobe_t *)th; th = th->next;
+    assert(strobe->sector == &sectors[6] && strobe->brighttime == 11);
+    glow_t *glow = (glow_t *)th; th = th->next;
+    assert(glow->sector == &sectors[7] && glow->direction == -1);
+    assert(th != &thinkercap);
+    ceiling_t *stopped = (ceiling_t *)th; th = th->next;
+    assert(stopped->sector == &sectors[8] && !th->prev->function.acp1);
+    assert(stopped->olddirection == -1 && activeceilings[1] == stopped);
+    assert(th != &thinkercap);
+    plat_t *paused = (plat_t *)th; th = th->next;
+    assert(paused->sector == &sectors[9] && !paused->thinker.function.acp1);
+    assert(paused->oldstatus == down && activeplats[1] == paused);
+    assert(th == &thinkercap);
+}
