@@ -305,3 +305,23 @@ static int uncovered_lines(SilLines *result, MotionSegment s, const Interval *in
     }
     return at >= 1 || SilLineAdd(result, along(s, at), s.b);
 }
+
+int SilComposite(SilLines *scene, const SilRects *mask, const SilLines *outline)
+{
+    if (!lines_valid(scene) || !rectangles_valid(mask) || !lines_valid(outline)) return 0;
+    Interval *intervals = mask->count ? malloc(mask->count * sizeof(*intervals)) : NULL;
+    if (mask->count && !intervals) return 0;
+    SilLines result = {0};
+    for (size_t i = 0; i < scene->count; i++) {
+        MotionSegment segment = scene->data[i];
+        size_t count = covered_intervals(segment, mask, intervals);
+        if (!uncovered_lines(&result, segment, intervals, count)) goto fail;
+    }
+    for (size_t i = 0; i < outline->count; i++)
+        if (!SilLineAdd(&result, outline->data[i].a, outline->data[i].b)) goto fail;
+    free(intervals); SilLinesFree(scene); *scene = result;
+    return 1;
+fail:
+    free(intervals); SilLinesFree(&result);
+    return 0;
+}
