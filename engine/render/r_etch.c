@@ -30,6 +30,22 @@ static int sprites_enabled = 1;
 void R_EtchSprites(int enabled) { sprites_enabled = enabled != 0; }
 int R_EtchSpritesActive(void) { return active && !failed && sprites_enabled; }
 
+static SpriteFrame *sprite_frame(int lump, const void *patch, size_t bytes)
+{
+    for (SpriteFrame *frame = sprite_frames; frame; frame = frame->next)
+        if (frame->lump == lump) return frame;
+    SpriteFrame *frame = calloc(1, sizeof(*frame));
+    if (!frame) return NULL;
+    if (!SilhouetteDecode(&frame->shape, patch, bytes)) {
+        free(frame);
+        return NULL;
+    }
+    frame->lump = lump;
+    frame->next = sprite_frames;
+    sprite_frames = frame;
+    return frame;
+}
+
 void R_EtchResetSprites(void)
 {
     while (sprite_frames) {
