@@ -225,10 +225,11 @@ extern char*	chat_macros[];
 typedef struct
 {
     char*	name;
-    int*	location;
+    void*	location;
     int		defaultvalue;
     int		scantranslate;		// PC scan code hack
     int		untranslated;		// lousy hack
+    char*	stringdefault;
 } default_t;
 
 default_t	defaults[] =
