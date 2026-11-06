@@ -489,3 +489,34 @@ static int hatch_rows(const HatchContext *context, HatchStrokes *strokes,
     }
     return 1;
 }
+
+static int compare_stroke(const void *left, const void *right)
+{
+    const HatchStroke *a = left, *b = right;
+    if (a->family != b->family) return a->family < b->family ? -1 : 1;
+    if (a->row != b->row) return a->row < b->row ? -1 : 1;
+    return a->line.a.x < b->line.a.x ? -1 : a->line.a.x > b->line.a.x;
+}
+
+static int publish_hatches(HatchStrokes *strokes, SilLines *out)
+{
+    SilLines result = {0};
+    for (size_t i = 0; i < out->count; i++)
+        if (!SilLineAdd(&result, out->data[i].a, out->data[i].b)) goto fail;
+    if (strokes->count) qsort(strokes->data, strokes->count, sizeof(*strokes->data), compare_stroke);
+    for (size_t i = 0; i < strokes->count;) {
+        HatchStroke stroke = strokes->data[i++];
+        MotionSegment line = stroke.line;
+        while (i < strokes->count && strokes->data[i].family == stroke.family
+            && strokes->data[i].row == stroke.row
+            && fabs(strokes->data[i].line.a.x - line.b.x) < 1e-9
+            && fabs(strokes->data[i].line.a.y - line.b.y) < 1e-9)
+            line.b = strokes->data[i++].line.b;
+        if (!SilLineAdd(&result, line.a, line.b)) goto fail;
+    }
+    SilLinesFree(out); *out = result;
+    return 1;
+fail:
+    SilLinesFree(&result);
+    return 0;
+}
