@@ -120,3 +120,31 @@ static void validation(void)
     path.kinds[1] = MOTION_OUTLINE; assert(MotionValid(&path));
     MotionFree(&path);
 }
+
+static void failedPlansPreserveOutput(void)
+{
+    MotionPath path = {0}, saved = {0};
+    assert(MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){0, 0}));
+    assert(MotionCopy(&saved, &path));
+    MotionPoint *points = path.points;
+    unsigned char *kinds = path.kinds;
+    const MotionSegment bad[] = {
+        {{-1, 0}, {0, 0}}, {{0, 0}, {11, 0}}, {{0, NAN}, {0, 0}},
+        {{0, 0}, {0, INFINITY}}
+    };
+    for (size_t i = 0; i < sizeof(bad) / sizeof(*bad); ++i)
+        assert(!MotionPlanSegments(&path, &bad[i], 1, 10, 10, (MotionPoint){0, 0}));
+    assert(!MotionPlanSegments(&path, NULL, 1, 10, 10, (MotionPoint){0, 0}));
+    assert(!MotionPlanSegments(&path, fixture, 3, 0, 10, (MotionPoint){0, 0}));
+    assert(!MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){-1, 0}));
+    assert(!MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){0, 11}));
+    assert(!MotionPlanSegments(&path, fixture, 3, 10, 10, (MotionPoint){NAN, 0}));
+    assert(path.points == points && path.kinds == kinds && path.count == saved.count);
+    for (size_t i = 0; i < path.count; ++i) {
+        pointEquals(path.points[i], saved.points[i]);
+        assert(path.kinds[i] == saved.kinds[i]);
+    }
+    assert(MotionValid(&path));
+    MotionFree(&saved);
+    MotionFree(&path);
+}
