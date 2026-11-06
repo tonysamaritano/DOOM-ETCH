@@ -39,7 +39,9 @@ static void attribute(const char *element, const char *name, char *value, size_t
     for (;;) {
         found = strstr(found, name);
         assert(found && found < end);
-        if (found > element && isspace((unsigned char)found[-1])) break;
+        const char *after = found + strlen(name);
+        while (isspace((unsigned char)*after)) ++after;
+        if (found > element && isspace((unsigned char)found[-1]) && *after == '=') break;
         ++found;
     }
     found += strlen(name);
