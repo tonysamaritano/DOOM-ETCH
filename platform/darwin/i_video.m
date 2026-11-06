@@ -3,12 +3,18 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 #import "keyboard.h"
+#import "etch_gpu.h"
+#import <QuartzCore/CAMediaTiming.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "doomdef.h"
+#include "doomstat.h"
+#include "r_main.h"
+#include "r_etch.h"
+#include "st_stuff.h"
 #include "d_main.h"
 #include "i_system.h"
 #include "i_video.h"
@@ -25,6 +31,9 @@ static id<MTLTexture> indices;
 static byte colors[256 * 4];
 static BOOL held[256];
 static unsigned presentedFrames, runFrames;
+static BOOL gpuEtch, capturePending;
+static BOOL GPUActive(void)
+{ return gpuEtch && gamestate == GS_LEVEL && !menuactive && !automapactive; }
 unsigned I_MetalPresentedFrames(void) { return presentedFrames; }
 
 static void PostKey(int key, BOOL down)
@@ -67,7 +76,16 @@ static void ReadFrameLimit(void)
     runFrames = (unsigned)value;
 }
 
-void I_StartFrame(void) {}
+void I_StartFrame(void)
+{
+    if (!gpuEtch) return;
+    BOOL active = GPUActive();
+    EtchGPUTick(CACurrentMediaTime(), active);
+    if (active && gametic >= 20 && !capturePending && EtchGPUNeedsPath()) {
+        if (!R_EtchBegin(320, 168)) I_Error("Cannot start GPU scene capture");
+        capturePending = YES;
+    }
+}
 void I_StartTic(void)
 {
     if (!window) return;
