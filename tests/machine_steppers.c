@@ -20,3 +20,23 @@ static void counters(void)
     MachineProgramFree(&p); MachineStepProgramFree(&steps);
     assert(!steps.moves && !steps.count); MachineStepProgramFree(&steps);
 }
+
+static void compile_rejection(void)
+{
+    MachineSettings s; MachineSettingsDefault(&s); MachineParseError e = {0};
+    MachineProgram p = {0}; MachineStepProgram out = {0};
+    assert(MachineGCodeParse(&p, "G1 X1 Y1 F60", NULL, &e));
+    assert(MachineSteppersCompile(&out, &p, &s, &e));
+    MachineStep *owned = out.moves;
+    p.moves[0].cnc_mm.x = s.width_mm + 1;
+    assert(!MachineSteppersCompile(&out, &p, &s, &e));
+    assert(e.line == 1 && e.message[0] && out.moves == owned);
+    assert(out.count == 1 && out.total_steps[0] == 20);
+    p.moves[0].cnc_mm.x = NAN;
+    assert(!MachineSteppersCompile(&out, &p, &s, &e));
+    assert(out.moves == owned && out.count == 1);
+    s.steps_per_mm[0] = 1e300;
+    assert(!MachineSteppersCompile(&out, &p, &s, &e));
+    assert(out.moves == owned);
+    MachineProgramFree(&p); MachineStepProgramFree(&out);
+}
