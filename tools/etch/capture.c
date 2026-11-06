@@ -7,6 +7,7 @@
 #include "m_argv.h"
 #include "m_menu.h"
 #include "p_local.h"
+#include "p_setup.h"
 #include "r_local.h"
 #include "r_etch.h"
 #include "s_sound.h"
