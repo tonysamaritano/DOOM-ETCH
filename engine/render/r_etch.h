@@ -12,6 +12,16 @@ void R_EtchWallColumn(int tier, int x, double top, double bottom,
                       double topstep, double bottomstep);
 void R_EtchClipPlane(int x, double top, double topstep, double bottom, double bottomstep);
 void R_EtchWallEnd(void);
+void R_EtchTextures(int enabled);
+void R_EtchSpriteTextures(int enabled);
+void R_EtchWeaponTextures(int enabled);
+int R_EtchTexturesActive(void);
+int R_EtchSpriteTexturesEnabled(void);
+int R_EtchWeaponTexturesEnabled(void);
+void R_EtchHatchPattern(int pattern);
+void R_EtchWallTexture(int tier, int x, const unsigned char *source,
+    const unsigned char *light, const unsigned char *palette,
+    double mid, double scale, double step, double center, double u, double u_end);
 int R_EtchBuildMotion(MotionPath *path);
 void R_EtchSprites(int enabled);
 int R_EtchSpritesActive(void);
