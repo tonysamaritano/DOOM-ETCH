@@ -258,8 +258,8 @@ static void EtchGPUEncodeLayer(id<MTLRenderCommandEncoder> encoder, EtchGPUPath 
 }
 
 static BOOL EtchGPUEncode(id<MTLCommandBuffer> command, id<MTLTexture> target,
-    EtchGPUPath *path, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
-    double clock, double backingScale)
+    EtchGPUFrame *frame, id<MTLRenderPipelineState> background, id<MTLRenderPipelineState> lines,
+    double backingScale)
 {
     MTLRenderPassDescriptor *pass = [MTLRenderPassDescriptor renderPassDescriptor];
     pass.colorAttachments[0].texture = target;
@@ -274,14 +274,11 @@ static BOOL EtchGPUEncode(id<MTLCommandBuffer> command, id<MTLTexture> target,
         (target.height - height) / 2, width, height, 0, 1}];
     [encoder setRenderPipelineState:background];
     [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
-    if (path.buffer && path.count) {
-        float uniforms[4] = {(float)width, (float)height, (float)(.65 * backingScale), (float)clock};
-        [encoder setRenderPipelineState:lines];
-        [encoder setVertexBuffer:path.buffer offset:0 atIndex:0];
-        [encoder setVertexBytes:uniforms length:sizeof(uniforms) atIndex:1];
-        [encoder setFragmentBytes:uniforms length:sizeof(uniforms) atIndex:0];
-        [encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:6 instanceCount:path.count];
-    }
+    [encoder setRenderPipelineState:lines];
+    EtchGPUEncodeLayer(encoder, frame.ghost, frame.ghostTime, frame.ghostOpacity,
+        frame.ghostBlur, width, height, backingScale);
+    EtchGPUEncodeLayer(encoder, frame.current, frame.currentTime, frame.currentOpacity,
+        frame.currentBlur, width, height, backingScale);
     [encoder endEncoding];
     return YES;
 }
