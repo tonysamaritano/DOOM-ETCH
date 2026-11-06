@@ -68,3 +68,30 @@ static void duplicateAndStraightEdges(void)
     MotionFree(&baseline);
     MotionFree(&duplicate);
 }
+
+static void copyAndFree(void)
+{
+    MotionPath source = {0}, copy = {0};
+    assert(MotionPlanSegments(&source, fixture, 3, 10, 10, (MotionPoint){0, 0}));
+    assert(MotionCopy(&copy, &source));
+    assert(copy.points != source.points && copy.kinds != source.kinds);
+    assert(copy.count == source.count && copy.width == source.width && copy.height == source.height);
+    assert(copy.width_mm == source.width_mm && copy.height_mm == source.height_mm);
+    for (size_t i = 0; i < source.count; ++i) {
+        pointEquals(copy.points[i], source.points[i]);
+        assert(copy.kinds[i] == source.kinds[i]);
+    }
+    MotionPoint *owned = copy.points;
+    assert(MotionCopy(&copy, &copy) && copy.points == owned);
+    source.points[1].x = 1;
+    source.kinds[1] = MOTION_CONNECTOR;
+    pointEquals(copy.points[1], (MotionPoint){2, 0});
+    assert(copy.kinds[1] == MOTION_OUTLINE);
+    MotionFree(&source);
+    assert(MotionValid(&copy));
+    MotionFree(&copy);
+    assert(!copy.points && !copy.kinds && !copy.count && !copy.width && !copy.height);
+    assert(copy.width_mm == 0 && copy.height_mm == 0);
+    MotionFree(&copy);
+    MotionFree(NULL);
+}
