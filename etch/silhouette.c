@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "silhouette.h"
+#include "hatch.h"
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>

@@ -23,6 +23,13 @@ int SilLineAdd(SilLines *lines, MotionPoint a, MotionPoint b);
 int SilhouetteDecode(Silhouette *shape, const void *patch, size_t bytes);
 int SilContours(const SilRects *rectangles, SilLines *outline);
 int SilFeatures(const Silhouette *shape, const unsigned char *palette, SilLines *outline);
+/* Append source-anchored shading; minimum spacing is perpendicular millimetres. */
+int SilHatch(const Silhouette *shape, const SilRects *visible, double ox, double oy,
+    double sx, double sy, const unsigned char *light, const unsigned char *palette,
+    const unsigned char *translation, int pattern, SilLines *out);
+int SilHatchDetail(const Silhouette *shape, const SilRects *visible, double ox, double oy,
+    double sx, double sy, const unsigned char *light, const unsigned char *palette,
+    const unsigned char *translation, int pattern, double min_spacing_mm, SilLines *out);
 /* first/last are inclusive. top is the last occluded row; bottom is exclusive. */
 int SilProject(const Silhouette *source, double ox, double oy, double sx, double sy,
     int first, int last, const short *top, const short *bottom,
