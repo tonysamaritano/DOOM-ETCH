@@ -172,3 +172,36 @@ void I_InitGraphics(void)
         [NSApp activateIgnoringOtherApps:YES];
     }
 }
+
+void I_ShutdownGraphics(void)
+{
+    for (int key = 1; key < 256; key++)
+        if (held[key]) PostKey(key, NO);
+    [window orderOut:nil];
+    window.delegate = nil;
+    [window close];
+    window = nil;
+    windowDelegate = nil;
+    layer = nil;
+    indices = nil;
+    pipeline = nil;
+    queue = nil;
+    device = nil;
+}
+void I_SetPalette(byte *palette)
+{
+    for (int i = 0; i < 256; i++) {
+        for (int channel = 0; channel < 3; channel++)
+            colors[i * 4 + channel] = gammatable[usegamma][palette[i * 3 + channel]];
+        colors[i * 4 + 3] = 255;
+    }
+}
+void I_UpdateNoBlit(void) {}
+void I_WaitVBL(int count)
+{
+    // Sleep one retrace at a time to avoid overflowing the microsecond count.
+    while (count-- > 0) usleep(1000000 / 70);
+}
+void I_ReadScreen(byte *dest) { memcpy(dest, screens[0], SCREENWIDTH * SCREENHEIGHT); }
+void I_BeginRead(void) {}
+void I_EndRead(void) {}
