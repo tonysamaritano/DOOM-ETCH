@@ -157,3 +157,37 @@ failed:
     fprintf(stderr, "AudioQueue unavailable (%d); continuing silently\n", (int)status);
     I_ShutdownSound();
 }
+
+int I_StartSound(int id, int volume, int pan, int pitch, int priority)
+{
+    (void)priority; /* The engine arbitrates priorities before starting voices. */
+    int handle = -1, slot = 0;
+    pthread_mutex_lock(&soundLock);
+    if (!soundRunning || id <= 0 || id >= NUMSFX || !samples[id].pcm) goto done;
+    for (int i = 0; i < AUDIO_VOICES; ++i) {
+        if (!voices[i].sample) { slot = i; break; }
+        if (voices[i].started < voices[slot].started) slot = i;
+    }
+    int collision;
+    do {
+        handle = nextHandle;
+        nextHandle = nextHandle == INT_MAX ? 1 : nextHandle + 1;
+        collision = 0;
+        for (int i = 0; i < AUDIO_VOICES; ++i)
+            if (voices[i].sample && voices[i].handle == handle) collision = 1;
+    } while (collision);
+    voices[slot] = (SoundVoice){.sample = &samples[id], .handle = handle,
+                               .started = ++soundSerial};
+    setVoiceParams(&voices[slot], volume, pan, pitch);
+done:
+    pthread_mutex_unlock(&soundLock);
+    return handle;
+}
+
+void I_StopSound(int handle)
+{
+    pthread_mutex_lock(&soundLock);
+    for (int i = 0; i < AUDIO_VOICES; ++i)
+        if (voices[i].handle == handle) voices[i].sample = NULL;
+    pthread_mutex_unlock(&soundLock);
+}
