@@ -103,3 +103,41 @@ static void Put32(unsigned char *p, unsigned value)
     Put16(p, value);
     Put16(p + 2, value >> 16);
 }
+static void MakeTextures(void)
+{
+    Put32(textureBytes, 2);
+    for (unsigned i = 0; i < 2; i++) {
+        unsigned offset = 12 + i * 32;
+        Put32(textureBytes + 4 + i * 4, offset);
+        unsigned char *record = textureBytes + offset;
+        memcpy(record, i ? "SECOND" : "FIRST", i ? 6 : 5);
+        Put16(record + 12, 2); // width after the 32-bit masked flag
+        Put16(record + 14, 1);
+        Put32(record + 16, 0x12345678); // obsolete field is a disk integer
+        Put16(record + 20, 1); // patch count
+        Put16(record + 22, 0); // x
+        Put16(record + 24, 0); // y
+        Put16(record + 26, 0); // patch index
+    }
+}
+int main(int argc, char **argv)
+{
+    assert(argc == 2);
+    mode = argv[1];
+    if (!strcmp(mode, "colormap")) {
+        R_InitColormaps();
+        assert(colormaps[0] == 42 && colormaps[255] == 42);
+    } else {
+        if (!strcmp(mode, "record")) {
+            fprintf(stderr, "disk patches offset=%zu; expected 22\n", offsetof(maptexture_t, patches));
+            assert(offsetof(maptexture_t, patches) == 22);
+        }
+        MakeTextures();
+        R_InitTextures();
+        assert(numtextures == 2 && textureheight[1] == FRACUNIT);
+        assert(R_TextureNumForName("SECOND") == 1);
+        assert(R_GetColumn(1, 1)[0] == 7);
+    }
+    for (unsigned i = 0; i < allocationCount; i++) free(allocated[i]);
+    return 0;
+}
