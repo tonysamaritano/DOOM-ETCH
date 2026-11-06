@@ -328,11 +328,30 @@ static void reversed_endpoint_ink(void)
     EtchDestroy(d);
 }
 
+static void cumulative_clock_rejection(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    c.x.speed_mm_s = 1e-10;
+    c.y.speed_mm_s = 1e150; c.y.acceleration_mm_s2 = 1e300;
+    EtchDevice *d = EtchCreate(c, (MotionPoint){0, 0});
+    MotionPoint p[] = {{0, 0}, {100, 0}, {100, .05}};
+    EtchStatus before = EtchDeviceGetStatus(d);
+    unsigned char ink[ETCH_INK_WIDTH * ETCH_INK_HEIGHT];
+    memcpy(ink, EtchDeviceInk(d), sizeof ink);
+    assert(!EtchDeviceSubmitHardware(d, p, 3));
+    same_status(before, EtchDeviceGetStatus(d));
+    assert(!memcmp(ink, EtchDeviceInk(d), sizeof ink));
+    assert(EtchDeviceSubmitHardware(d, p, 2));
+    assert(EtchDeviceTick(d, 2e12));
+    point(EtchDeviceGetStatus(d).cursor_mm, 100, 0);
+    EtchDestroy(d);
+}
+
 int main(void)
 {
     defaults(); analytical_profiles(); direction_memory(); quantized_extent();
     transactional(); invalid_idle(); shake_retention(); chunk_invariance();
-    deferred_erase(); persistent_submissions(); tiny_clock(); tiny_shake(); reversed_endpoint_ink();
+    deferred_erase(); persistent_submissions(); tiny_clock(); tiny_shake(); reversed_endpoint_ink(); cumulative_clock_rejection();
     puts("etch-physics: independent per-axis, ownership, ink and shake checks passed");
     return 0;
 }
