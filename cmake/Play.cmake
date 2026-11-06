@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 target_sources(etch-controller PRIVATE machine/live.c)
 target_sources(doom-metal PRIVATE
-    platform/darwin/etch_packet.m platform/darwin/etch_play.m)
+    platform/darwin/etch_packet.m platform/darwin/etch_play.m
+    platform/darwin/etch_resources.m)
 target_link_libraries(doom-metal PRIVATE "-framework WebKit")
 include(cmake/PlayResources.cmake)
 
@@ -23,4 +24,11 @@ if(BUILD_TESTING)
         add_test(NAME viewer-play-decoder COMMAND "${DOOM_NODE_EXECUTABLE}"
             "${PROJECT_SOURCE_DIR}/tests/play_decoder.mjs")
     endif()
+endif()
+
+if(BUILD_TESTING)
+    add_executable(machine-live-test tests/machine_live.c)
+    target_link_libraries(machine-live-test PRIVATE etch-controller)
+    target_compile_options(machine-live-test PRIVATE -UNDEBUG)
+    add_test(NAME machine-live COMMAND machine-live-test)
 endif()
