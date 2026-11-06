@@ -260,6 +260,29 @@ static void EtchGPUControls(void)
     atomic_store(&controlRead, read);
 }
 
+static void EtchGPUPlanSnapshots(EtchSnapshot snapshot, uint64_t epoch,
+                                 id<MTLDevice> gpu, double drawingSpeed)
+{
+    for (;;) @autoreleasepool {
+        const char *message = NULL;
+        EtchGPUPath *bundle = EtchGPUBuildPath(snapshot, gpu, drawingSpeed, &message);
+        os_unfair_lock_lock(&stateLock);
+        if (running && epoch == generation) {
+            if (bundle) { pending = bundle; atomic_fetch_add(&uploads, 1); }
+            else if (message && !failure[0]) snprintf(failure, sizeof(failure), "%s", message);
+        }
+        BOOL next = running && instant && !paused && !failure[0] && latestSnapshot.width;
+        if (next) {
+            snapshot = latestSnapshot; epoch = latestGeneration;
+            latestSnapshot = (EtchSnapshot){0};
+        } else {
+            EtchGPUFreeLatest(); planning = NO;
+        }
+        os_unfair_lock_unlock(&stateLock);
+        if (!next) return;
+    }
+}
+
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot)
 {
     if (!snapshot || (!snapshot->segments && snapshot->count) || snapshot->count > 400000
