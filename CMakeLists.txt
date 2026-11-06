@@ -270,3 +270,4 @@ if(BUILD_TESTING)
 endif()
 
 include(tests/viewer_trace.cmake)
+include(cmake/Play.cmake)
