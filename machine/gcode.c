@@ -108,3 +108,26 @@ static int parse_row(Parser *p,const char *row,size_t line,MachineParseError *e)
                      p->mode==0 ? MACHINE_MOVE_RAPID : MACHINE_MOVE_DRAW,line};
     return append(&p->program,move) ? 1 : fail(e,line,"out of memory");
 }
+int MachineGCodeParse(MachineProgram *out,const char *text,
+                     const MachineParseOptions *options,MachineParseError *e)
+{
+    if (!out || !text) return fail(e,0,"missing parser input");
+    Parser p={.mode=-1};
+    p.cursor=options ? options->start_cnc_mm : (MotionPoint){0,0};
+    if (!isfinite(p.cursor.x) || !isfinite(p.cursor.y)) return fail(e,0,"invalid start");
+    p.program.start_cnc_mm=p.cursor;
+    size_t line=1;
+    while (*text) {
+        const char *end=strchr(text,'\n');
+        size_t length=end ? (size_t)(end-text) : strlen(text);
+        if (length && text[length-1]=='\r') length--;
+        if (length>80) { MachineProgramFree(&p.program); return fail(e,line,"line exceeds 80 bytes"); }
+        char row[81]; memcpy(row,text,length); row[length]=0;
+        if (!parse_row(&p,row,line,e)) { MachineProgramFree(&p.program); return 0; }
+        if (!end) break;
+        text=end+1; line++;
+    }
+    MachineProgramFree(out); *out=p.program;
+    if (e) *e=(MachineParseError){0};
+    return 1;
+}
