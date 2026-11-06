@@ -4,6 +4,15 @@
 
 #include "motion.h"
 
+// An owned snapshot stays valid while the main thread captures the next frame.
+typedef struct {
+    MotionSegment *segments;
+    size_t count;
+    unsigned width, height;
+} EtchSnapshot;
+// Pass an empty destination. On success the caller owns and frees segments.
+int R_EtchTakeSnapshot(EtchSnapshot *snapshot);
+
 // Projected capture is optional; ordinary gameplay leaves it inactive.
 int R_EtchBegin(int width, int height);
 void R_EtchFrameBegin(int width, int height);
