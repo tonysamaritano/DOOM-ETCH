@@ -51,3 +51,22 @@ function resize() {
   catch(error){fail(error);}
 }
 window.addEventListener('resize',resize);
+async function start() {
+  if(!bridge)throw Error('Native presentation bridge is unavailable');
+  renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.AgXToneMapping;renderer.toneMappingExposure=1.05;
+  document.body.prepend(renderer.domElement);
+  renderer.domElement.addEventListener('webglcontextlost',()=>fail(Error('WebGL context lost')));
+  renderer.debug.onShaderError=(gl,program,vertex,fragment)=>{
+    const detail=[gl.getProgramInfoLog(program),gl.getShaderInfoLog(vertex),gl.getShaderInfoLog(fragment)].filter(Boolean).join('\n');
+    fail(Error('Rig shader failure: '+detail.slice(0,1200)));
+  };
+  rig=await buildScene(renderer,read);
+  if(failed||stopped||document.documentElement.dataset.failed)return;
+  resize();if(failed||stopped)return;
+  if(!renderer.info.render.calls)throw Error('Rig scene did not render');
+  evidence.state='ready';evidence.scene=rig.evidence();publish();
+  bridge.postMessage({type:'ready'});animation=requestAnimationFrame(()=>poll().catch(fail));
+}
+start().catch(fail);
