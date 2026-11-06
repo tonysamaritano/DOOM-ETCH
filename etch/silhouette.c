@@ -172,3 +172,36 @@ static int decode_column(Silhouette *shape, const unsigned char *patch,
         at += length + 4;
     }
 }
+
+int SilhouetteDecode(Silhouette *shape, const void *data, size_t bytes)
+{
+    if (!shape || !data || bytes < 8) return 0;
+    const unsigned char *patch = data;
+    unsigned width = read_u16(patch), height = read_u16(patch + 2);
+    size_t header = 8 + (size_t)width * 4;
+    if (!width || !height || width > MAX_PATCH_EXTENT || height > MAX_PATCH_EXTENT || bytes < header)
+        return 0;
+    Silhouette result = {.width = width, .height = height};
+    for (unsigned x = 0; x < width; x++) {
+        size_t offset = read_u32(patch + 8 + x * 4);
+        if (offset < header || !decode_column(&result, patch, bytes, x, offset)) goto fail;
+    }
+    if (!SilContours(&result.fill, &result.outline)) goto fail;
+    SilhouetteFree(shape); *shape = result;
+    return 1;
+fail:
+    SilhouetteFree(&result);
+    return 0;
+}
+
+static int shape_valid(const Silhouette *shape)
+{
+    if (!shape || !shape->width || !shape->height || shape->width > MAX_PATCH_EXTENT
+        || shape->height > MAX_PATCH_EXTENT || !rectangles_valid(&shape->fill)
+        || !lines_valid(&shape->outline)) return 0;
+    for (size_t i = 0; i < shape->fill.count; i++) {
+        SilRect r = shape->fill.data[i];
+        if (r.x0 < 0 || r.y0 < 0 || r.x1 > shape->width || r.y1 > shape->height) return 0;
+    }
+    return 1;
+}
