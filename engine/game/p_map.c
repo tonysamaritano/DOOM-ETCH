@@ -239,6 +239,8 @@ boolean PIT_CheckLine (line_t* ld)
     // if contacted a special line, add it to the list
     if (ld->special)
     {
+	if (numspechit >= MAXSPECIALCROSS)
+	    I_Error("PIT_CheckLine: MAXSPECIALCROSS exceeded (%i)", numspechit + 1);
 	spechit[numspechit] = ld;
 	numspechit++;
     }
