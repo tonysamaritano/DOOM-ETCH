@@ -129,12 +129,12 @@ static ParsedCode parseCode(char *text)
     for (char *line = strtok(text, "\r\n"); line; line = strtok(NULL, "\r\n")) {
         while (isspace((unsigned char)*line)) ++line;
         if (*line == ';') {
-            if (strstr(line, "ETCH_SIZE")) {
+            if (!strncmp(line, "; ETCH_SIZE ", strlen("; ETCH_SIZE "))) {
                 assert(fabs(coordinate(line, 'X') - 170.15) < 1e-7);
                 assert(fabs(coordinate(line, 'Y') - 127.6) < 1e-7);
                 ++code.sizeSeen;
             }
-            if (strstr(line, "ETCH_START")) {
+            if (!strncmp(line, "; ETCH_START ", strlen("; ETCH_START "))) {
                 code.points[0] = (MotionPoint){coordinate(line, 'X'), coordinate(line, 'Y')};
                 code.count = 1; ++code.startSeen;
             }
