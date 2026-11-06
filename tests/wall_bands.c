@@ -74,3 +74,21 @@ static void adjacentSurfaces(void)
     }
     MotionFree(&path);
 }
+
+static void nearWallWins(void)
+{
+    const MotionSegment edges[] = {
+        {{1, 0}, {2, 0}}, {{1, 3}, {2, 3}},
+        {{1, 0}, {1, 1}}, {{1, 1}, {1, 2}}, {{1, 2}, {1, 3}},
+        {{2, 0}, {2, 1}}, {{2, 1}, {2, 2}}, {{2, 2}, {2, 3}},
+        {{1, 1}, {2, 1}}, {{1, 2}, {2, 2}}
+    };
+    MotionPath path = {0};
+    assert(R_EtchBegin(3, 3));
+    R_EtchColumn(1, 1, 1, 7);
+    R_EtchColumn(1, 0, 2, 9);
+    R_EtchColumn(1, 0, 2, 12); /* Entirely hidden behind both nearer walls. */
+    assert(R_EtchBuildMotion(&path));
+    checkBoundary(&path, edges, 10);
+    MotionFree(&path);
+}
