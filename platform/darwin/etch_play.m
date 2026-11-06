@@ -121,7 +121,11 @@ const char *EtchPlayArgumentError(int argc,char **argv)
 - (void)userContentController:(WKUserContentController *)controller didReceiveScriptMessage:(WKScriptMessage *)message
 {
     (void)controller;
-    if (_stopped || ![message.body isKindOfClass:NSDictionary.class]) return;
+    if (_stopped || message.webView!=_web || !message.frameInfo.isMainFrame ||
+        ![message.body isKindOfClass:NSDictionary.class]) return;
+    NSURL *origin=message.frameInfo.request.URL;
+    if (![origin.scheme isEqualToString:@"doomrig"] || ![origin.host isEqualToString:@"local"] ||
+        origin.user || origin.password || origin.port) return;
     NSDictionary *body=message.body;
     if ([body[@"type"] isEqual:@"ready"]) _ready=YES;
     else if ([body[@"type"] isEqual:@"presented"]) {
