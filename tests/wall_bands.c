@@ -57,3 +57,20 @@ static void outerCell(void)
     assert(connectors == 1);
     MotionFree(&path);
 }
+
+static void adjacentSurfaces(void)
+{
+    const MotionSegment edges[] = {
+        {{0, 0}, {1, 0}}, {{1, 0}, {2, 0}}, {{0, 1}, {1, 1}}, {{1, 1}, {2, 1}},
+        {{0, 0}, {0, 1}}, {{2, 0}, {2, 1}}, {{1, 0}, {1, 1}}
+    };
+    MotionPath path = {0};
+    for (int separate = 0; separate <= 1; ++separate) {
+        assert(R_EtchBegin(2, 1));
+        R_EtchColumn(0, 0, 0, 4);
+        R_EtchColumn(1, 0, 0, separate ? 9 : 4);
+        assert(R_EtchBuildMotion(&path));
+        checkBoundary(&path, edges, separate ? 7 : 6);
+    }
+    MotionFree(&path);
+}
