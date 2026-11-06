@@ -23,15 +23,17 @@ function capturePart(mesh,knob,motor,radiusMM) {
   return {mesh,position,normal,vertices,center,axis,along,across,loop,unit};
 }
 function movePart(part,angle) {
+  if(part.lastAngle===angle)return;part.lastAngle=angle;
   const b=part,travel=b.loop.big*angle;
+  const outward=new THREE.Vector3(),tangent=new THREE.Vector3(),v=new THREE.Vector3(),normal=new THREE.Vector3();
   for(let i=0;i<b.vertices.length;i++) {
     const [u,offset,depth,no,nt,nw]=b.vertices[i],p=b.loop.point(u+travel);
-    const outward=b.along.clone().multiplyScalar(p[2]).addScaledVector(b.across,p[3]);
-    const tangent=new THREE.Vector3().crossVectors(b.axis,outward);
-    const v=b.center.clone().addScaledVector(b.along,p[0]).addScaledVector(b.across,p[1])
+    outward.copy(b.along).multiplyScalar(p[2]).addScaledVector(b.across,p[3]);
+    tangent.crossVectors(b.axis,outward);
+    v.copy(b.center).addScaledVector(b.along,p[0]).addScaledVector(b.across,p[1])
       .addScaledVector(outward,offset).addScaledVector(b.axis,depth);
     b.position.setXYZ(i,v.x,v.y,v.z);
-    if(b.normal){const n=outward.multiplyScalar(no).addScaledVector(tangent,nt).addScaledVector(b.axis,nw);b.normal.setXYZ(i,n.x,n.y,n.z);}
+    if(b.normal){normal.copy(outward).multiplyScalar(no).addScaledVector(tangent,nt).addScaledVector(b.axis,nw);b.normal.setXYZ(i,normal.x,normal.y,normal.z);}
   }
   b.position.needsUpdate=true;if(b.normal)b.normal.needsUpdate=true;
 }
