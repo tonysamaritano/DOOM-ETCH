@@ -22,6 +22,21 @@ for (const index of [-1, .5, 1, NaN])
 for (const args of [[NaN, 20, 1], [0, 0, 1], [0, 20, Infinity]])
   assert.throws(() => quantize(...args), RangeError);
 console.log('viewer trace invalid sampling arguments rejected');
+for (const [time, expected] of [[0, 0], [.12, 1.8], [.24, 7.2], [.5, 22.8], [143 / 75, 100]]) {
+  const point = sampleTrace(hand, time);
+  assert(Math.abs(point.x - expected) < 1e-12);
+  assert(Math.abs(point.mx - expected) < 1e-12);
+}
+// Exact half-grid ties can differ at floating-point discontinuities. Compare
+// either side of the independent x=.025 mm acceleration threshold instead.
+const threshold = Math.sqrt(2 * .025 / 250);
+assert.equal(sampleTrace(hand, threshold * (1 - 1e-8)).x, 0);
+assert.equal(sampleTrace(hand, threshold * (1 + 1e-8)).x, .05);
+for (const field of [3, 4]) {
+  const invalid = structuredClone(hand);
+  invalid.segments[field] = -1;
+  assert.throws(() => validateTrace(invalid));
+}
 
 const {writeFileSync, readFileSync, mkdirSync} = await import('node:fs');
 const {dirname} = await import('node:path');
@@ -53,6 +68,12 @@ for (const fixture of fixtures) {
   assert.equal(result.status, 0, `${fixture.name}: ${result.stderr}`);
   const trace = validateTrace(JSON.parse(readFileSync(`${stem}.json`, 'utf8')));
   const samples = JSON.parse(readFileSync(`${stem}-samples.json`, 'utf8'));
+  if (fixture.name === 'reverse') {
+    const takeup = sampleTrace(trace, trace.segments[15] + .001);
+    assert(takeup.backlash && takeup.x === 100 && takeup.mx < 100);
+  }
+  for (const erase of trace.erases)
+    assert.deepEqual(sampleTrace(trace, erase[0] + erase[1] / 2).erase, erase);
   for (const [time, x, y, mx, my] of samples) {
     const point = sampleTrace(trace, time);
     for (const [key, expected] of Object.entries({x, y, mx, my}))
