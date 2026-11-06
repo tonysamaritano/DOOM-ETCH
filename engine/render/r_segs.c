@@ -217,8 +217,11 @@ void R_RenderSegLoop (void)
 
     //texturecolumn = 0;				// shut up compiler warning
 	
+    R_EtchWallBegin();
     for ( ; rw_x < rw_stopx ; rw_x++)
     {
+	double projectedTop = 0, projectedBottom = viewheight;
+	double projectedTopStep = 0, projectedBottomStep = 0;
 	// mark floor / ceiling areas
 	yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
 
@@ -361,10 +364,13 @@ void R_RenderSegLoop (void)
 	    }
 	}
 		
+	R_EtchClipPlane(rw_x, projectedTop, projectedTopStep,
+	                projectedBottom, projectedBottomStep);
 	rw_scale += rw_scalestep;
 	topfrac += topstep;
 	bottomfrac += bottomstep;
     }
+    R_EtchWallEnd();
 }
 
 
