@@ -29,3 +29,29 @@ static void shake_clock(void)
     machine_point(EtchDeviceGetStatus(d).cursor_mm, 0, 0);
     MachinePlaybackDestroy(p);
 }
+
+static void playback_partition(void)
+{
+    MachineSettings sa, sb; MachineSettingsDefault(&sa); sb = sa;
+    const char *text = "; ETCH_START X0 Y127.6\nF3600\nG1 X100\n"
+        "F1200\nY27.6\nM0\nG0 X0\nM2";
+    MachinePlayback *a = play_text(text, &sa), *b = play_text(text, &sb);
+    double before = MachinePlaybackSeconds(a);
+    assert(!MachinePlaybackTick(a, NAN)); assert(!MachinePlaybackTick(a, -1));
+    machine_near(MachinePlaybackSeconds(a), before);
+    assert(MachinePlaybackTick(a, 30));
+    for (int i = 0; i < 30000; ++i) assert(MachinePlaybackTick(b, .001));
+    assert(MachinePlaybackDone(a) && MachinePlaybackDone(b));
+    machine_near(MachinePlaybackSeconds(a), MachinePlaybackSeconds(b));
+    compare_devices(MachinePlaybackDevice(a), MachinePlaybackDevice(b));
+    double finished = MachinePlaybackSeconds(a);
+    assert(MachinePlaybackTick(a, 100)); machine_near(MachinePlaybackSeconds(a), finished);
+    MachinePlaybackDestroy(a); MachinePlaybackDestroy(b);
+}
+
+int main(void)
+{
+    shake_clock(); playback_partition();
+    puts("machine-playback: copied program, M0 clock and chunk invariance passed");
+    return 0;
+}
