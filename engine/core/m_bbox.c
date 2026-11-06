@@ -50,11 +50,11 @@ M_AddToBox
 {
     if (x<box[BOXLEFT])
 	box[BOXLEFT] = x;
-    else if (x>box[BOXRIGHT])
+    if (x>box[BOXRIGHT])
 	box[BOXRIGHT] = x;
     if (y<box[BOXBOTTOM])
 	box[BOXBOTTOM] = y;
-    else if (y>box[BOXTOP])
+    if (y>box[BOXTOP])
 	box[BOXTOP] = y;
 }
 
