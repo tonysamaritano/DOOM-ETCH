@@ -71,3 +71,40 @@ static void segments(FILE *f,const EtchTrace *t)
     }
     fputs("],\n",f);
 }
+static void document(FILE *f,const MachineStepProgram *p,const EtchTrace *t,double seconds)
+{
+    fputs("{\"format\":\"doom-etch-trace\",\"version\":1,\n"
+        "\"units\":{\"length\":\"mm\",\"time\":\"s\",\"frame\":\"device: origin top-left, +X right, +Y down\"},\n",f);
+    settings(f,&p->settings);
+    fprintf(f,"\"duration\":%.17g,\"simulated_seconds\":%.17g,\"steps\":[%llu,%llu],"
+        "\"reversals\":[%llu,%llu],\"start\":[%.17g,%.17g],\n\"erases\":[",
+        t->clock,seconds,(unsigned long long)p->total_steps[0],(unsigned long long)p->total_steps[1],
+        (unsigned long long)p->reversals[0],(unsigned long long)p->reversals[1],t->start_mm.x,t->start_mm.y);
+    for (size_t i=0;i<t->erase_count;i++)
+        fprintf(f,"%s[%.17g,%.17g]",i ? "," : "",t->erases[i].t0,t->erases[i].duration);
+    fputs("],\n",f); segments(f,t);
+    fputs("\"gcode\":",f); string(f,t->source); fputs("}\n",f);
+}
+int MachineTraceWrite(const char *filename,const MachineStepProgram *p,const EtchTrace *t,
+                      double seconds,MachineParseError *e)
+{
+    if (!filename || !*filename || !valid(p,t,seconds)) return fail(e,"invalid or incomplete trace output");
+    size_t length=strlen(filename);
+    if (length>SIZE_MAX-12) return fail(e,"trace output filename too long");
+    char *temporary=malloc(length+12);
+    if (!temporary) return fail(e,"cannot allocate trace output filename");
+    snprintf(temporary,length+12,"%s.tmp.XXXXXX",filename);
+    int fd=mkstemp(temporary);
+    if (fd<0) { free(temporary); return fail(e,"cannot create trace output"); }
+    FILE *stream=fdopen(fd,"wb");
+    if (!stream) { close(fd); unlink(temporary); free(temporary); return fail(e,"cannot open trace output"); }
+    document(stream,p,t,seconds);
+    int ok=!ferror(stream);
+    if (fclose(stream)) ok=0;
+    if (ok && rename(temporary,filename)) ok=0;
+    if (!ok) unlink(temporary);
+    free(temporary);
+    if (!ok) return fail(e,"cannot publish trace output");
+    if (e) *e=(MachineParseError){0};
+    return 1;
+}
