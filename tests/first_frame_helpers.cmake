@@ -16,10 +16,10 @@ function(machine_summary text destination)
     set(${destination} "${report}" PARENT_SCOPE)
 endfunction()
 
-function(reject_command label)
+function(reject_command label expected)
     execute_process(COMMAND ${ARGN} RESULT_VARIABLE status
         OUTPUT_VARIABLE output ERROR_VARIABLE errors TIMEOUT 15)
-    if(status EQUAL 0 OR "${output}${errors}" STREQUAL "")
+    if(status EQUAL 0 OR NOT "${output}${errors}" MATCHES "${expected}")
         message(FATAL_ERROR "${label} did not reject with a diagnostic: ${status} ${output}${errors}")
     endif()
 endfunction()
