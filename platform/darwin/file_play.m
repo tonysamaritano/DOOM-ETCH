@@ -39,7 +39,10 @@ static int options(int argc,char **argv,FileOptions *o)
     o->rate=1; int rate_seen=0;
     for (int i=1;i<argc;i++) {
         if (!strcmp(argv[i],"--etch-gcode")) {
-            if (o->filename || i+1==argc || !strncmp(argv[i+1],"--",2)) return 0;
+            if (o->filename) { fputs("Duplicate --etch-gcode option\n",stderr); return 0; }
+            if (i+1==argc || !strncmp(argv[i+1],"--",2)) {
+                fputs("--etch-gcode requires FILE\n",stderr); return 0;
+            }
             o->filename=argv[++i];
         } else if (!strcmp(argv[i],"--etch-time-scale")) {
             if (rate_seen++ || i+1==argc || !rate_value(argv[++i],&o->rate)) {
