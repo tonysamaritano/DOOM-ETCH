@@ -1,4 +1,5 @@
 #include "r_etch.h"
+#include "hatch.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -165,9 +166,39 @@ static void failedFramesRecover(void)
     MotionFree(&path);
 }
 
+static void perspectiveHatchSpacing(void)
+{
+    unsigned char source[128] = {0}, light[256], palette[768] = {0};
+    for (unsigned i = 0; i < 256; i++) light[i] = (unsigned char)i;
+    MotionPath paths[2] = {{0}, {0}};
+    R_EtchHatchPattern(HATCH_HORIZONTAL);
+    for (int enabled = 0; enabled < 2; enabled++) {
+        R_EtchTextures(enabled);
+        assert(R_EtchBegin(320, 200));
+        R_EtchWallBegin();
+        R_EtchWallColumn(0, 10, 20, 80, 20, 80);
+        R_EtchWallTexture(0, 10, source, light, palette, 0, 1, 1, 0, 0, 1);
+        R_EtchWallEnd();
+        assert(R_EtchBuildMotion(&paths[enabled]));
+    }
+    // This half-millimetre-wide perspective wedge cannot fit a second
+    // source row at the required 1.914 mm perpendicular separation.
+    fprintf(stderr, "Perspective wedge: outline=%zu moves, hatched=%zu moves\n",
+        paths[0].count - 1, paths[1].count - 1);
+    assert(paths[0].count == paths[1].count);
+    for (size_t i = 0; i < paths[0].count; i++) {
+        assert(paths[0].points[i].x == paths[1].points[i].x);
+        assert(paths[0].points[i].y == paths[1].points[i].y);
+        assert(paths[0].kinds[i] == paths[1].kinds[i]);
+    }
+    MotionFree(&paths[0]); MotionFree(&paths[1]);
+    R_EtchTextures(1); R_EtchHatchPattern(HATCH_CROSS);
+}
+
 int main(void)
 {
     rectangle(); slopingWall(); disjointTiers(); slopingClip();
+    perspectiveHatchSpacing();
     offscreenAndClosed(); resetAndLifecycle(); failedFramesRecover();
     puts("Projected wall outlines and clipping passed");
     return 0;
