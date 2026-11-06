@@ -71,6 +71,17 @@ static int replay(Presentation *p)
     p->shake_time=0; p->reset_clock=YES; memset(p->retained,0,sizeof(p->retained));
     return 1;
 }
+static int control(Presentation *p,int key)
+{
+    p->rate=EtchVisualRateKey(p->rate,key);
+    if (key==KEY_F6 && !replay(p)) return 0;
+    if (key==KEY_F9) { p->paused=!p->paused; p->reset_clock=YES; }
+    if (key==KEY_F7 && !p->shaken && !p->shaking) {
+        p->interrupted=YES; p->shaking=YES; p->shake_time=0;
+        memcpy(p->retained,EtchDeviceInk(MachinePlaybackDevice(p->play)),sizeof(p->retained));
+    }
+    return 1;
+}
 static int events(Presentation *p,NSWindow *window,BOOL *quit)
 {
     NSEvent *event;
@@ -82,13 +93,7 @@ static int events(Presentation *p,NSWindow *window,BOOL *quit)
                 *quit=YES;
             else if (!event.isARepeat) {
                 int key=DoomKeyForEvent(event);
-                p->rate=EtchVisualRateKey(p->rate,key);
-                if (key==KEY_F6 && !replay(p)) return 0;
-                if (key==KEY_F9) { p->paused=!p->paused; p->reset_clock=YES; }
-                if (key==KEY_F7 && !p->shaken && !p->shaking) {
-                    p->interrupted=YES; p->shaking=YES; p->shake_time=0;
-                    memcpy(p->retained,EtchDeviceInk(MachinePlaybackDevice(p->play)),sizeof(p->retained));
-                }
+                if (!control(p,key)) return 0;
             }
             continue;
         }
