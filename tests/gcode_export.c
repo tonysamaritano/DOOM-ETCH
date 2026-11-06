@@ -85,3 +85,27 @@ static void quantization(void)
     assert(MotionQuantizePoint(&p, (MotionPoint){320, 200}, &point));
     assert(near(point.x, 170.15) && near(point.y, 127.6));
 }
+
+static void failedQuantizationPreservesOutput(void)
+{
+    MotionPath p = metadata(); MotionPoint point = {7, 11};
+    const MotionPoint invalid[] = {{-1, 0}, {0, 101}, {NAN, 0}, {0, INFINITY}};
+    for (size_t i = 0; i < sizeof(invalid) / sizeof(*invalid); ++i)
+        assert(!MotionQuantizePoint(&p, invalid[i], &point));
+    assert(!MotionQuantizePoint(NULL, (MotionPoint){0, 0}, &point));
+    assert(!MotionQuantizePoint(&p, (MotionPoint){0, 0}, NULL));
+    p.width = 0; assert(!MotionQuantizePoint(&p, (MotionPoint){0, 0}, &point));
+    p = metadata(); p.height_mm = NAN;
+    assert(!MotionQuantizePoint(&p, (MotionPoint){0, 0}, &point));
+    p = metadata(); p.width_mm = DBL_MAX;
+    assert(!MotionQuantizePoint(&p, (MotionPoint){0, 0}, &point));
+    assert(point.x == 7 && point.y == 11);
+}
+static char *contents(FILE *stream)
+{
+    assert(fflush(stream) == 0 && fseek(stream, 0, SEEK_END) == 0);
+    long bytes = ftell(stream); assert(bytes >= 0 && bytes < 16000000);
+    char *text = calloc((size_t)bytes + 1, 1); assert(text); rewind(stream);
+    assert(fread(text, 1, (size_t)bytes, stream) == (size_t)bytes);
+    return text;
+}
