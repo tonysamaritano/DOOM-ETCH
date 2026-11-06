@@ -94,10 +94,18 @@ static int advance(MachinePlayback *p)
 }
 MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *program,MachineParseError *e)
 {
+    return MachinePlaybackCreateTraced(program,NULL,e);
+}
+MachinePlayback *MachinePlaybackCreateTraced(const MachineStepProgram *program,EtchTrace *trace,
+                                            MachineParseError *e)
+{
+    if (trace && (trace->count || trace->erase_count || trace->clock || trace->failed || trace->completed)) {
+        fail(e,0,"trace must be empty"); return NULL;
+    }
     if (!valid_program(program,e)) return NULL;
     MachinePlayback *p=calloc(1,sizeof(*p));
     if (!p) { fail(e,0,"out of memory"); return NULL; }
-    p->program=*program; p->program.moves=NULL;
+    p->program=*program; p->program.moves=NULL; p->trace=trace;
     if (program->count) {
         p->program.moves=malloc(program->count*sizeof(*program->moves));
         if (!p->program.moves) { fail(e,0,"out of memory"); MachinePlaybackDestroy(p); return NULL; }
@@ -107,6 +115,10 @@ MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *program,Machine
                        program->start_steps[1]/program->settings.steps_per_mm[1]};
     p->device=EtchCreate(MachineSettingsConfig(&program->settings),start);
     if (!p->device) { fail(e,0,"invalid device configuration"); MachinePlaybackDestroy(p); return NULL; }
+    if (trace) {
+        trace->config=MachineSettingsConfig(&program->settings);
+        trace->start_mm=EtchDeviceGetStatus(p->device).cursor_mm;
+    }
     if (!advance(p) || !MachinePlaybackTick(p,0)) {
         if (e) *e=p->error;
         MachinePlaybackDestroy(p); return NULL;
