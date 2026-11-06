@@ -350,6 +350,24 @@ static void instantQueuedOwnershipFollowsLifecycle(void)
     }
 }
 
+static void failedInstantPlanReleasesQueuedSnapshot(void)
+{
+    startFixture(); EtchGPUSetInstant(YES); EtchGPUTick(testClock, YES);
+    dispatch_semaphore_t unblock = dispatch_semaphore_create(0);
+    dispatch_async(plannerQueue, ^{ dispatch_semaphore_wait(unblock, DISPATCH_TIME_FOREVER); });
+    for (unsigned i = 0; i < 2; i++) {
+        EtchSnapshot snapshot = {calloc(1, sizeof(MotionSegment)), 1, 100, 100};
+        assert(snapshot.segments);
+        snapshot.segments[0] = (MotionSegment){{0, 0}, {i ? 40 : NAN, 0}};
+        assert(EtchGPUOfferSnapshot(&snapshot) && !snapshot.segments);
+    }
+    assert(planning && latestSnapshot.segments);
+    dispatch_semaphore_signal(unblock); dispatch_sync(plannerQueue, ^{});
+    assert(!planning && !pending && !latestSnapshot.segments && !latestSnapshot.width);
+    assert(EtchGPUUploadCount() == 0 && EtchGPUError());
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
@@ -364,6 +382,7 @@ int main(void)
         invalidationDiscardsInflightPlan(NO); invalidationDiscardsInflightPlan(YES);
         instantKeepsLatestSnapshotWhileWorkerBusy();
         instantQueuedOwnershipFollowsLifecycle();
+        failedInstantPlanReleasesQueuedSnapshot();
         puts("GPU ghost timing, prefix clipping, Metal pixels and resource lifetimes passed");
     }
     return EXIT_SUCCESS;
