@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.21)
-set(CMAKE_C_COMPILER clang CACHE FILEPATH "C compiler")
+if(NOT DEFINED CMAKE_C_COMPILER)
+    execute_process(COMMAND xcrun --find clang OUTPUT_VARIABLE DOOM_CLANG
+        OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+    set(CMAKE_C_COMPILER "${DOOM_CLANG}" CACHE FILEPATH "C compiler")
+endif()
+if(NOT DEFINED CMAKE_OSX_SYSROOT)
+    execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE DOOM_SDK
+        OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+    set(CMAKE_OSX_SYSROOT "${DOOM_SDK}" CACHE PATH "Apple SDK")
+endif()
 project(doom-etch LANGUAGES C)
 if(NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
     message(FATAL_ERROR "doom-etch requires Clang")
