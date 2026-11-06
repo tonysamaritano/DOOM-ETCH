@@ -108,3 +108,41 @@ static void rectangle_events(EdgeEvent *events, SilRect r)
     events[6] = (EdgeEvent){1, -1, r.x1, r.y0};
     events[7] = (EdgeEvent){1, 1, r.x1, r.y1};
 }
+
+static int sweep_events(const EdgeEvent *events, size_t count, SilLines *result)
+{
+    for (size_t i = 0; i < count;) {
+        int axis = events[i].axis, balance = 0;
+        double fixed = events[i].fixed, begin = 0;
+        while (i < count && events[i].axis == axis && events[i].fixed == fixed) {
+            double at = events[i].at;
+            int delta = 0;
+            do { delta += events[i++].delta; }
+            while (i < count && events[i].axis == axis && events[i].fixed == fixed && events[i].at == at);
+            int next = balance + delta;
+            if (!balance && next) begin = at;
+            if (balance && !next) {
+                MotionPoint a = axis ? (MotionPoint){fixed, begin} : (MotionPoint){begin, fixed};
+                MotionPoint b = axis ? (MotionPoint){fixed, at} : (MotionPoint){at, fixed};
+                if (!SilLineAdd(result, a, b)) return 0;
+            }
+            balance = next;
+        }
+    }
+    return 1;
+}
+int SilContours(const SilRects *rectangles, SilLines *outline)
+{
+    if (!outline || !rectangles_valid(rectangles)) return 0;
+    size_t count = rectangles->count * 8;
+    EdgeEvent *events = count ? malloc(count * sizeof(*events)) : NULL;
+    if (count && !events) return 0;
+    for (size_t i = 0; i < rectangles->count; i++) rectangle_events(events + i * 8, rectangles->data[i]);
+    if (count) qsort(events, count, sizeof(*events), compare_event);
+    SilLines result = {0};
+    int success = sweep_events(events, count, &result);
+    free(events);
+    if (!success) { SilLinesFree(&result); return 0; }
+    SilLinesFree(outline); *outline = result;
+    return 1;
+}
