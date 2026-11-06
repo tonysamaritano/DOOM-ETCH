@@ -249,12 +249,11 @@ void W_AddFile (char *filename)
 //
 void W_Reload (void)
 {
-    wadinfo_t		header;
+    filelump_t*         directory;
     int			lumpcount;
     lumpinfo_t*		lump_p;
     unsigned		i;
     int			handle;
-    int			length;
     filelump_t*		fileinfo;
 	
     if (!reloadname)
@@ -263,14 +262,11 @@ void W_Reload (void)
     if ( (handle = open (reloadname,O_RDONLY | O_BINARY)) == -1)
 	I_Error ("W_Reload: couldn't open %s",reloadname);
 
-    read (handle, &header, sizeof(header));
-    lumpcount = LONG(header.numlumps);
-    header.infotableofs = LONG(header.infotableofs);
-    length = lumpcount*sizeof(filelump_t);
-    fileinfo = alloca (length);
-    lseek (handle, header.infotableofs, SEEK_SET);
-    read (handle, fileinfo, length);
-    
+    directory = ReadDirectory(handle, &lumpcount);
+    if (lumpcount != numlumps - reloadlump)
+        I_Error("Reloaded WAD has a different directory size");
+    fileinfo = directory;
+
     // Fill in lumpinfo
     lump_p = &lumpinfo[reloadlump];
 	
@@ -285,6 +281,7 @@ void W_Reload (void)
 	lump_p->size = LONG(fileinfo->size);
     }
 	
+    free(directory);
     close (handle);
 }
 
