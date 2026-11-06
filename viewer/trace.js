@@ -23,3 +23,27 @@ export function validateTrace(data) {
 export function quantize(value,steps,extent) {
   return Math.max(0,Math.min(Math.round(value*steps),Math.floor(extent*steps)))/steps;
 }
+export function sampleSegment(trace,index,time) {
+  const a=trace.segments.slice(index*15,index*15+15);
+  const [t0,duration,ramp,peak,accel,slack,length,x0,y0,ux,uy,mx0,my0,line,frame]=a;
+  const t=Math.max(0,Math.min(duration,time-t0)),travel=length+slack;
+  let distance,velocity;
+  if(t>=duration){distance=travel;velocity=0;}
+  else if(t<ramp){velocity=accel*t;distance=velocity*t/2;}
+  else if(duration-t<ramp){velocity=accel*(duration-t);distance=travel-velocity*(duration-t)/2;}
+  else {velocity=peak;distance=peak*(t-ramp/2);}
+  const drawn=t>=duration?length:Math.max(0,Math.min(length,distance-slack));
+  const s=trace.settings;
+  return {x:quantize(x0+ux*drawn,s.steps_per_mm[0],s.width_mm),
+    y:quantize(y0+uy*drawn,s.steps_per_mm[1],s.height_mm),
+    mx:mx0+ux*distance,my:my0+uy*distance,velocity,
+    backlash:distance<slack&&t<duration,line,frame,segment:index,drawn};
+}
+export function sampleTrace(trace,time) {
+  let lo=0,hi=trace.segments.length/15;
+  while(lo<hi){const mid=(lo+hi)>>1;if(trace.segments[mid*15]<=time)lo=mid+1;else hi=mid;}
+  const point=lo?sampleSegment(trace,lo-1,time):{x:trace.start[0],y:trace.start[1],
+    mx:trace.start[0],my:trace.start[1],velocity:0,backlash:false,line:0,frame:0,segment:-1,drawn:0};
+  point.erase=trace.erases.find(e=>time>=e[0]&&time<e[0]+e[1])||null;
+  return point;
+}
