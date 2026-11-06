@@ -46,3 +46,22 @@ function frameCamera(camera,bounds,target,back,width,height) {
   }
   camera.position.copy(target).addScaledVector(back,distance);camera.lookAt(target);
 }
+function createSceneState(context) {
+  const c=context;let drives=null;
+  const calibration={settings:{knob_mm_turn:20}};
+  return {scene:c.scene,camera:c.camera,
+    resize(width,height){if(width<1||height<1)return;frameCamera(c.camera,c.bounds,c.target,c.back,width,height);c.renderer.setSize(width,height,false);},
+    apply(frame){
+      c.display.set(frame);const m=frame.metadata;let motion=null;
+      if(m.mode==='physical') {
+        if(!drives)drives=buildDrives(c.model,calibration);
+        calibration.settings.knob_mm_turn=m.knob_mm_turn;
+        motion=drives.set({mx:m.motor_mm[0],my:m.motor_mm[1]});
+      }
+      return motion;
+    },render(){c.renderer.render(c.scene,c.camera);},
+    evidence(){return {nodes:c.nodes,noteURL:c.noteURL,
+      visible_opening_mm:[c.area.userData.width_mm,c.area.userData.height_mm],
+      camera:{position:c.camera.position.toArray(),target:c.target.toArray(),aspect:c.camera.aspect}};}
+  };
+}
