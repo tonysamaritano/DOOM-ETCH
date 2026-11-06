@@ -29,3 +29,11 @@ static void defaults(void)
     near(c.x.step_mm, .05); near(c.y.step_mm, .05);
     near(c.erase_seconds, 2.5); near(c.ghost_fraction, .03);
 }
+
+/* Rest-to-rest line motion: feed limits speed, never acceleration. */
+static double profile(double length, double speed, double acceleration)
+{
+    return length < speed * speed / acceleration
+        ? 2 * sqrt(length / acceleration)
+        : length / speed + speed / acceleration;
+}
