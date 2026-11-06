@@ -36,6 +36,11 @@ if(BUILD_TESTING)
     target_compile_options(play-resources-test PRIVATE -fobjc-arc -UNDEBUG)
     target_link_libraries(play-resources-test PRIVATE "-framework Foundation")
     add_test(NAME machine-play-resources COMMAND play-resources-test)
+    add_executable(rig-keys-test tests/rig_keys.m platform/darwin/keyboard.m)
+    target_include_directories(rig-keys-test PRIVATE platform/darwin engine/core)
+    target_compile_options(rig-keys-test PRIVATE -fobjc-arc -UNDEBUG)
+    target_link_libraries(rig-keys-test PRIVATE "-framework AppKit")
+    add_test(NAME machine-rig-keys COMMAND rig-keys-test)
 endif()
 
 if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
@@ -46,4 +51,15 @@ if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS)
         "-framework Foundation" "-framework Metal" "-framework QuartzCore")
     add_test(NAME machine-play-readback COMMAND play-readback-test)
     set_tests_properties(machine-play-readback PROPERTIES TIMEOUT 30 RUN_SERIAL TRUE)
+endif()
+
+if(BUILD_TESTING AND DOOM_ENABLE_GPU_TESTS AND DOOM_TEST_WAD_DIRECTORY
+   AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+    foreach(mode visual physical)
+        add_test(NAME machine-play-${mode} COMMAND "${CMAKE_COMMAND}"
+            "-DGAME=$<TARGET_FILE:doom-metal>" "-DWAD=${DOOM_TEST_WAD_DIRECTORY}"
+            "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/play-native" "-DMODE=${mode}"
+            -P "${PROJECT_SOURCE_DIR}/tests/play_native.cmake")
+        set_tests_properties(machine-play-${mode} PROPERTIES TIMEOUT 90 RUN_SERIAL TRUE)
+    endforeach()
 endif()
