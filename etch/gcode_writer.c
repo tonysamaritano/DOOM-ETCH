@@ -46,14 +46,26 @@ static double quantized(double units, unsigned source_extent, double extent_mm)
     return fmin(extent_mm, fmax(0.0, steps * step_mm));
 }
 
+int MotionQuantizePoint(const MotionPath *path, MotionPoint source, MotionPoint *device_mm)
+{
+    if (!path || !device_mm || !path->width || !path->height
+        || !isfinite(path->width_mm) || !isfinite(path->height_mm)
+        || path->width_mm <= 0 || path->height_mm <= 0
+        || !isfinite(path->width_mm / step_mm) || !isfinite(path->height_mm / step_mm)
+        || !isfinite(source.x) || !isfinite(source.y) || source.x < 0 || source.y < 0
+        || source.x > path->width || source.y > path->height) return 0;
+    *device_mm = (MotionPoint){quantized(source.x, path->width, path->width_mm),
+        quantized(source.y, path->height, path->height_mm)};
+    return 1;
+}
+
 static int position(FILE *stream, const char *command, const MotionPath *path, size_t index)
 {
-    MotionPoint point = path->points[index];
-    double x = quantized(point.x, path->width, path->width_mm);
-    double device_y = quantized(point.y, path->height, path->height_mm);
-    double y = fmax(0.0, path->height_mm - device_y) + 0.0;
+    MotionPoint device;
+    if (!MotionQuantizePoint(path, path->points[index], &device)) return 0;
+    double y = fmax(0.0, path->height_mm - device.y) + 0.0;
     char xs[128], ys[128], line[128];
-    if (!coordinate(xs, x, path->width_mm)
+    if (!coordinate(xs, device.x, path->width_mm)
         || !coordinate(ys, y, path->height_mm)) return 0;
     int length = snprintf(line, sizeof(line), "%s X%s Y%s\n", command, xs, ys);
     return length > 0 && length <= 81 && fputs(line, stream) >= 0;
