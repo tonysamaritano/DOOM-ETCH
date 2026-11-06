@@ -169,6 +169,8 @@ static int decode_column(Silhouette *shape, const unsigned char *patch,
             return 0;
         if (length && !SilRectAdd(&shape->fill, (SilRect){x, y, x + 1, y + length}))
             return 0;
+        for (unsigned k = 0; k < length; k++)
+            shape->texels[(size_t)(y + k) * shape->width + x] = patch[at + 3 + k];
         last = y + length;
         at += length + 4;
     }
@@ -183,6 +185,10 @@ int SilhouetteDecode(Silhouette *shape, const void *data, size_t bytes)
     if (!width || !height || width > MAX_PATCH_EXTENT || height > MAX_PATCH_EXTENT || bytes < header)
         return 0;
     Silhouette result = {.width = width, .height = height};
+    size_t texels = (size_t)width * height;
+    result.texels = malloc(texels * sizeof(*result.texels));
+    if (!result.texels) return 0;
+    for (size_t i = 0; i < texels; i++) result.texels[i] = 256;
     for (unsigned x = 0; x < width; x++) {
         size_t offset = read_u32(patch + 8 + x * 4);
         if (offset < header || !decode_column(&result, patch, bytes, x, offset)) goto fail;
