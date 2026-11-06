@@ -279,3 +279,30 @@ static void EtchGPURender(id<MTLCommandQueue> queue, CAMetalLayer *layer,
         [command commit];
     }
 }
+
+BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingScale, unsigned frameLimit)
+{
+    if (!queue || !layer || !isfinite(backingScale) || backingScale <= 0 || backingScale > 1e6)
+        return NO;
+    dispatch_semaphore_t gate = renderGate;
+    if (!gate || dispatch_semaphore_wait(gate, DISPATCH_TIME_NOW) != 0) return NO;
+    // Completion can advance the count between the caller's check and this gate.
+    if (frameLimit && atomic_load(&frames) >= frameLimit) {
+        dispatch_semaphore_signal(gate); return NO;
+    }
+    if (!os_unfair_lock_trylock(&stateLock)) { dispatch_semaphore_signal(gate); return NO; }
+    if (!running || failure[0]) {
+        os_unfair_lock_unlock(&stateLock); dispatch_semaphore_signal(gate); return NO;
+    }
+    EtchGPUPath *path = current;
+    id<MTLRenderPipelineState> background = backgroundPipeline, lines = linePipeline;
+    double clock = playhead;
+    dispatch_queue_t renderer = renderQueue;
+    dispatch_group_t group = renderGroup;
+    dispatch_group_enter(group);
+    os_unfair_lock_unlock(&stateLock);
+    dispatch_async(renderer, ^{
+        EtchGPURender(queue, layer, path, background, lines, clock, backingScale, gate, group);
+    });
+    return YES;
+}

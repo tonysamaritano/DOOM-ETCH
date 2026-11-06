@@ -11,7 +11,7 @@ BOOL EtchGPUNeedsPath(void);
 /* YES transfers and clears the snapshot; NO leaves ownership with the caller. */
 BOOL EtchGPUOfferSnapshot(EtchSnapshot *snapshot);
 /* Nonblocking main-thread submission; drawable acquisition runs on a worker. */
-BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingScale);
+BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingScale, unsigned frameLimit);
 unsigned EtchGPUFrameCount(void);
 unsigned EtchGPUUploadCount(void);
 /* NULL when no error is ready; returned text lasts until this thread's next call. */
