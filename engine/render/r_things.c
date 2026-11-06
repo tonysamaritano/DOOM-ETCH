@@ -736,6 +736,19 @@ void R_DrawPSprite (pspdef_t* psp)
 	vis->colormap = spritelights[MAXLIGHTSCALE-1];
     }
 	
+    if (R_EtchWeaponActive() && vis->xiscale) {
+        int lump = vis->patch + firstspritelump;
+        const patch_t *patch = W_CacheLumpNum(lump, PU_CACHE);
+        double scale_x = (double)FRACUNIT / vis->xiscale;
+        double scale_y = (double)vis->scale / FRACUNIT;
+        double origin_x = vis->x1 - (double)vis->startfrac / FRACUNIT * scale_x;
+        double origin_y = (double)(centeryfrac - FixedMul(vis->texturemid, vis->scale))
+            / FRACUNIT;
+        if (!R_EtchOverlayPatch(lump, patch, W_LumpLength(lump),
+                origin_x, origin_y, scale_x, scale_y,
+                vis->x1, vis->x2, mceilingclip, mfloorclip, NULL, 0))
+            I_Error("Cannot capture weapon outline for lump %d", lump);
+    }
     R_DrawVisSprite (vis, vis->x1, vis->x2);
 }
 
