@@ -279,7 +279,7 @@ static BOOL DrawGPU(void)
     if (!active) return NO;
     presentedFrames = EtchGPUFrameCount();
     if (runFrames && presentedFrames >= runFrames) I_Quit();
-    EtchGPUDraw(queue, layer, window.backingScaleFactor);
+    EtchGPUDraw(queue, layer, window.backingScaleFactor, runFrames);
     return YES;
 }
 
