@@ -28,3 +28,42 @@ void I_Error(char *format, ...)
     va_end(args);
     abort();
 }
+void *Z_Malloc(int size, int tag, void *owner)
+{
+    (void)tag;
+    if (!strcmp(mode, "tables") && allocationCount < 4) {
+        fprintf(stderr, "pointer table %u requests %d bytes; needs %zu\n",
+            allocationCount, size, 2 * sizeof(void *));
+        assert(size == 2 * sizeof(void *));
+    }
+    assert(size > 0 && allocationCount < 64);
+    void *ptr = calloc(1, (size_t)size);
+    assert(ptr);
+    allocated[allocationCount++] = ptr;
+    if (owner) *(void **)owner = ptr;
+    if (!strcmp(mode, "colormap")) colormapAllocation = (uintptr_t)ptr;
+    return ptr;
+}
+void Z_Free(void *ptr)
+{
+    for (unsigned i = 0; i < allocationCount; i++)
+        if (allocated[i] == ptr) allocated[i] = NULL;
+    free(ptr);
+}
+static const unsigned char patchBytes[] = {
+    2,0, 1,0, 0,0, 0,0, 16,0,0,0, 16,0,0,0, 0,1,0,7,0,255
+};
+static unsigned char textureBytes[76];
+static const unsigned char namesBytes[] = {1,0,0,0,'P','A','T','C','H',0,0,0};
+int W_CheckNumForName(char *name)
+{
+    const char *names[] = {"PNAMES", "PATCH", "TEXTURE1", "S_START", "S_END", "COLORMAP"};
+    for (int i = 0; i < 6; i++) if (!strcmp(name, names[i])) return i;
+    return -1;
+}
+int W_GetNumForName(char *name)
+{
+    int result = W_CheckNumForName(name);
+    assert(result >= 0);
+    return result;
+}
