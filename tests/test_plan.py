@@ -65,3 +65,9 @@ class PlannerTests(unittest.TestCase):
         self.assertTrue(all(count == 2 for count in visits.values()))
         self.assertEqual(connectors, 1)
         self.assertEqual(plan.route_edges(set(reversed(sorted(edges)))), (points, kinds))
+
+    def test_simplification_keeps_ends_and_large_corners(self):
+        self.assertEqual(plan.simplify([(0, 0), (1, 0), (2, 0)]), [(0, 0), (2, 0)])
+        corner = [(0, 0), (0, 3), (3, 3), (3, 0), (0, 0)]
+        self.assertEqual(plan.simplify(corner), corner)
+        self.assertEqual(plan.simplify([(0, 0)]), [(0, 0)])
