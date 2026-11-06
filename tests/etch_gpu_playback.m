@@ -222,6 +222,26 @@ static EtchGPUPath *publishInstantFixture(float y)
     return prior;
 }
 
+static void instantGhostCadenceIgnoresDrawingRate(void)
+{
+    const double rates[] = {1.0 / 64, 1024};
+    for (size_t i = 0; i < 2; ++i) {
+        startFixture(); EtchGPUSetRate(rates[i]); EtchGPUSetInstant(YES);
+        EtchGPUTick(testClock, YES);
+        assert(instant && !paused && playhead == current.duration);
+        EtchGPUPath *initial = publishInstantFixture(.2f);
+        assert(ghost == initial && ghostTime == initial.duration);
+        advance(.010); publishInstantFixture(.18f);
+        assert(ghost == initial);
+        advance(.022); publishInstantFixture(.16f);
+        assert(ghost == initial); /* 32 ms remains below one 30 Hz interval at either rate. */
+        advance(.002); EtchGPUPath *last = publishInstantFixture(.14f);
+        assert(ghost == last && ghostTime == last.duration);
+        assert(instantGhostElapsed < 1.0 / 30);
+        EtchGPUShutdown();
+    }
+}
+
 int main(void)
 {
     @autoreleasepool {
