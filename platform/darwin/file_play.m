@@ -137,13 +137,15 @@ static void title(Presentation *p,NSWindow *window)
 {
     NSString *state=p->paused ? @"paused" : p->shaking ? @"presentation shake" :
         p->queued ? @"shake queued after file" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
-    window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@ · F6 replay · F7 shake · F9 pause",
-        p->rate,MachinePlaybackSeconds(p->play),state];
+    NSString *queued=p->queued ? @" · shake queued after file" : @"";
+    window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@%@ · F6 replay · F7 shake · F9 pause",
+        p->rate,MachinePlaybackSeconds(p->play),state,queued];
 }
 static int present(MachinePlayback *play,const FileOptions *o)
 {
     Presentation p={.play=play,.rate=o->rate,.last=CACurrentMediaTime()};
     NSWindow *window=I_MetalFileOpen();
+    p.last=CACurrentMediaTime();
     BOOL quit=NO; int ok=1;
     while (!quit && !I_MetalFileClosed() && (!o->frames || I_MetalPresentedFrames()<o->frames)) {
         @autoreleasepool {
