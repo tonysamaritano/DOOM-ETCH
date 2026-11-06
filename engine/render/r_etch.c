@@ -296,3 +296,15 @@ int R_EtchSpritePatch(int lump, const void *patch, size_t bytes,
     return capture_patch(frame, origin_x, origin_y, scale_x, scale_y,
         first, last, top, bottom, NULL);
 }
+
+int R_EtchOverlayPatch(int lump, const void *patch, size_t bytes,
+    double origin_x, double origin_y, double scale_x, double scale_y,
+    int first, int last, const short *top, const short *bottom,
+    const unsigned char *palette, int hud)
+{
+    if (hud ? !hud_capture : !R_EtchWeaponActive()) return 1;
+    SpriteFrame *frame = sprite_frame(lump, patch, bytes);
+    if (!frame || (hud && !palette)) { failed = 1; return 0; }
+    return capture_patch(frame, origin_x, origin_y, scale_x, scale_y,
+        first, last, top, bottom, hud ? palette : NULL);
+}
