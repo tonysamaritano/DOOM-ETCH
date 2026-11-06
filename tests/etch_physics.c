@@ -136,3 +136,31 @@ static void transactional(void)
     point(EtchDeviceGetStatus(d).cursor_mm, 100, 10);
     EtchDestroy(d);
 }
+
+static void invalid_idle(void)
+{
+    EtchConfig c = EtchAssumedDefaults();
+    EtchDevice *d = EtchCreate(c, (MotionPoint){0, 0});
+    MotionPoint p[] = {{0, 0}, {1, 1}};
+    EtchStatus before = EtchDeviceGetStatus(d);
+    assert(!EtchDeviceSubmit(d, p, 2, 0));
+    assert(!EtchDeviceSubmit(d, p, 2, NAN));
+    assert(!EtchDeviceSubmit(d, p, 2, INFINITY));
+    assert(!EtchDeviceSubmit(d, p, 2, -1));
+    assert(!EtchDeviceSubmitHardware(d, NULL, 2));
+    assert(!EtchDeviceSubmitHardware(d, p, 0));
+    assert(!EtchDeviceSubmitHardware(d, p, ETCH_MAX_POINTS + 1));
+    p[0].x = 1;
+    assert(!EtchDeviceSubmitHardware(d, p, 2));
+    p[0].x = 0; p[1].x = c.width_mm + 1;
+    assert(!EtchDeviceSubmitHardware(d, p, 2));
+    p[1].x = NAN;
+    assert(!EtchDeviceSubmitHardware(d, p, 2));
+    same_status(before, EtchDeviceGetStatus(d));
+    EtchDestroy(d);
+    c.x.step_mm = 0; assert(!EtchCreate(c, (MotionPoint){0, 0}));
+    c = EtchAssumedDefaults(); c.y.acceleration_mm_s2 = NAN;
+    assert(!EtchCreate(c, (MotionPoint){0, 0}));
+    c = EtchAssumedDefaults(); c.ghost_fraction = 1.01;
+    assert(!EtchCreate(c, (MotionPoint){0, 0}));
+}
