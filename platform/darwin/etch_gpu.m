@@ -160,7 +160,11 @@ void EtchGPUShutdown(void)
     os_unfair_lock_lock(&stateLock);
     current = pending = ghost = nil;
     ghostTime = holdTime = eraseTime = 0; erasing = NO;
-    atomic_store(&eraseRequested, NO);
+    generation++;
+    instant = paused = replaceRequested = controlClockReset = NO;
+    drawRate = 1; instantGhostElapsed = ghostInterval;
+    atomic_store(&controlRead, 0); atomic_store(&controlWrite, 0);
+    atomic_store(&controlOverflow, NO);
     planning = clockStarted = NO;
     playhead = previous = 0;
     os_unfair_lock_unlock(&stateLock);
