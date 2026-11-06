@@ -42,7 +42,7 @@ export function buildCamera(scene,renderer,stage) {
   }
   for(const [id,input] of Object.entries(inputs))input.addEventListener('input',()=>{if(id==='focus')autofocus=false;optics();});
   document.getElementById('reset-camera').onclick=()=>{inputs.lens.value=45;inputs.aperture.value=5.6;autofocus=true;camera.setFocalLength(45);if(bounds)fit(camera,controls,bounds);optics();};
-  function resize(){camera.aspect=stage.clientWidth/stage.clientHeight;camera.updateProjectionMatrix();renderer.setSize(stage.clientWidth,stage.clientHeight,false);composer.setSize(stage.clientWidth,stage.clientHeight);if(bounds)fit(camera,controls,bounds);optics();}
+  function resize(){camera.aspect=stage.clientWidth/stage.clientHeight;camera.setFocalLength(Number(inputs.lens.value));renderer.setSize(stage.clientWidth,stage.clientHeight,false);composer.setSize(stage.clientWidth,stage.clientHeight);if(bounds)fit(camera,controls,bounds);optics();}
   new ResizeObserver(resize).observe(stage);
   return {camera,controls,composer,optics,setModel(model){bounds=rigBounds(model);resize();}};
 }
