@@ -331,11 +331,6 @@ void R_EtchWallTexture(int tier, int x, const unsigned char *source,
         mid, scale, scale + step, center, u, u_end};
     for (int family = 0; family < HatchFamilies(hatch_pattern); ++family) {
         double slope = HatchSlope(hatch_pattern, family);
-        double screen_slope = slope * (u_end - u) * scale;
-        double minimum = HATCH_SPACING_MM * hypot(1, screen_slope * HATCH_MM_Y / HATCH_MM_X);
-        int spacing = 1;
-        while (spacing * fmin(scale, scale + step) * HATCH_MM_Y < minimum
-               && spacing < 1048576) spacing *= 2;
         double first = fmin((sample.top + 0.6 - center) / scale + mid - slope * u,
             (sample.top_end + 0.6 - center) / (scale + step) + mid - slope * u_end);
         double last = fmax((sample.bottom - 0.6 - center) / scale + mid - slope * u,
@@ -343,6 +338,14 @@ void R_EtchWallTexture(int tier, int x, const unsigned char *source,
         if (!isfinite(first) || !isfinite(last) || fabs(first) > 1e9 || fabs(last) > 1e9) {
             failed = 1; return;
         }
+        /* Perspective changes each row's slope as well as its vertical scale. */
+        double offset = (slope * u_end - mid) * (scale + step) - (slope * u - mid) * scale;
+        double steepest = fmax(fabs(first * step + offset), fabs(last * step + offset));
+        double minimum = HATCH_SPACING_MM * hypot(1, steepest * HATCH_MM_Y / HATCH_MM_X);
+        if (!isfinite(minimum)) { failed = 1; return; }
+        int spacing = 1;
+        while (spacing * fmin(scale, scale + step) * HATCH_MM_Y < minimum
+               && spacing < 1048576) spacing *= 2;
         for (double row = ceil(first / spacing) * spacing; row <= last; row += spacing)
             if (!wall_hatch_row(&texture, sample, family, slope, row, spacing)) {
                 failed = 1; return;
