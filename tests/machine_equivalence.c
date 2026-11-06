@@ -70,6 +70,9 @@ static void raw_ties_and_extents(void)
         {.50000002, .50000002}, {20, 20}};
     MotionPath p = {tie, kinds, 5, 3403, 2552, 170.15, 127.6};
     equivalent(p, -1);
+    MotionPoint exact_ties[] = {{0, 0}, {.025, .025}, {.075, .075}, {.125, .125}};
+    p = (MotionPath){exact_ties, kinds, 4, 100, 100, 100, 100};
+    equivalent(p, -1);
     MotionPoint custom[] = {{10, 10}, {100, 100}, {0, 0}, {50, 50}};
     p = (MotionPath){custom, kinds, 4, 100, 100, 1.023, 1.037};
     equivalent(p, -1);
