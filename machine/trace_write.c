@@ -25,13 +25,13 @@ static int valid(const MachineStepProgram *p,const EtchTrace *t,double seconds)
             double fields[]={s->t0,s->duration,s->ramp,s->peak,s->accel,s->slack,s->length,
                 s->x0,s->y0,s->ux,s->uy,s->motor_x0,s->motor_y0};
             for (unsigned j=0;j<13;j++) if (!isfinite(fields[j])) return 0;
-            if (s->t0<end || s->duration<0 || s->ramp<0 || s->peak<0 || s->accel<0 ||
+            if (fabs(s->t0-end)>1e-9 || s->duration<0 || s->ramp<0 || s->peak<0 || s->accel<0 ||
                 s->slack<0 || s->length<0 || s->line!=move->line || s->frame!=frame) return 0;
             end=s->t0+s->duration;
         } else if (move->kind==MACHINE_MOVE_PAUSE) {
             if (erase==t->erase_count) return 0;
             EtchTraceErase e=t->erases[erase++];
-            if (!isfinite(e.t0) || !isfinite(e.duration) || e.t0<end || e.duration<=0) return 0;
+            if (!isfinite(e.t0) || !isfinite(e.duration) || fabs(e.t0-end)>1e-9 || e.duration<=0) return 0;
             end=e.t0+e.duration; frame++;
         }
     }
