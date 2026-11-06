@@ -49,9 +49,24 @@ static void playback_partition(void)
     MachinePlaybackDestroy(a); MachinePlaybackDestroy(b);
 }
 
+static void zero_motion_program(void)
+{
+    MachineSettings s; MachineSettingsDefault(&s);
+    MachinePlayback *p = play_text("; ETCH_START X5 Y122.6\n"
+        "F3600\nG1 X5 Y122.6\nM0\nG1 X5 Y122.6\nM2", &s);
+    assert(MachinePlaybackTick(p, 100));
+    assert(MachinePlaybackDone(p));
+    machine_near(MachinePlaybackSeconds(p), 2.5);
+    EtchDevice *d = MachinePlaybackDevice(p);
+    machine_point(EtchDeviceGetStatus(d).cursor_mm, 5, 5);
+    assert(ink_count(d, ETCH_INK_FRESH) == 0);
+    assert(ink_count(d, ETCH_INK_GHOST) == 0);
+    MachinePlaybackDestroy(p);
+}
+
 int main(void)
 {
-    shake_clock(); playback_partition();
+    shake_clock(); playback_partition(); zero_motion_program();
     puts("machine-playback: copied program, M0 clock and chunk invariance passed");
     return 0;
 }
