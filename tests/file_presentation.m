@@ -21,3 +21,25 @@ static Presentation fixture(void)
     MachineProgramFree(&p); MachineStepProgramFree(&steps);
     return (Presentation){.play = play, .rate = 1000};
 }
+
+static void pause_and_interrupt(void)
+{
+    Presentation p = fixture();
+    assert(advance(&p, .2));
+    assert(control(&p, KEY_F9) && p.paused && p.reset_clock);
+    assert(advance(&p, 5)); machine_near(MachinePlaybackSeconds(p.play), .2);
+    assert(control(&p, KEY_F9) && !p.paused && p.reset_clock);
+    assert(advance(&p, .1)); machine_near(MachinePlaybackSeconds(p.play), .3);
+    unsigned char physical[sizeof p.retained];
+    memcpy(physical, EtchDeviceInk(MachinePlaybackDevice(p.play)), sizeof physical);
+    assert(control(&p, KEY_F7) && p.interrupted && p.shaking);
+    assert(!memcmp(p.retained, physical, sizeof physical));
+    assert(advance(&p, .5)); machine_near(p.shake_time, .5);
+    assert(control(&p, KEY_F7)); machine_near(p.shake_time, .5);
+    assert(control(&p, KEY_F9) && advance(&p, 10)); machine_near(p.shake_time, .5);
+    assert(control(&p, KEY_F9) && advance(&p, 2));
+    assert(p.shaken && !p.shaking && !p.reported);
+    machine_near(MachinePlaybackSeconds(p.play), .3);
+    assert(!memcmp(physical, EtchDeviceInk(MachinePlaybackDevice(p.play)), sizeof physical));
+    MachinePlaybackDestroy(p.play);
+}
