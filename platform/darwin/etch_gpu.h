@@ -23,3 +23,6 @@ unsigned EtchGPUFrameCount(void);
 unsigned EtchGPUUploadCount(void);
 /* NULL when no error is ready; returned text lasts until this thread's next call. */
 const char *EtchGPUError(void);
+/* Bounded offscreen display readback. Completion owns immutable packed BGRA
+ * pixels and runs off-main after render admission is released; nil on failure. */
+BOOL EtchGPUReadPixels(id<MTLCommandQueue> queue, void (^completion)(NSData *pixels));
