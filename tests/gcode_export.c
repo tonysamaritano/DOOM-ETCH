@@ -61,3 +61,27 @@ static CodeReport inspectCode(FILE *stream)
     }
     assert(!ferror(stream)); return r;
 }
+
+static MotionPath metadata(void)
+{
+    return (MotionPath){.count = SIZE_MAX, .width = 100, .height = 100,
+                        .width_mm = 100, .height_mm = 100};
+}
+static void quantization(void)
+{
+    MotionPath p = metadata(); MotionPoint point = {99, 99};
+    assert(MotionQuantizePoint(&p, (MotionPoint){1.024, 2.076}, &point));
+    assert(near(point.x, 1) && near(point.y, 2.1));
+    assert(MotionQuantizePoint(&p, (MotionPoint){.0249, .0251}, &point));
+    assert(point.x == 0 && near(point.y, .05));
+    assert(MotionQuantizePoint(&p, (MotionPoint){.025, .025}, &point));
+    assert(near(point.x, .05) && near(point.y, .05));
+    p.width = 320; p.height = 200; p.width_mm = 170.15; p.height_mm = 127.6;
+    assert(MotionQuantizePoint(&p, (MotionPoint){1, 1}, &point));
+    assert(near(point.x, .55) && near(point.y, .65));
+    assert(MotionQuantizePoint(&p, (MotionPoint){320, 200}, &point));
+    assert(near(point.x, 170.15) && near(point.y, 127.6));
+    p.width_mm = 170.17; p.height_mm = 127.62;
+    assert(MotionQuantizePoint(&p, (MotionPoint){320, 200}, &point));
+    assert(near(point.x, 170.15) && near(point.y, 127.6));
+}
