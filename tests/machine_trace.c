@@ -84,3 +84,30 @@ static void metadata_and_profiles(void)
     compare_samples(fixture, settings, &trace);
     MachinePlaybackDestroy(p); EtchTraceFree(&trace);
 }
+static void nonuniform_steps_and_empty(void)
+{
+    MachineSettings settings; MachineSettingsDefault(&settings);
+    settings.steps_per_mm[0] = 40; settings.steps_per_mm[1] = 16;
+    settings.max_rate_mm_min[1] = 420; settings.acceleration_mm_s2[0] = 47;
+    EtchTrace trace = {0}; MachinePlayback *p = record(fixture, settings, &trace);
+    compare_samples(fixture, settings, &trace);
+    MachinePlaybackDestroy(p); EtchTraceFree(&trace);
+    const char *cases[] = {"", "M2\n", "M0\nM0\nM2\n",
+        "; ETCH_START X5 Y122.6\nG1 X5 Y122.6 F600\nM0\nG1 X5 Y122.6\nM2\n"};
+    for (size_t i = 0; i < sizeof(cases) / sizeof(*cases); i++) {
+        p = record(cases[i], settings, &trace);
+        compare_samples(cases[i], settings, &trace);
+        MotionPoint cursor = {-9, -8}, motor = {-7, -6};
+        assert(!EtchTraceSample(&trace, NAN, &cursor, &motor));
+        assert(!EtchTraceSample(&trace, -1, &cursor, &motor));
+        assert(!EtchTraceSample(&trace, trace.clock + 1, &cursor, &motor));
+        machine_point(cursor, -9, -8); machine_point(motor, -7, -6);
+        MachinePlaybackDestroy(p); EtchTraceFree(&trace);
+    }
+}
+int main(void)
+{
+    metadata_and_profiles(); nonuniform_steps_and_empty();
+    puts("machine-trace: independent sampled cursor/motor positions within 1e-5 mm");
+    return 0;
+}
