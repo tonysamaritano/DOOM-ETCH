@@ -93,3 +93,28 @@ static void decodeHole(void)
     SilhouetteFree(&shape); SilhouetteFree(&shape);
     assert(!shape.width && !shape.height && !shape.fill.data && !shape.outline.data);
 }
+
+static size_t asymmetricPatch(unsigned char patch[128])
+{
+    memset(patch, 0, 128); patch[0] = 2; patch[2] = 3;
+    little32(patch + 8, 16);
+    size_t at = post(patch, 16, 0, 3); patch[at++] = 255;
+    little32(patch + 12, (unsigned)at);
+    at = post(patch, at, 0, 1); patch[at++] = 255;
+    return at;
+}
+static void flippedProjection(void)
+{
+    unsigned char patch[128]; size_t bytes = asymmetricPatch(patch);
+    Silhouette shape = {0}; assert(SilhouetteDecode(&shape, patch, bytes));
+    short top[16], bottom[16];
+    for (int x = 0; x < 16; ++x) { top[x] = -1; bottom[x] = 8; }
+    SilRects fill = {0}; SilLines lines = {0};
+    assert(SilProject(&shape, 5, 1, 2, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(fabs(area(&fill) - 8) < 1e-9);
+    assert(filled(&fill, 6, 3) && !filled(&fill, 8, 3));
+    assert(SilProject(&shape, 9, 1, -2, 1, 0, 15, top, bottom, 16, 8, &fill, &lines));
+    assert(fabs(area(&fill) - 8) < 1e-9);
+    assert(!filled(&fill, 6, 3) && filled(&fill, 8, 3));
+    SilRectsFree(&fill); SilLinesFree(&lines); SilhouetteFree(&shape);
+}
