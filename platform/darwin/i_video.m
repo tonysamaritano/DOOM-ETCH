@@ -102,8 +102,13 @@ void I_StartTic(void)
                     [NSApp sendEvent:event];
                     continue;
                 }
+                int key = DoomKeyForEvent(event);
+                if (gpuEtch && key == KEY_F7) {
+                    if (event.type == NSEventTypeKeyDown && !event.isARepeat) EtchGPUErase();
+                    continue;
+                }
                 if (!event.isARepeat)
-                    PostKey(DoomKeyForEvent(event), event.type == NSEventTypeKeyDown);
+                    PostKey(key, event.type == NSEventTypeKeyDown);
                 continue;
             }
             if (event.window == window && event.type == NSEventTypeFlagsChanged) {
