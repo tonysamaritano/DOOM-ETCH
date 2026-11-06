@@ -61,3 +61,25 @@ the file and shakes the drawing. An interrupted run does not report full-file
 completion; use F6 to start again. Command-Q quits. Playback rate changes presentation only; reported simulated seconds and
 motor counts retain their physical values. The rate option requires standalone
 `--etch-gcode` mode.
+
+## Play on the rig
+
+Clone the project, put your local shareware `doom1.wad` in `test-data/`, and build:
+
+```sh
+git clone https://github.com/tonysamaritano/DOOM-ETCH.git doom-etch
+cd doom-etch
+cmake --preset test -DDOOM_TEST_WAD_DIRECTORY="$PWD/test-data"
+cmake --build --preset test
+DOOMWADDIR=test-data ./build/test/doom-metal --play-on-etch --fullscreen -warp 1 1
+```
+
+The embedded local rig uses the full captured drawing, including the HUD, weapon,
+sprites and hatching. It starts in instant visual mode. Ctrl-Command-F toggles
+fullscreen; arrow keys move and turn, Control fires, Space uses doors, and Command-Q
+quits. Sound effects use the Mac's audio output; music is not implemented.
+
+F8 switches instant/timed drawing, +/- changes its presentation rate within
+1/64×–1024×, F9 pauses the drawing and F7 erases it into a faint ghost.
+F2 changes hatch pattern, F3 sprite hatching, F4 wall hatching, F5 sprites,
+H the HUD, G the gun and J gun hatching. Layer changes clear the visual ghost.
