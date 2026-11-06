@@ -27,3 +27,26 @@ static void rejected_programs(void)
     assert(!p.moves && !p.count);
     MachineProgramFree(&p);
 }
+
+static void modal_program(void)
+{
+    MachineProgram p = {0}; MachineParseError error = {0};
+    MachineParseOptions options = {{1, 2}};
+    const char *text = "; heading\r\nG21 G90\r\nG94 G61\r\nF3600\r\n"
+        "G1 X3 (first)\r\nY1 ; modal\r\nM0\r\nG0 X1\r\nM2";
+    assert(MachineGCodeParse(&p, text, &options, &error));
+    assert(p.count == 5);
+    machine_point(p.start_cnc_mm, 1, 2);
+    machine_point(p.moves[0].cnc_mm, 3, 2);
+    machine_point(p.moves[1].cnc_mm, 3, 1);
+    machine_point(p.moves[2].cnc_mm, 3, 1);
+    machine_point(p.moves[3].cnc_mm, 1, 1);
+    machine_point(p.moves[4].cnc_mm, 1, 1);
+    for (size_t i = 0; i < p.count; ++i) assert(p.moves[i].line == i + 5);
+    assert(p.moves[0].kind == MACHINE_MOVE_DRAW);
+    assert(p.moves[2].kind == MACHINE_MOVE_PAUSE);
+    assert(p.moves[3].kind == MACHINE_MOVE_RAPID && p.moves[3].feed_mm_s == 0);
+    assert(p.moves[4].kind == MACHINE_MOVE_END);
+    machine_near(p.moves[0].feed_mm_s, 60);
+    MachineProgramFree(&p);
+}
