@@ -71,3 +71,42 @@ static int replay(Presentation *p)
     p->shake_time=0; p->reset_clock=YES; memset(p->retained,0,sizeof(p->retained));
     return 1;
 }
+static int events(Presentation *p,NSWindow *window,BOOL *quit)
+{
+    NSEvent *event;
+    while ((event=[NSApp nextEventMatchingMask:NSEventMaskAny untilDate:[NSDate distantPast]
+        inMode:NSDefaultRunLoopMode dequeue:YES])) {
+        if (event.window==window && event.type==NSEventTypeKeyDown) {
+            if ((event.modifierFlags & NSEventModifierFlagCommand) &&
+                [event.charactersIgnoringModifiers.lowercaseString isEqualToString:@"q"])
+                *quit=YES;
+            else if (!event.isARepeat) {
+                int key=DoomKeyForEvent(event);
+                p->rate=EtchVisualRateKey(p->rate,key);
+                if (key==KEY_F6 && !replay(p)) return 0;
+                if (key==KEY_F9) { p->paused=!p->paused; p->reset_clock=YES; }
+                if (key==KEY_F7 && !p->shaken && !p->shaking) p->queued=YES;
+            }
+            continue;
+        }
+        [NSApp sendEvent:event];
+    }
+    [NSApp updateWindows];
+    return 1;
+}
+static void retain_ghost(Presentation *p)
+{
+    const unsigned char *ink=EtchDeviceInk(MachinePlaybackDevice(p->play));
+    const unsigned cells=ETCH_INK_WIDTH*ETCH_INK_HEIGHT;
+    unsigned marks=0;
+    for (unsigned i=0;i<cells;i++) marks+=ink[i]!=ETCH_INK_EMPTY;
+    double fraction=MachinePlaybackProgram(p->play)->settings.ghost_fraction;
+    unsigned keep=(unsigned)floor(marks*fraction);
+    memset(p->retained,0,sizeof(p->retained));
+    /* Stable permutation distributes the assumed retained fraction spatially. */
+    for (unsigned i=0;i<cells && keep;i++) {
+        unsigned at=(i*9973+7919)%cells;
+        if (ink[at]) { p->retained[at]=ETCH_INK_GHOST; keep--; }
+    }
+    p->shaking=NO; p->shaken=YES;
+}
