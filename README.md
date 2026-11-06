@@ -83,3 +83,20 @@ F8 switches instant/timed drawing, +/- changes its presentation rate within
 1/64×–1024×, F9 pauses the drawing and F7 erases it into a faint ghost.
 F2 changes hatch pattern, F3 sprite hatching, F4 wall hatching, F5 sprites,
 H the HUD, G the gun and J gun hatching. Layer changes clear the visual ghost.
+
+Add `--etch-via-gcode` to drive one persistent simulated device through the actual
+G-code writer, parser and step compiler. Ink, knobs, motors and belts follow the
+same physical state, including backlash. This option advances at physical **1×**;
+the game stays responsive while the current drawing and its shake finish.
+F9 pauses physical drawing without catch-up. F7 or a layer change finishes the
+current segment, cancels the rest and requests the existing physical shake.
+F8 and +/- do not accelerate this mode; its badge and title identify physical 1×.
+Physical mode rejects `--etch-gpu-rate` and `--etch-gpu-instant` at startup.
+`--etch-time-scale` remains restricted to standalone `--etch-gcode FILE` playback.
+
+Each build refreshes an `etch-play/` resource directory beside `doom-metal`, including
+the model, both note textures, required three.js modules and their MIT license.
+Keep that directory with the executable when moving it. The local custom URL scheme
+needs no web server, bundler, internet connection or working-directory-specific assets.
+The visible model opening is 178.4 × 127.6 mm; the drawing covers it edge to edge.
+Physical travel and all controller calculations stay at 170.15 × 127.6 mm.
