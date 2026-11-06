@@ -91,3 +91,41 @@ NSURL *EtchPlayResource(NSURL *root,NSURL *request,NSString **mime)
     [data appendBytes:palette length:1024];
     if (![_frames publishPixels:data metadata:metadata]) _failure=@"Invalid indexed rig frame";
 }
+- (void)drawEtchWithQueue:(id<MTLCommandQueue>)queue
+{
+    if (_stopped || !_ready || _reading) return;
+    unsigned epoch=_generation;
+    __weak EtchPlayView *weakSelf=self;
+    _reading=EtchGPUReadPixels(queue,^(NSData *pixels) {
+        dispatch_async(dispatch_get_main_queue(),^{
+            EtchPlayView *view=weakSelf;
+            if (!view || view->_stopped) return;
+            view->_reading=NO;
+            if (epoch!=view->_generation) return;
+            NSDictionary *metadata=@{@"kind":@"bgra",@"mode":@"visual",@"width":@768,@"height":@576};
+            if (!pixels || ![view->_frames publishPixels:pixels metadata:metadata])
+                view->_failure=@"Cannot publish the Metal rig display";
+        });
+    });
+}
+- (void)webView:(WKWebView *)web startURLSchemeTask:(id<WKURLSchemeTask>)task
+{
+    (void)web;
+    if (_stopped) return;
+    NSURL *url=task.request.URL; NSString *mime=nil; NSData *data=nil;
+    if ([url.scheme isEqualToString:@"doomrig"] && [url.host isEqualToString:@"local"] &&
+        [url.path isEqualToString:@"/frame"]) {
+        data=[_frames take]; mime=@"application/octet-stream";
+    } else {
+        NSURL *file=EtchPlayResource(_assets,url,&mime);
+        if (file) data=[NSData dataWithContentsOfURL:file options:NSDataReadingMappedIfSafe error:nil];
+    }
+    if (!data) {
+        _failure=[NSString stringWithFormat:@"Missing or invalid live rig resource %@",url.path];
+        [task didFailWithError:[NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorFileDoesNotExist userInfo:nil]];
+        return;
+    }
+    NSHTTPURLResponse *response=[[NSHTTPURLResponse alloc] initWithURL:url statusCode:200
+        HTTPVersion:@"HTTP/1.1" headerFields:@{@"Content-Type":mime,@"Cache-Control":@"no-store"}];
+    [task didReceiveResponse:response]; [task didReceiveData:data]; [task didFinish];
+}
