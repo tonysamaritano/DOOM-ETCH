@@ -286,6 +286,36 @@ static int compare_wall_hatch(const void *left, const void *right)
     return a->x < b->x ? -1 : a->x > b->x;
 }
 
+static double wall_luminance(const WallTexture *texture, double row)
+{
+    double sum = 0;
+    double footprint = fmin(128, HATCH_SPACING_MM / HATCH_MM_Y / texture->scale);
+    for (int sample = 0; sample < 8; ++sample) {
+        int v = (int)floor(row + ((sample + 0.5) / 8 - 0.5) * footprint);
+        unsigned index = texture->light[texture->source[(unsigned)v & 127]];
+        const unsigned char *rgb = texture->palette + 3 * index;
+        sum += (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 8;
+    }
+    return sum;
+}
+
+static int wall_hatch_row(const WallTexture *texture, WallSample sample,
+                         int family, double slope, double row, int spacing)
+{
+    double y = texture->center + (row + slope * texture->u - texture->mid) * texture->scale;
+    double end = texture->center
+        + (row + slope * texture->u_end - texture->mid) * texture->next_scale;
+    double low, high;
+    if (!HatchClip(y, end, sample.top + 0.6, sample.top_end + 0.6,
+            sample.bottom - 0.6, sample.bottom_end - 0.6, &low, &high)) return 1;
+    double texel_row = row + slope * (texture->u + texture->u_end) * 0.5;
+    if (wall_luminance(texture, texel_row) >= HatchThreshold((int)(row / spacing), family))
+        return 1;
+    return append_wall_hatch((WallHatch){texture->tier, family, (int)row, texture->x,
+        {{texture->x + low, y + (end - y) * low},
+         {texture->x + high, y + (end - y) * high}}});
+}
+
 void R_EtchWallEnd(void)
 {
     if (!active || failed) return;
