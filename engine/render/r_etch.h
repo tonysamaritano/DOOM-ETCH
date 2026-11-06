@@ -27,6 +27,10 @@ void R_EtchWeaponTextures(int enabled);
 int R_EtchTexturesActive(void);
 int R_EtchSpriteTexturesEnabled(void);
 int R_EtchWeaponTexturesEnabled(void);
+int R_EtchSpritesEnabled(void);
+int R_EtchTexturesEnabled(void);
+int R_EtchWeaponEnabled(void);
+int R_EtchHatchPatternValue(void);
 void R_EtchHatchPattern(int pattern);
 void R_EtchWallTexture(int tier, int x, const unsigned char *source,
     const unsigned char *light, const unsigned char *palette,

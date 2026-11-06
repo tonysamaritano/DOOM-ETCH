@@ -50,6 +50,10 @@ void R_EtchWeaponTextures(int enabled) { weapon_textures = enabled != 0; }
 int R_EtchTexturesActive(void) { return active && !failed && wall_textures; }
 int R_EtchSpriteTexturesEnabled(void) { return sprite_textures; }
 int R_EtchWeaponTexturesEnabled(void) { return weapon_textures; }
+int R_EtchSpritesEnabled(void) { return sprites_enabled; }
+int R_EtchTexturesEnabled(void) { return wall_textures; }
+int R_EtchWeaponEnabled(void) { return weapon_enabled; }
+int R_EtchHatchPatternValue(void) { return hatch_pattern; }
 void R_EtchHatchPattern(int pattern)
 {
     if (pattern >= 0 && pattern < HATCH_PATTERN_COUNT) hatch_pattern = pattern;
