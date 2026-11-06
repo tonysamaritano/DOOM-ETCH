@@ -130,3 +130,15 @@ static int graph_vertices(Graph *graph, const MotionSegment *segments, size_t co
     free(ids);
     return 1;
 }
+
+static void graph_unique_edges(Graph *graph, size_t count)
+{
+    if (!count) return;
+    qsort(graph->edges, count, sizeof(*graph->edges), compare_edge);
+    for (size_t i = 0; i < count; i++) {
+        Edge edge = graph->edges[i];
+        size_t n = graph->edge_count;
+        if (edge.a != edge.b && (!n || compare_edge(&edge, &graph->edges[n - 1])))
+            graph->edges[graph->edge_count++] = edge;
+    }
+}
