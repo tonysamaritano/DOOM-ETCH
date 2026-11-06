@@ -39,11 +39,26 @@ static void ReportMotion(const MotionPath *path)
     puts("Estimate assumes constant 60 mm/s, excluding acceleration and backlash.");
 }
 
+static int ParseFrames(const char *text, unsigned *frames)
+{
+    unsigned value = 0;
+    if (!*text) return 0;
+    for (; *text; text++) {
+        if (*text < '0' || *text > '9' || value > 1000) return 0;
+        value = value * 10 + (unsigned)(*text - '0');
+    }
+    // Bound batch size to the reference's supported 1..10000 frames.
+    if (value < 1 || value > 10000) return 0;
+    *frames = value;
+    return 1;
+}
+
 int main(int argc, char **argv)
 {
+    unsigned frames = 1;
     if (argc < 3) {
         fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites] [--no-hud] [--no-weapon]\n"
-            "  [--no-textures] [--no-sprite-textures] [--no-weapon-textures] [--hatch-pattern 0..2]\n", argv[0]);
+            "  [--no-textures] [--no-sprite-textures] [--no-weapon-textures] [--hatch-pattern 0..2] [--frames 1..10000]\n", argv[0]);
         return 2;
     }
     for (int argument = 3; argument < argc; ++argument) {
@@ -53,6 +68,12 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[argument], "--no-textures")) R_EtchTextures(0);
         else if (!strcmp(argv[argument], "--no-sprite-textures")) R_EtchSpriteTextures(0);
         else if (!strcmp(argv[argument], "--no-weapon-textures")) R_EtchWeaponTextures(0);
+        else if (!strcmp(argv[argument], "--frames")) {
+            if (argument + 1 >= argc || !ParseFrames(argv[++argument], &frames)) {
+                fputs("Frames must be a decimal integer in 1..10000\n", stderr);
+                return 2;
+            }
+        }
         else if (!strcmp(argv[argument], "--hatch-pattern") && argument + 1 < argc) {
             const char *pattern = argv[++argument];
             if (pattern[0] < '0' || pattern[0] > '2' || pattern[1]) {
