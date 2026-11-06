@@ -19,3 +19,4 @@ foreach(case valid header directory count payload index)
 endforeach()
 
 include(tests/save_roundtrip.cmake)
+include(tests/movement.cmake)
