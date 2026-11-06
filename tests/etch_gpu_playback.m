@@ -198,6 +198,20 @@ static void rateScalesDrawingHoldAndFade(void)
     EtchGPUShutdown();
 }
 
+static void pauseAndManualErase(void)
+{
+    startFixture(); advance(.5);
+    EtchGPUAction(KEY_F9); EtchGPUTick(testClock, YES);
+    assert(paused); advance(.25); assert(fabs(playhead - .5) < 1e-9);
+    EtchGPUErase(); EtchGPUTick(testClock, YES);
+    assert(erasing && eraseTime == 0);
+    advance(.25); assert(eraseTime == 0 && fabs(playhead - .5) < 1e-9);
+    EtchGPUAction(KEY_F9); EtchGPUTick(testClock, YES); assert(!paused);
+    advance(.325); assert(fabs(eraseTime - .325) < 1e-9);
+    assert(fabs(playhead - .5) < 1e-9);
+    EtchGPUShutdown();
+}
+
 int main(void)
 {
     @autoreleasepool {
