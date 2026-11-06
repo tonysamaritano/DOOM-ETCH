@@ -35,3 +35,25 @@ void MotionFree(MotionPath *path)
         *path = (MotionPath){0};
     }
 }
+
+int MotionCopy(MotionPath *destination, const MotionPath *source)
+{
+    if (!destination || !source || source->count > SIZE_MAX / sizeof(MotionPoint)
+        || !MotionValid(source))
+        return 0;
+    if (destination == source)
+        return 1;
+    MotionPath copy = *source;
+    size_t bytes = copy.count * sizeof(*copy.points);
+    copy.points = malloc(bytes);
+    copy.kinds = malloc(copy.count);
+    if (!copy.points || !copy.kinds) {
+        MotionFree(&copy);
+        return 0;
+    }
+    memcpy(copy.points, source->points, bytes);
+    memcpy(copy.kinds, source->kinds, copy.count);
+    MotionFree(destination);
+    *destination = copy;
+    return 1;
+}
