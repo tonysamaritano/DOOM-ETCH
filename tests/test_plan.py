@@ -49,3 +49,19 @@ class PlannerTests(unittest.TestCase):
                     ((0, 0), (0, 1)), ((1, 0), (1, 1)), ((2, 0), (2, 1))}
         self.assertEqual(edges, expected)
         self.assertEqual(plan.structural_edges([[0]]), set())
+
+    def test_raw_route_traverses_each_outline_twice(self):
+        edges = plan.structural_edges([[1, 0, 2]])
+        points, kinds = plan.route_edges(edges)
+        self.assertEqual(len(points), len(kinds) + 1)
+        visits = collections.Counter()
+        connectors = 0
+        for a, b, kind in zip(points, points[1:], kinds):
+            if kind == 'outline':
+                visits[tuple(sorted((a, b)))] += 1
+            else:
+                connectors += 1
+        self.assertEqual(set(visits), {tuple(sorted(edge)) for edge in edges})
+        self.assertTrue(all(count == 2 for count in visits.values()))
+        self.assertEqual(connectors, 1)
+        self.assertEqual(plan.route_edges(set(reversed(sorted(edges)))), (points, kinds))
