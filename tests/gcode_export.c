@@ -109,3 +109,35 @@ static char *contents(FILE *stream)
     assert(fread(text, 1, (size_t)bytes, stream) == (size_t)bytes);
     return text;
 }
+
+static MotionPath framePath(MotionPoint *points, unsigned char *kinds, size_t count)
+{
+    MotionPath path = metadata(); path.points = points; path.kinds = kinds; path.count = count;
+    return path;
+}
+static void combinedFramesAndWrapper(void)
+{
+    MotionPoint a[] = {{.0249, .0251}, {10.0249, 20.0251}, {10.0249, 20.0251}};
+    unsigned char ka[] = {MOTION_START, MOTION_OUTLINE, MOTION_OUTLINE};
+    MotionPath first = framePath(a, ka, 3); MotionPoint cursor;
+    assert(MotionQuantizePoint(&first, a[2], &cursor));
+    assert(near(cursor.x, 10) && near(cursor.y, 20.05));
+    MotionPoint b[] = {{cursor.x, cursor.y}, {12.076, 23.024}};
+    unsigned char kb[] = {MOTION_START, MOTION_CONNECTOR};
+    MotionPath second = framePath(b, kb, 2);
+    FILE *combined = tmpfile(); assert(combined);
+    assert(MotionWriteGCodeFrame(combined, &first, 3600, 1, 0));
+    assert(MotionWriteGCodeFrame(combined, &second, 3600, 0, 1));
+    CodeReport r = inspectCode(combined);
+    assert(r.pauses == 1 && r.ends == 1 && r.sizes == 1 && r.starts == 1 && r.feeds == 2);
+    assert(r.moves[0] == 2 && r.moves[1] == 1); /* The zero-distance G1 survives. */
+    for (size_t i = 0; i < 4; ++i) assert(r.modes[i] == 1);
+    assert(near(r.boundary.x, cursor.x) && near(100 - r.boundary.y, cursor.y));
+    assert(near(r.last.x, 12.1) && near(r.last.y, 77)); fclose(combined);
+    FILE *old = tmpfile(), *single = tmpfile(); assert(old && single);
+    assert(MotionWriteGCode(old, &first, 3600));
+    assert(MotionWriteGCodeFrame(single, &first, 3600, 1, 1));
+    char *oldText = contents(old), *singleText = contents(single);
+    assert(!strcmp(oldText, singleText));
+    free(oldText); free(singleText); fclose(old); fclose(single);
+}
