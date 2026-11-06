@@ -221,8 +221,25 @@ static void writerArgumentFailures(void)
     assert(ftell(stream) == 0);
     fclose(stream);
 }
+static void startOnlyWriters(void)
+{
+    MotionPath path = writerFixture(); path.count = 1;
+    FILE *svgStream = tmpfile(), *codeStream = tmpfile();
+    assert(svgStream && codeStream);
+    assert(MotionWriteSVG(svgStream, &path));
+    assert(MotionWriteGCode(codeStream, &path, 1234.5));
+    char *svg = readOutput(svgStream), *gcode = readOutput(codeStream);
+    MotionPoint points[16];
+    assert(svgPoints(svg, points) == 1);
+    assert(!strstr(svg, "<line"));
+    ParsedCode code = parseCode(gcode);
+    sameTrace(points, &code, 1);
+    free(svg); free(gcode);
+    fclose(svgStream); fclose(codeStream);
+}
 void MotionWriterTests(void)
 {
     emittedFormatsAgree();
+    startOnlyWriters();
     writerArgumentFailures();
 }
