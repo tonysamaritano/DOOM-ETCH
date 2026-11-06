@@ -121,3 +121,41 @@ void EtchGPUInit(id<MTLDevice> gpu, double visual_speed_mm_s)
     renderGate = dispatch_semaphore_create(1); renderGroup = dispatch_group_create();
     running = needsPath = YES;
 }
+
+void EtchGPUShutdown(void)
+{
+    os_unfair_lock_lock(&stateLock);
+    running = needsPath = NO;
+    os_unfair_lock_unlock(&stateLock);
+    // Draining is allowed during shutdown, never during normal frame submission.
+    if (plannerQueue) dispatch_sync(plannerQueue, ^{});
+    if (renderQueue) dispatch_sync(renderQueue, ^{});
+    if (renderGroup) dispatch_group_wait(renderGroup, DISPATCH_TIME_FOREVER);
+    os_unfair_lock_lock(&stateLock);
+    current = pending = nil;
+    planning = clockStarted = NO;
+    playhead = previous = 0;
+    os_unfair_lock_unlock(&stateLock);
+    plannerQueue = renderQueue = nil; renderGate = nil; renderGroup = nil;
+    linePipeline = backgroundPipeline = nil; device = nil;
+}
+
+static EtchGPUPath *EtchGPUBuildPath(EtchSnapshot snapshot, id<MTLDevice> gpu, double drawingSpeed)
+{
+    MotionPath path = {0};
+    int planned = MotionPlanSegments(&path, snapshot.segments, snapshot.count,
+        snapshot.width, snapshot.height, (MotionPoint){0, 0});
+    free(snapshot.segments);
+    if (!planned) { EtchGPUFail("Cannot plan captured wall and artwork segments"); return nil; }
+    MotionTimedSegment *data = NULL; size_t count = 0; double seconds = 0;
+    int timed = MotionTimelineBuild(&path, drawingSpeed, &data, &count, &seconds);
+    MotionFree(&path);
+    if (!timed) { EtchGPUFail("Cannot construct the captured path timeline"); return nil; }
+    EtchGPUPath *bundle = [EtchGPUPath new];
+    if (count && count <= gpu.maxBufferLength / sizeof(*data))
+        bundle.buffer = [gpu newBufferWithBytes:data length:count * sizeof(*data) options:MTLResourceStorageModeShared];
+    free(data);
+    if (count && !bundle.buffer) { EtchGPUFail("Cannot allocate the immutable timed path buffer"); return nil; }
+    bundle.count = count; bundle.duration = seconds;
+    return bundle;
+}
