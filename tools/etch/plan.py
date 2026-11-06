@@ -48,3 +48,38 @@ def structural_edges(cells):
             if x == width - 1 and surface:
                 edges.add(((x + 1, y), (x + 1, y + 1)))
     return edges
+
+
+def route_edges(edges):
+    neighbors = {}
+    for a, b in edges:
+        neighbors.setdefault(a, set()).add(b)
+        neighbors.setdefault(b, set()).add(a)
+    remaining = set(neighbors)
+    points, kinds = [(0, 0)], []
+    while remaining:
+        cursor = points[-1]
+        root = min(remaining, key=lambda p: ((p[0] - cursor[0]) ** 2 + (p[1] - cursor[1]) ** 2, p))
+        if root != cursor:
+            points.append(root)
+            kinds.append('connector')
+        stack = [root]
+        while stack:
+            vertex = stack[-1]
+            if neighbors[vertex]:
+                other = min(neighbors[vertex])
+                neighbors[vertex].remove(other)
+                neighbors[other].remove(vertex)
+                for endpoint in (vertex, other):
+                    if not neighbors[endpoint]:
+                        remaining.discard(endpoint)
+                points.append(other)
+                kinds.append('outline')
+                stack.append(other)
+            else:
+                remaining.discard(vertex)
+                stack.pop()
+                if stack:
+                    points.append(stack[-1])
+                    kinds.append('outline')
+    return points, kinds
