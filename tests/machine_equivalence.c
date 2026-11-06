@@ -27,3 +27,23 @@ static EtchDevice *raw_direct(const MotionPath *path)
     assert(EtchDeviceSubmit(d, mm, path->count, 60));
     return d;
 }
+
+static void equivalent(MotionPath path, double expected_seconds)
+{
+    assert(MotionValid(&path));
+    EtchDevice *direct = raw_direct(&path);
+    MachinePlayback *play = serialized(&path);
+    double duration = EtchDeviceGetStatus(direct).remaining_s;
+    if (expected_seconds >= 0) machine_near(duration, expected_seconds);
+    for (int i = 0; i < 101; ++i) {
+        double dt = duration / 100;
+        assert(EtchDeviceTick(direct, dt));
+        assert(MachinePlaybackTick(play, dt));
+        compare_devices(direct, MachinePlaybackDevice(play));
+    }
+    assert(EtchDeviceReady(direct) && MachinePlaybackDone(play));
+    machine_near(MachinePlaybackSeconds(play), duration);
+    machine_near(EtchDeviceGetStatus(direct).elapsed_s, duration);
+    printf("machine-equivalence points=%zu seconds=%.17g\n", path.count, duration);
+    EtchDestroy(direct); MachinePlaybackDestroy(play);
+}
