@@ -63,3 +63,41 @@ void P_AddActiveCeiling(ceiling_t *obj)
         if (!activeceilings[i]) { activeceilings[i] = obj; return; }
     abort();
 }
+void P_AddActivePlat(plat_t *obj)
+{
+    for (int i = 0; i < MAXPLATS; i++)
+        if (!activeplats[i]) { activeplats[i] = obj; return; }
+    abort();
+}
+static void *Add(size_t size, actionf_p1 action)
+{
+    thinker_t *th = Z_Malloc((int)size, PU_LEVEL, NULL);
+    th->function.acp1 = action; P_AddThinker(th); return th;
+}
+static void BuildWorld(sector_t *sec, line_t *line, side_t *side)
+{
+    sectors = sec; lines = line; sides = side; numsectors = 10; numlines = 1;
+    for (int i = 0; i < numsectors; i++) {
+        sec[i].floorheight = (-48 + i) * FRACUNIT;
+        sec[i].ceilingheight = (96 + 3 * i) * FRACUNIT;
+        sec[i].floorpic = 11 + i; sec[i].ceilingpic = 31 + i;
+        sec[i].lightlevel = 200 - i; sec[i].tag = 70 + i;
+    }
+    line[0].sidenum[0] = 0; line[0].sidenum[1] = 1;
+    line[0].flags = 9; line[0].special = 17; line[0].tag = 85;
+    for (int i = 0; i < 2; i++) {
+        side[i].textureoffset = (-7 + i) * FRACUNIT;
+        side[i].rowoffset = (13 + i) * FRACUNIT;
+        side[i].toptexture = 21 + i; side[i].midtexture = 41 + i;
+    }
+}
+static void BuildPlayers(void)
+{
+    memset(players, 0, sizeof(players));
+    memset(playeringame, 0, sizeof(playeringame));
+    for (int i = 0; i < MAXPLAYERS; i += 2) {
+        playeringame[i] = true; players[i].health = 81 - i;
+        players[i].armorpoints = 27 + i; players[i].ammo[am_clip] = 34 + i;
+        players[i].psprites[0].state = &states[7 + i];
+    }
+}
