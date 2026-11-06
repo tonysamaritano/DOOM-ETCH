@@ -11,6 +11,8 @@ struct MachinePlayback {
     double seconds, completed_seconds;
     int active,done,failed;
     MachineParseError error;
+    EtchTrace *trace;
+    size_t frame;
 };
 static int fail(MachineParseError *e,size_t line,const char *message)
 {
@@ -19,7 +21,8 @@ static int fail(MachineParseError *e,size_t line,const char *message)
 }
 static int runtime_fail(MachinePlayback *p,size_t line,const char *message)
 {
-    p->failed=1; return fail(&p->error,line,message);
+    p->failed=1; if (p->trace) p->trace->failed=1;
+    return fail(&p->error,line,message);
 }
 void MachinePlaybackDestroy(MachinePlayback *p)
 {
@@ -69,6 +72,9 @@ static int advance(MachinePlayback *p)
     if (s->kind==MACHINE_MOVE_END) { p->next++; p->done=1; p->active=0; return 1; }
     if (s->kind==MACHINE_MOVE_PAUSE) {
         p->next++; p->active=2;
+        if (p->trace && !EtchTraceRecordErase(p->trace,p->program.settings.erase_seconds))
+            return runtime_fail(p,s->line,"cannot record erase profile");
+        p->frame++;
         return EtchDeviceRequestErase(p->device) ? 1 : runtime_fail(p,s->line,"erase rejected");
     }
     size_t first=p->next;
@@ -81,6 +87,9 @@ static int advance(MachinePlayback *p)
     if (!MachineSubmitBatch(p->device,&p->program,first,p->next-first,&p->error)) {
         p->failed=1; return 0;
     }
+    if (p->trace && !EtchTraceRecordDevice(p->trace,p->device,&p->program.moves[first],
+                                         p->next-first,p->frame))
+        return runtime_fail(p,s->line,"cannot record accepted motion profiles");
     p->active=1; return 1;
 }
 MachinePlayback *MachinePlaybackCreate(const MachineStepProgram *program,MachineParseError *e)
