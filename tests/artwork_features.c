@@ -29,3 +29,26 @@ int main(void)
     }
     memset(patch, 0, sizeof(patch)); // Decoder owns colors independently of lump storage.
     assert(SilFeatures(&shape, palette, &features)); vertical_edge(&features);
+    unsigned short *owned = shape.texels;
+    assert(!SilhouetteDecode(&shape, patch, 8));
+    assert(shape.texels == owned && shape.texels[1] == 1);
+    grayscale(palette, 2, 30); // Weak difference: below the 36-luminance threshold.
+    grayscale(palette, 3, 50); // Strong difference but remains in the same 64-level bin.
+    grayscale(palette, 4, 80); // Strong difference across a bin boundary.
+    for (unsigned index = 2; index <= 4; index++) {
+        for (unsigned y = 0; y < 3; y++) shape.texels[y * 3 + 1] = index;
+        assert(SilFeatures(&shape, palette, &features));
+        if (index == 4) vertical_edge(&features);
+        else assert(features.count == 0);
+    }
+    grayscale(palette, 5, 63); grayscale(palette, 6, 65);
+    for (unsigned y = 0; y < 3; y++) {
+        shape.texels[y * 3] = 5; shape.texels[y * 3 + 1] = 6;
+    }
+    assert(SilFeatures(&shape, palette, &features) && features.count == 0);
+    // A horizontal black/white boundary merges across all three source columns.
+    for (unsigned y = 0; y < 3; y++)
+        for (unsigned x = 0; x < 3; x++) shape.texels[y * 3 + x] = y ? 1 : 0;
+    assert(SilFeatures(&shape, palette, &features) && features.count == 1);
+    MotionSegment edge = features.data[0];
+    assert(edge.a.x == 0 && edge.a.y == 1 && edge.b.x == 3 && edge.b.y == 1);
