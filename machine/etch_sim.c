@@ -62,3 +62,37 @@ void EtchDestroy(EtchDevice *d)
 {
     if (d) { free(d->segments); free(d); }
 }
+static void axis_limits(EtchAxisConfig a, double u, int previous,
+                        double *speed, double *acceleration, double *slack)
+{
+    if (!u) return;
+    *speed=fmin(*speed,a.speed_mm_s/fabs(u));
+    *acceleration=fmin(*acceleration,a.acceleration_mm_s2/fabs(u));
+    if (previous && previous != (u > 0 ? 1 : -1))
+        *slack=fmax(*slack,a.backlash_mm/fabs(u));
+}
+static int profile(EtchConfig c, Segment *s, double feed, int px, int py)
+{
+    double dx=s->end.x-s->start.x, dy=s->end.y-s->start.y;
+    s->length=hypot(dx,dy); s->direction_x=px; s->direction_y=py;
+    if (!s->length) return 1;
+    s->unit=(MotionPoint){dx/s->length,dy/s->length};
+    if ((dx && !s->unit.x) || (dy && !s->unit.y)) return 0;
+    double speed=feed, acceleration=INFINITY;
+    axis_limits(c.x,s->unit.x,px,&speed,&acceleration,&s->slack);
+    axis_limits(c.y,s->unit.y,py,&speed,&acceleration,&s->slack);
+    s->travel=s->length+s->slack; s->acceleration=acceleration;
+    if (!isfinite(speed) || speed<=0 || !isfinite(acceleration) || acceleration<=0 ||
+        !isfinite(s->travel) || s->travel<=s->slack) return 0;
+    if (speed*(speed/acceleration) >= s->travel) {
+        s->ramp=sqrt(s->travel)/sqrt(acceleration);
+        s->peak=sqrt(s->travel)*sqrt(acceleration); s->duration=2*s->ramp;
+    } else {
+        s->ramp=speed/acceleration; s->peak=speed;
+        s->duration=s->travel/speed+s->ramp;
+    }
+    if (s->unit.x) s->direction_x=s->unit.x>0 ? 1 : -1;
+    if (s->unit.y) s->direction_y=s->unit.y>0 ? 1 : -1;
+    return isfinite(s->duration) && s->duration>0 &&
+           isfinite(s->peak) && s->peak>0 && isfinite(s->ramp) && s->ramp>0;
+}
