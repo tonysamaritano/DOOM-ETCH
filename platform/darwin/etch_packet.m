@@ -65,3 +65,25 @@ NSData *EtchPlayPacket(NSData *pixels,NSDictionary *metadata,uint64_t sequence)
     _pixels=[pixels copy]; _metadata=json;
     return YES;
 }
+- (NSData *)take
+{
+    if (_stopped || _outstanding || !_pixels || (_limit && _delivered>=_limit)) return [NSData data];
+    NSDictionary *metadata=[NSJSONSerialization JSONObjectWithData:_metadata options:0 error:nil];
+    NSData *packet=EtchPlayPacket(_pixels,metadata,_delivered+1);
+    if (!packet) return nil;
+    _outstanding=++_delivered;
+    _pixels=_metadata=nil;
+    return packet;
+}
+- (BOOL)acknowledge:(uint64_t)sequence
+{
+    if (_stopped || !sequence || sequence!=_outstanding) return NO;
+    _outstanding=0; _presented++;
+    return YES;
+}
+- (unsigned)presented { return _presented; }
+- (void)stop
+{
+    _stopped=YES; _pixels=_metadata=nil; _outstanding=0;
+}
+@end
