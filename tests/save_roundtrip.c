@@ -101,3 +101,33 @@ static void BuildPlayers(void)
         players[i].psprites[0].state = &states[7 + i];
     }
 }
+static void BuildObjects(void)
+{
+    for (int i = 0; i < MAXPLAYERS; i += 2) {
+        mobj_t *mo = Add(sizeof(*mo), (actionf_p1)P_MobjThinker);
+        mo->x = (18 + i) * FRACUNIT; mo->health = 81 - i;
+        mo->state = &states[23 + i]; mo->type = MT_PLAYER;
+        mo->player = &players[i]; players[i].mo = mo;
+        mo->target = mo; mo->z = 6 * FRACUNIT;
+    }
+    ceiling_t *ceiling = Add(sizeof(*ceiling), (actionf_p1)T_MoveCeiling);
+    ceiling->sector = &sectors[1]; ceiling->speed = 3 * FRACUNIT;
+    vldoor_t *door = Add(sizeof(*door), (actionf_p1)T_VerticalDoor);
+    door->sector = &sectors[2]; door->topwait = 37;
+    floormove_t *floor = Add(sizeof(*floor), (actionf_p1)T_MoveFloor);
+    floor->sector = &sectors[3]; floor->floordestheight = 29 * FRACUNIT;
+    plat_t *plat = Add(sizeof(*plat), (actionf_p1)T_PlatRaise);
+    plat->sector = &sectors[4]; plat->count = 19;
+    lightflash_t *flash = Add(sizeof(*flash), (actionf_p1)T_LightFlash);
+    flash->sector = &sectors[5]; flash->count = 43;
+    strobe_t *strobe = Add(sizeof(*strobe), (actionf_p1)T_StrobeFlash);
+    strobe->sector = &sectors[6]; strobe->brighttime = 11;
+    glow_t *glow = Add(sizeof(*glow), (actionf_p1)T_Glow);
+    glow->sector = &sectors[7]; glow->direction = -1;
+    ceiling_t *stopped = Add(sizeof(*stopped), NULL);
+    stopped->sector = &sectors[8]; stopped->olddirection = -1;
+    P_AddActiveCeiling(stopped);
+    plat_t *paused = Add(sizeof(*paused), NULL);
+    paused->sector = &sectors[9]; paused->oldstatus = down;
+    P_AddActivePlat(paused);
+}
