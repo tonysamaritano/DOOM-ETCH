@@ -21,3 +21,11 @@ void R_EtchColumn(int x, int top, int bottom, int surface)
     if (top <= bottom)
         fprintf(output, "%d,%d,%d,%d\n", x, top, bottom, surface);
 }
+int R_EtchEnd(void)
+{
+    if (!output) return 0;
+    int failed = ferror(output);
+    if (fclose(output)) failed = 1;
+    output = NULL;
+    return !failed;
+}
