@@ -456,3 +456,36 @@ static int hatch_piece(const HatchContext *context, HatchStrokes *strokes,
     MotionSegment line = {{x0, y0 + (y1 - y0) * low}, {x1, y0 + (y1 - y0) * high}};
     return stroke_add(strokes, line, family, (int)row);
 }
+
+static int hatch_rectangle(const HatchContext *context, SilRect *rectangle)
+{
+    double end_x = context->ox + context->shape->width * context->sx;
+    double end_y = context->oy + context->shape->height * context->sy;
+    if (!isfinite(end_x) || !isfinite(end_y)) return -1;
+    rectangle->x0 = fmax(rectangle->x0, fmax(0, fmin(context->ox, end_x)));
+    rectangle->x1 = fmin(rectangle->x1, fmin(320, fmax(context->ox, end_x)));
+    rectangle->y0 = fmax(rectangle->y0, fmax(0, context->oy));
+    rectangle->y1 = fmin(rectangle->y1, fmin(200, end_y));
+    return rectangle->x0 < rectangle->x1 && rectangle->y0 + .35 < rectangle->y1 - .35;
+}
+
+static int hatch_rows(const HatchContext *context, HatchStrokes *strokes,
+                       SilRect rectangle, double slope, int family, int spacing)
+{
+    int visible = hatch_rectangle(context, &rectangle);
+    if (visible <= 0) return visible == 0;
+    double u0 = (rectangle.x0 - context->ox) / context->sx;
+    double u1 = (rectangle.x1 - context->ox) / context->sx;
+    double first = ceil(((rectangle.y0 + .35 - context->oy) / context->sy
+        - fmax(slope * u0, slope * u1)) / spacing) * spacing;
+    double last = (rectangle.y1 - .35 - context->oy) / context->sy - fmin(slope * u0, slope * u1);
+    if (!isfinite(first) || !isfinite(last) || fabs(first) > 1e9 || fabs(last) > 1e9) return 0;
+    for (double row = first; row <= last; row += spacing) {
+        for (double x = rectangle.x0; x < rectangle.x1;) {
+            double end = fmin(rectangle.x1, floor(x) + 1);
+            if (!hatch_piece(context, strokes, rectangle, row, spacing, slope, family, x, end)) return 0;
+            x = end;
+        }
+    }
+    return 1;
+}
