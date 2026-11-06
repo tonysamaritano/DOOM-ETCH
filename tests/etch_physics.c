@@ -255,11 +255,34 @@ static void deferred_erase(void)
     EtchDestroy(d);
 }
 
+static void persistent_submissions(void)
+{
+    EtchDevice *d = EtchCreate(EtchAssumedDefaults(), (MotionPoint){0, 0});
+    MotionPoint p[] = {{0, 0}, {100, 0}};
+    assert(d && EtchDeviceSubmitHardware(d, p, 2));
+    assert(EtchDeviceTick(d, 10));
+    unsigned char ink[ETCH_INK_WIDTH * ETCH_INK_HEIGHT];
+    memcpy(ink, EtchDeviceInk(d), sizeof ink);
+    MotionPoint start = {100, 0};
+    assert(EtchDeviceSubmitHardware(d, &start, 1));
+    EtchStatus s = EtchDeviceGetStatus(d);
+    assert(s.count == 0 && s.completed == 0 && EtchDeviceReady(d));
+    near(s.elapsed_s, 0); point(s.cursor_mm, 100, 0);
+    assert(!memcmp(ink, EtchDeviceInk(d), sizeof ink));
+    MotionPoint next[] = {{100, 0}, {100, 100}};
+    assert(EtchDeviceSubmitHardware(d, next, 2));
+    assert(EtchDeviceTick(d, 10));
+    const unsigned char *after = EtchDeviceInk(d);
+    for (size_t i = 0; i < sizeof ink; ++i)
+        if (ink[i]) assert(after[i] == ink[i]);
+    EtchDestroy(d);
+}
+
 int main(void)
 {
     defaults(); analytical_profiles(); direction_memory(); quantized_extent();
     transactional(); invalid_idle(); shake_retention(); chunk_invariance();
-    deferred_erase();
+    deferred_erase(); persistent_submissions();
     puts("etch-physics: independent per-axis, ownership, ink and shake checks passed");
     return 0;
 }
