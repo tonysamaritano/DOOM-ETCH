@@ -5,25 +5,29 @@ export function validateTrace(data) {
     JSON.stringify(data.segment_fields)!==JSON.stringify(fields))throw Error('Unsupported trace schema');
   const s=data.settings;
   if(!s||![s.width_mm,s.height_mm,s.knob_mm_turn,...(s.steps_per_mm||[])].every(x=>Number.isFinite(x)&&x>0)||
-    s.steps_per_mm.length!==2)throw Error('Invalid physical dimensions or calibration');
-  if(!Array.isArray(data.start)||data.start.length!==2||!data.start.every(Number.isFinite)||
-    !Number.isFinite(data.duration)||!Number.isFinite(data.simulated_seconds)||data.duration<0||Math.abs(data.duration-data.simulated_seconds)>1e-9)
+    s.steps_per_mm.length!==2||s.width_mm*s.steps_per_mm[0]>2**52||s.height_mm*s.steps_per_mm[1]>2**52)throw Error('Invalid physical dimensions or calibration');
+  if(!Array.isArray(data.start)||data.start.length!==2||!Array.from(data.start).every(Number.isFinite)||
+    !Number.isFinite(data.duration)||!Number.isFinite(data.simulated_seconds)||data.duration<0||data.simulated_seconds<0||Math.abs(data.duration-data.simulated_seconds)>1e-9)
     throw Error('Invalid trace start or completed clock');
-  if(!Array.isArray(data.segments)||data.segments.length%15||!data.segments.every(Number.isFinite))
+  if(!Array.isArray(data.segments)||data.segments.length%15||!Array.from(data.segments).every(Number.isFinite))
     throw Error('Invalid segment records');
   if(!Array.isArray(data.erases)||!data.erases.every(e=>Array.isArray(e)&&e.length===2&&e.every(Number.isFinite)&&e[0]>=0&&e[1]>0))
     throw Error('Invalid erase records');
   for(let i=0;i<data.segments.length;i+=15) {
     const a=data.segments.slice(i,i+15);
-    if(a[0]<0||a[1]<0||a[2]<0||a[5]<0||a[6]<0||a[0]+a[1]>data.duration+1e-9||
+    if(a[0]<0||a[1]<0||a[2]<0||a[3]<0||a[4]<0||a[5]<0||a[6]<0||a[0]+a[1]>data.duration+1e-9||
       (i&&a[0]<data.segments[i-15]))throw Error('Invalid segment timing');
   }
   return data;
 }
 export function quantize(value,steps,extent) {
+  if(![value,steps,extent].every(Number.isFinite)||steps<=0||extent<=0||
+    !Number.isFinite(extent*steps)||extent*steps>2**52)throw new RangeError('Invalid step grid');
   return Math.max(0,Math.min(Math.round(value*steps),Math.floor(extent*steps)))/steps;
 }
 export function sampleSegment(trace,index,time) {
+  if(!Number.isFinite(time)||time<0||time>trace.duration||!Number.isInteger(index)||
+    index<0||index>=trace.segments.length/15)throw new RangeError('Invalid segment sample');
   const a=trace.segments.slice(index*15,index*15+15);
   const [t0,duration,ramp,peak,accel,slack,length,x0,y0,ux,uy,mx0,my0,line,frame]=a;
   const complete=time>=t0+duration;
@@ -41,6 +45,7 @@ export function sampleSegment(trace,index,time) {
     backlash:distance<slack&&t<duration,line,frame,segment:index,drawn};
 }
 export function sampleTrace(trace,time) {
+  if(!Number.isFinite(time)||time<0||time>trace.duration)throw new RangeError('Invalid physical sample time');
   let lo=0,hi=trace.segments.length/15;
   while(lo<hi){const mid=(lo+hi)>>1;if(trace.segments[mid*15]<=time)lo=mid+1;else hi=mid;}
   const point=lo?sampleSegment(trace,lo-1,time):{x:trace.start[0],y:trace.start[1],
