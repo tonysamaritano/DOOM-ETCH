@@ -81,7 +81,15 @@ static void replay_and_completed_shake(void)
 
 int main(void)
 {
-    @autoreleasepool { pause_and_interrupt(); replay_and_completed_shake(); }
+    @autoreleasepool {
+        FILE *captured = tmpfile(); assert(captured);
+        int saved = dup(STDOUT_FILENO); assert(saved >= 0);
+        fflush(stdout); assert(dup2(fileno(captured), STDOUT_FILENO) >= 0);
+        pause_and_interrupt();
+        fflush(stdout); assert(ftell(captured) == 0);
+        assert(dup2(saved, STDOUT_FILENO) >= 0); close(saved); fclose(captured);
+        replay_and_completed_shake();
+    }
     puts("Actual file presentation controls passed without UI");
     return 0;
 }
