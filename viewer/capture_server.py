@@ -100,7 +100,8 @@ class PitchSession:
         fd, temporary = tempfile.mkstemp(prefix='.pitch-', dir=path.parent)
         try:
             with os.fdopen(fd, 'wb') as stream:
-                stream.write(data)
+                if stream.write(data) != len(data):
+                    raise OSError('Incomplete frame write')
                 stream.flush()
             os.replace(temporary, path)
         finally:
