@@ -34,3 +34,40 @@ class CaptureProtocol(unittest.TestCase):
         self.thread.join()
         self.root_patch.stop()
         self.temp.cleanup()
+
+    def post(self, path, body=b'', headers=None):
+        connection = http.client.HTTPConnection('127.0.0.1', self.server.server_port)
+        merged = {'Content-Length': str(len(body))}
+        if body:
+            merged['Content-Type'] = 'image/jpeg'
+        merged.update(headers or {})
+        connection.request('POST', path, body, merged)
+        response = connection.getresponse()
+        result = response.status, response.read()
+        connection.close()
+        return result
+
+    def start(self):
+        status, body = self.post('/__start?cut=pitch')
+        self.assertEqual(status, 200)
+        result = json.loads(body)
+        self.assertEqual((result['ok'], result['cut']), (True, 'pitch'))
+        return result['token']
+
+    def frame(self, token, index, body=JPEG, headers=None):
+        return self.post(f'/__frame?cut=pitch&token={token}&frame={index}', body, headers)
+
+    def done(self, token):
+        return self.post(f'/__done?cut=pitch&token={token}')
+
+    def test_complete_sequential_capture(self):
+        token = self.start()
+        for index in range(540):
+            status, body = self.frame(token, index)
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body), {'ok': True, 'cut': 'pitch', 'token': token, 'frame': index})
+        self.assertEqual(sorted(p.name for p in self.frames.iterdir()), [f'{i:05d}.jpg' for i in range(540)])
+        self.assertTrue(all(p.read_bytes() == JPEG for p in self.frames.iterdir()))
+        status, body = self.done(token)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)['frames'], 540)
