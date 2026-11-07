@@ -57,7 +57,7 @@ function animate(now) {
   if(runtime)drawPhysical(runtime.transport.tick(now));
   evidence.camera=optics.optics();optics.composer.render();publish();
 }
-loadRig().then(loadDrawing).catch(fail);requestAnimationFrame(animate);
+boot().catch(fail);
 
 function pitchAnchors(rig) {
   rig.model.updateMatrixWorld(true);
@@ -112,10 +112,35 @@ function buildPitch(rig) {
       const camera=optics.script(pitchCamera(state,anchors,width,height),width,height);
       optics.composer.render();ctx.drawImage(renderer.domElement,0,0,width,height);
       drawPitchOverlay(ctx,state,layout);last=state.video_time;
-      evidence.camera=camera;evidence.promo={...state,layout,render_size:[width,height]};publish();return camera;
+      evidence.camera=camera;evidence.promo={...state,layout,render_size:[width,height],capture:evidence.promo?.capture};publish();return camera;
     }
   });
   return {canvas,renderAt:pitch.renderAt,setSize(width,height) {
     fixed=[width,height];pitch.renderAt(last);
   }};
+}
+
+async function beginPitch(api,options) {
+  api.renderAt(options.at??0);
+  if(options.capture) {
+    await startCapture({...api,onProgress(info) {
+      evidence.promo.capture=info;publish();
+    }});return;
+  }
+  if(options.at!==null) {
+    window.addEventListener('resize',()=>api.renderAt(options.at));return;
+  }
+  const origin=performance.now();
+  function frame(now) {
+    try {api.renderAt(((now-origin)/1000)%18);requestAnimationFrame(frame);}
+    catch(error){fail(error);}
+  }
+  requestAnimationFrame(frame);
+}
+async function boot() {
+  const options=pitchOptions(location.search);
+  if(options){document.body.classList.add('pitch');document.title='doom-etch · One subscribe';}
+  else requestAnimationFrame(animate);
+  const rig=await loadRig();await loadDrawing(rig);
+  if(options){await document.fonts.ready;await beginPitch(buildPitch(rig),options);}
 }
