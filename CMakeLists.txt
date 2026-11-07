@@ -199,7 +199,7 @@ add_library(etch-controller STATIC machine/gcode.c machine/steppers.c
 target_include_directories(etch-controller PUBLIC machine)
 target_link_libraries(etch-controller PUBLIC etch-simulator)
 if(BUILD_TESTING)
-    foreach(check parser settings steppers feeds equivalence playback multiframe metadata)
+    foreach(check parser settings steppers feeds equivalence playback multiframe metadata requirements)
         add_executable(machine-${check}-test tests/machine_${check}.c)
         target_link_libraries(machine-${check}-test PRIVATE etch-controller)
         target_compile_options(machine-${check}-test PRIVATE -UNDEBUG)
