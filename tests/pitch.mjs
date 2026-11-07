@@ -87,3 +87,23 @@ test('actual price and burst draw under one constant shared transform',()=>{
   assert.ok(burst>=0&&text>burst);
   assert.ok(!calls.slice(burst,text).some(x=>['restore','rotate','scale','translate'].includes(x[0])));
 });
+test('invalid source traces fail instead of displaying invented results',()=>{
+  for(const mutate of [t=>t.requirements=[],t=>t.requirements.push(t.requirements[0]),
+    t=>t.requirements[0].target_fps=35,t=>t.requirements[0].no_stop_mach=NaN,
+    t=>t.requirements[0].geometry='raw-path',t=>t.requirements[0].budget='all-frames',
+    t=>t.erases=[{}],t=>t.segments[14]=1,t=>t.segments=[],t=>t.duration=3,
+    t=>t.segments[15]=1]) {
+    const trace=fixture();mutate(trace);assert.throws(()=>pitchContext(trace));
+  }
+});
+test('query options distinguish preview, endpoint holds and exact capture',()=>{
+  assert.equal(pitchOptions('?trace=x'),null);
+  assert.deepEqual(pitchOptions('?promo=pitch'),{at:null,capture:false});
+  assert.deepEqual(pitchOptions('?promo=pitch&promoAt=18'),{at:18,capture:false});
+  assert.deepEqual(pitchOptions('?promo=pitch&capture'),{at:null,capture:true});
+  for(const query of ['promo=film','promo=pitch&promo=pitch','promo=pitch&promoAt=-1',
+    'promo=pitch&promoAt=18.01','promo=pitch&promoAt=NaN','promo=pitch&promoAt=',
+    'promo=pitch&promoAt=1e1','promo=pitch&capture=1','promo=pitch&capture&promoAt=0',
+    'promo=pitch&capture&capture','promo=pitch&promoAt=1&promoAt=2'])
+    assert.throws(()=>pitchOptions('?'+query));
+});
