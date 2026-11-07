@@ -123,9 +123,10 @@ done:
 int main(int argc, char **argv)
 {
     unsigned frames = 1;
+    double target_fps=0;
     if (argc < 3) {
         fprintf(stderr, "Usage: %s IWAD PREFIX [--no-sprites] [--no-hud] [--no-weapon]\n"
-            "  [--no-textures] [--no-sprite-textures] [--no-weapon-textures] [--hatch-pattern 0..2] [--frames 1..10000]\n", argv[0]);
+            "  [--no-textures] [--no-sprite-textures] [--no-weapon-textures] [--hatch-pattern 0..2] [--frames 1..10000] [--target-fps N]\n", argv[0]);
         return 2;
     }
     for (int argument = 3; argument < argc; ++argument) {
@@ -135,6 +136,14 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[argument], "--no-textures")) R_EtchTextures(0);
         else if (!strcmp(argv[argument], "--no-sprite-textures")) R_EtchSpriteTextures(0);
         else if (!strcmp(argv[argument], "--no-weapon-textures")) R_EtchWeaponTextures(0);
+        else if (!strcmp(argv[argument], "--target-fps")) {
+            if (target_fps || argument+1>=argc ||
+                !MachineRequirementsParseFPS(argv[argument+1],&target_fps)) {
+                fputs("--target-fps requires one finite positive decimal value\n",stderr);
+                return 2;
+            }
+            argument++;
+        }
         else if (!strcmp(argv[argument], "--frames")) {
             if (argument + 1 >= argc || !ParseFrames(argv[++argument], &frames)) {
                 fputs("Frames must be a decimal integer in 1..10000\n", stderr);
@@ -180,7 +189,7 @@ int main(int argc, char **argv)
         G_Ticker();
         ++gametic;
     }
-    int success = ExportFrames(argv[2], frames,0);
+    int success = ExportFrames(argv[2], frames,target_fps);
     R_EtchResetSprites();
     if (!success) I_Error("Cannot export completed frames to %s", argv[2]);
     return 0;
