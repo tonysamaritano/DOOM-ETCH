@@ -93,7 +93,7 @@ int MachineLiveTick(MachineLive *live,double seconds,int active)
         double clock=live->phase_start+elapsed;
         if (!isfinite(clock) || clock<live->seconds ||
             (elapsed>0 && clock<=live->phase_start)) return 0;
-        live->seconds=clock; seconds=fmax(0,seconds-used);
+        live->seconds=clock; seconds=fmax(0,seconds-slice);
         if (before.drawing && !after.drawing) live->phase_start=clock;
         if (EtchDeviceReady(live->device)) {
             if (before.erasing) { live->needs_path=1; break; }
