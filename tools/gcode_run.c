@@ -49,12 +49,21 @@ int main(int argc,char **argv)
         fprintf(stderr,"%s:%zu: %s\n",argv[1],error.line,error.message);
         EtchTraceFree(&trace); return 1;
     }
-    int ok=MachineRun(play);
-    if (!ok) error=*MachinePlaybackError(play);
-    if (ok && tracefile) ok=MachineTraceWrite(tracefile,MachinePlaybackProgram(play),&trace,
-                                             MachinePlaybackSeconds(play),&error);
-    if (ok) ok=MachineReport(stdout,MachinePlaybackProgram(play),MachinePlaybackSeconds(play),json);
+    const MachineStepProgram *program=MachinePlaybackProgram(play);
+    MachineRequirementsFrames requirements={0};
+    int ok=!(requested_fps || tracefile) ||
+        MachineRequirementsFramesBuild(&requirements,program,fps,&error);
+    if (ok) {
+        ok=MachineRun(play);
+        if (!ok) error=*MachinePlaybackError(play);
+    }
+    if (ok && tracefile) ok=MachineTraceWriteWithRequirements(tracefile,program,&trace,
+        MachinePlaybackSeconds(play),&requirements,&error);
+    if (ok) ok=requested_fps ? MachineReportWithRequirements(stdout,program,
+        MachinePlaybackSeconds(play),json,&requirements) :
+        MachineReport(stdout,program,MachinePlaybackSeconds(play),json);
     else fprintf(stderr,"%s:%zu: %s\n",argv[1],error.line,error.message);
+    MachineRequirementsFramesFree(&requirements);
     MachinePlaybackDestroy(play); EtchTraceFree(&trace);
     return ok ? 0 : 1;
 }
