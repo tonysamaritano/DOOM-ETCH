@@ -58,3 +58,32 @@ test('production renderAt derives complete state independent of call order',()=>
   size=[360,800];assert.equal(pitch.renderAt(16.5).layout.width,360);
   size=[1920,1080];assert.deepEqual(pitch.renderAt(16.5),first);
 });
+test('measured price stays inside the pulsing burst and viewport',()=>{
+  const context=pitchContext(fixture());
+  for(const [width,height] of [[1920,1080],[1280,720],[360,800]]) {
+    for(let t=15.101;t<=18;t+=.017) {
+      const state=buildPitchState(context,t),layout=layoutPitch(state,width,height,measure);
+      const p=layout.price,inner=.78*Math.cos(Math.PI/22)*p.pulse;
+      // The inscribed ellipse lies inside every star edge, not only its bounding box.
+      assert.ok(Math.hypot(p.width/2/p.rx,p.height/2/p.ry)<inner);
+      assert.equal(p.tilt,-.06);assert.ok(p.pulse>=.965&&p.pulse<=1.035);
+      assert.equal(p.polygon.length,44);
+      for(const box of [p.burstBounds,p.textBounds,layout.commitment.bounds,layout.fine.bounds])
+        assert.ok(box.left>=0&&box.right<=width&&box.top>=0&&box.bottom<=height);
+    }
+  }
+});
+test('actual price and burst draw under one constant shared transform',()=>{
+  const state=buildPitchState(pitchContext(fixture()),16.5);
+  const layout=layoutPitch(state,1920,1080,measure),calls=[];
+  const ctx=new Proxy({measureText:text=>measure(text,'20px test')},{get(target,key){
+    return key in target?target[key]:(...args)=>calls.push([key,...args]);
+  }});
+  drawPitchOverlay(ctx,state,layout);
+  assert.deepEqual(calls.filter(x=>x[0]==='rotate'),[['rotate',-.06]]);
+  assert.deepEqual(calls.filter(x=>x[0]==='scale'),[['scale',1,1]]);
+  const burst=calls.findIndex(x=>x[0]==='fill');
+  const text=calls.findIndex(x=>x[0]==='fillText'&&x[1]==='1 SUBSCRIBE!');
+  assert.ok(burst>=0&&text>burst);
+  assert.ok(!calls.slice(burst,text).some(x=>['restore','rotate','scale','translate'].includes(x[0])));
+});
