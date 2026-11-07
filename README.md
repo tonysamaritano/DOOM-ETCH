@@ -25,7 +25,8 @@ Platform, test and drawing code use the following folders as the project grows:
 
 ## Build and play on macOS
 
-With the Xcode command-line tools, CMake and a local shareware `doom1.wad` in `test-data/`:
+With the Xcode command-line tools, CMake, Python 3 for CLI tests, and a local
+shareware `doom1.wad` in `test-data/`:
 
 ```sh
 cmake --preset test -DDOOM_TEST_WAD_DIRECTORY="$PWD/test-data"
@@ -103,3 +104,30 @@ Keep that directory with the executable when moving it. The local custom URL sch
 needs no web server, bundler, internet connection or working-directory-specific assets.
 The visible model opening is 178.4 × 127.6 mm; the drawing covers it edge to edge.
 Physical travel and all controller calculations stay at 170.15 × 127.6 mm.
+
+## Measure the required drawing speed
+
+Request drawing demands at a target frame rate alongside the physical result:
+
+```sh
+./build/test/etch-export test-data/doom1.wad /tmp/e1m1 --target-fps 30
+./build/test/etch-gcode-run /tmp/e1m1.gcode --target-fps 30 --machine-readable --trace /tmp/e1m1.json
+./build/test/etch-gcode-run /tmp/e1m1.gcode --target-fps 35
+```
+
+Both tools print these demands only with `--target-fps`. Default stdout retains its
+physical report. Trace JSON always includes a `requirements` array at the requested
+fps, or 30 fps when omitted. Frame IDs start at zero and preserve empty M0 frames.
+Each frame gets its own drawing-only 1/fps budget, retaining its starting cursor.
+Target fps affects reporting only; commands, step counts and physical clocks retain
+their values. The existing PATH line remains the raw, unquantized ideal-feed estimate.
+
+For commanded segment distances in metres, length L and sum S of square roots,
+no-stop speed is L×fps and stop-at-every-vertex acceleration is (2×S×fps)².
+Peak speed is √(acceleration×longest segment). Mach uses an assumed 343 m/s;
+g uses standard gravity 9.80665 m/s². Knob RPM is a path-speed-equivalent demand
+using the assumed mm per knob turn; separate-axis and motor-pulley speeds differ.
+Backlash, shake and jerk are excluded from this drawing-demand calculation.
+A 100 mm straight line at 30 fps requires 3 m/s without stops, or 360 m/s²
+and 6 m/s peak with stops, equivalent to 9,000 knob rpm at 20 mm per turn.
+Nonfinite rates and unrepresentable positive demands fail with a diagnostic.
