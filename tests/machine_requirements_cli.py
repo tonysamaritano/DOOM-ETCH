@@ -193,11 +193,17 @@ def main():
     parser.add_argument('--exporter', type=Path, required=True)
     parser.add_argument('--work', type=Path, required=True)
     parser.add_argument('--wad', type=Path)
+    parser.add_argument('--baseline-runner', type=Path)
     args = parser.parse_args()
     args.work.mkdir(parents=True, exist_ok=True)
     fixture = args.work / 'frames.gcode'
     write_fixture(fixture)
     report_compatibility(args.runner, fixture, args.work)
+    if args.baseline_runner:
+        for flags in ([], ['--machine-readable']):
+            current = invoke(args.runner, [fixture, *flags]).stdout
+            previous = invoke(args.baseline_runner, [fixture, *flags]).stdout
+            assert current == previous  # Exact pre-beat stdout bytes/text.
     empty_files(args.runner, args.work)
     missing = args.work / 'does-not-exist'
     invalid_flags(args.runner, [missing], args.work, runner=True)
