@@ -30,19 +30,24 @@ export function buildCamera(scene,renderer,stage) {
   controls.enableDamping=false;let bounds=null,autofocus=true;
   const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));
   const bokeh=new BokehPass(scene,camera,{focus:.65,aperture:.02,maxblur:.012});composer.addPass(bokeh);composer.addPass(new OutputPass());
+  let scripted=false;
   const inputs=Object.fromEntries(['lens','aperture','focus'].map(id=>[id,document.getElementById(id)]));
+  function applyOptics(lens,fstop,focus) {
+    camera.setFocalLength(lens);
+    const focal=lens/1000;
+    bokeh.uniforms.focus.value=focus;bokeh.uniforms.aperture.value=focal*focal/(fstop*focus*Math.max(.001,focus-focal)*.036);
+    return {lens_mm:lens,aperture_f:fstop,focus_m:focus,position:camera.position.toArray(),target:controls.target.toArray()};
+  }
   function optics() {
-    camera.setFocalLength(Number(inputs.lens.value));
     const focus=Math.max(.01,autofocus?camera.position.distanceTo(controls.target):Number(inputs.focus.value));
     if(autofocus)inputs.focus.value=focus;
-    const focal=Number(inputs.lens.value)/1000,fstop=Number(inputs.aperture.value);
-    bokeh.uniforms.focus.value=focus;bokeh.uniforms.aperture.value=focal*focal/(fstop*focus*Math.max(.001,focus-focal)*.036);
+    const lens=Number(inputs.lens.value),fstop=Number(inputs.aperture.value);
     for(const [id,value] of Object.entries({lens:inputs.lens.value+' mm',aperture:'f/'+fstop.toFixed(1),focus:focus.toFixed(2)+' m'}))document.getElementById(id+'-value').textContent=value;
-    return {lens_mm:Number(inputs.lens.value),aperture_f:fstop,focus_m:focus,position:camera.position.toArray(),target:controls.target.toArray()};
+    return applyOptics(lens,fstop,focus);
   }
   for(const [id,input] of Object.entries(inputs))input.addEventListener('input',()=>{if(id==='focus')autofocus=false;optics();});
   document.getElementById('reset-camera').onclick=()=>{inputs.lens.value=45;inputs.aperture.value=5.6;autofocus=true;camera.setFocalLength(45);if(bounds)fit(camera,controls,bounds);optics();};
-  function resize(){camera.aspect=stage.clientWidth/stage.clientHeight;camera.setFocalLength(Number(inputs.lens.value));renderer.setSize(stage.clientWidth,stage.clientHeight,false);composer.setSize(stage.clientWidth,stage.clientHeight);if(bounds)fit(camera,controls,bounds);optics();}
+  function resize(){if(scripted)return;camera.aspect=stage.clientWidth/stage.clientHeight;camera.setFocalLength(Number(inputs.lens.value));renderer.setSize(stage.clientWidth,stage.clientHeight,false);composer.setSize(stage.clientWidth,stage.clientHeight);if(bounds)fit(camera,controls,bounds);optics();}
   new ResizeObserver(resize).observe(stage);
   return {camera,controls,composer,optics,setModel(model){bounds=rigBounds(model);resize();}};
 }
