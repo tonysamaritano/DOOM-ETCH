@@ -65,3 +65,42 @@ static void corner_sensitivity(void)
     near(r.peak_m_s, 6);
     near(calculate(&p, 0, 2, 35).accel_m_s2, 980);
 }
+
+static void cursor_ranges(void)
+{
+    MachineStep moves[] = {{{1200, 200}, 60, MACHINE_MOVE_DRAW, 2},
+        {{INT64_MAX, INT64_MIN}, 0, MACHINE_MOVE_PAUSE, 3},
+        {{1200, 200}, 0, MACHINE_MOVE_RAPID, 4},
+        {{200, 200}, .001, MACHINE_MOVE_DRAW, 5},
+        {{INT64_MIN, INT64_MAX}, 0, MACHINE_MOVE_END, 6}};
+    MachineStepProgram p = fixture(moves, 5);
+    p.start_steps[0] = p.start_steps[1] = 200;
+    MachineRequirements all = calculate(&p, 0, 5, 30);
+    assert(all.segments == 3);
+    near(all.path_m, .1);
+    near(all.accel_m_s2, 720);
+    MachineRequirements tail = calculate(&p, 2, 5, 30);
+    assert(tail.segments == 2);
+    near(tail.path_m, .05);
+    near(tail.accel_m_s2, 180);
+    near(tail.peak_m_s, 3);
+    MachineRequirements empty = calculate(&p, 1, 2, 30);
+    assert(!empty.segments && empty.path_m == 0 && empty.knob_rpm == 0);
+}
+
+static void asymmetric_grid(void)
+{
+    MachineStep moves[] = {{{1240, 352}, 60, MACHINE_MOVE_DRAW, 9}};
+    MachineStepProgram p = fixture(moves, 1);
+    p.settings.steps_per_mm[0] = 40;
+    p.settings.steps_per_mm[1] = 16;
+    p.start_steps[0] = 40;
+    p.start_steps[1] = 32;
+    p.settings.knob_mm_turn = 10;
+    p.settings.max_rate_mm_min[0] = 17;
+    p.settings.acceleration_mm_s2[1] = 3;
+    MachineRequirements r = calculate(&p, 0, 1, 30);
+    near(r.path_m, sqrt(1300.0) / 1000);
+    near(r.accel_m_s2, 3600 * sqrt(1300.0) / 1000);
+    near(r.knob_rpm, sqrt(1300.0) * 180);
+}
