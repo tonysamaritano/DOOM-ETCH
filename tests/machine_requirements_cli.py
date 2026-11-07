@@ -69,3 +69,41 @@ def trace_compatibility(runner, fixture, work, original):
         else:
             check_frames(record.pop('requirements'), fps)
             assert trace == baseline  # Every old field, not just duration.
+
+
+def report_compatibility(runner, fixture, work):
+    original, physical = summary(runner, fixture)
+    assert 'requirements' not in physical
+    plain = invoke(runner, [fixture]).stdout
+    for fps in (30, 35):
+        _, record = summary(runner, fixture, '--target-fps', fps)
+        check_frames(record.pop('requirements'), fps)
+        assert record == physical  # Includes calibration / steps / exact clock.
+        explicit = invoke(runner, [fixture, '--target-fps', fps]).stdout
+        assert explicit.startswith(plain)
+        assert 'requirements' in explicit and 'RPM' in explicit
+    trace_compatibility(runner, fixture, work, original)
+
+
+def invalid_flags(executable, initial, work):
+    sentinel = work / 'must-not-publish.json'
+    sentinel.write_text('previous trace\n')
+    bad = ('0', '-1', 'nan', 'inf', '30x', ' 30', '30 ', '0x1p5',
+           '1e9999', '1e-9999', '')
+    variants = [['--target-fps', value] for value in bad]
+    variants += [['--target-fps'], ['--target-fps', '30', '--target-fps', '35']]
+    for flags in variants:
+        result = invoke(executable, [*initial, *flags], success=False)
+        assert '--target-fps' in result.stderr, (flags, result.stderr)
+        assert not result.stdout, result.stdout
+        assert sentinel.read_text() == 'previous trace\n'
+
+
+def empty_files(runner, work):
+    for name, text in (('empty', ''), ('end', 'M2\n'), ('comments', '; hi\n')):
+        path = work / f'{name}.gcode'
+        path.write_text(text)
+        _, report = summary(runner, path, '--target-fps', 30)
+        assert len(report['requirements']) == 1
+        r = report['requirements'][0]
+        assert r['frame'] == 0 and not r['segments'] and not r['path_m']
