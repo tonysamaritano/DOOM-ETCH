@@ -29,5 +29,6 @@ void MachineRequirementsFramesFree(MachineRequirementsFrames *);
 /* Prevalidate before writing. JSON writes one array, no trailing newline;
  * plain writes labeled records. Stream stays open; I/O failure may be partial.
  * Demand excludes backlash/shake/jerk; knob RPM is path-speed-equivalent. */
+int MachineRequirementsFramesValid(const MachineRequirementsFrames *);
 int MachineRequirementsFramesWrite(FILE *, const MachineRequirementsFrames *, int json);
 #endif
