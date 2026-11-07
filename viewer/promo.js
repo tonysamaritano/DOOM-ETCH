@@ -40,8 +40,10 @@ const dealFont=size=>`italic 900 ${size}px "Arial Black",Impact,"Helvetica Neue"
 function measured(text,size,measure,font=dealFont) {
   const metrics=measure(text,font(size));
   if(!Number.isFinite(metrics.width)||metrics.width<=0)throw Error('Cannot measure pitch text');
-  return {text,font:font(size),width:metrics.width,
-    height:(metrics.actualBoundingBoxAscent??size*.8)+(metrics.actualBoundingBoxDescent??size*.2)};
+  const ascent=metrics.actualBoundingBoxAscent??size*.8,descent=metrics.actualBoundingBoxDescent??size*.2;
+  const left=metrics.actualBoundingBoxLeft??metrics.width/2,right=metrics.actualBoundingBoxRight??metrics.width/2;
+  return {text,font:font(size),width:Math.max(metrics.width,left+right),height:ascent+descent,
+    textOffset:[(left-right)/2,(ascent-descent)/2]};
 }
 function bounds(cx,cy,rx,ry,angle) {
   const x=Math.abs(rx*Math.cos(angle))+Math.abs(ry*Math.sin(angle));
