@@ -14,7 +14,7 @@ int MotionOutputOpen(MotionOutput *output, const char *prefix, const char *exten
     if (length < 0 || (size_t)length >= sizeof(next.temporary)) return 0;
     int fd = mkstemp(next.temporary);
     if (fd < 0) return 0;
-    next.stream = fdopen(fd, "w");
+    next.stream = fdopen(fd, "w+"); // Analyze actual commands before publication.
     if (!next.stream) { close(fd); unlink(next.temporary); return 0; }
     *output = next;
     return 1;
