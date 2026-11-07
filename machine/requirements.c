@@ -159,3 +159,27 @@ int MachineRequirementsFramesBuild(MachineRequirementsFrames *out,
     if (e) *e=(MachineParseError){0};
     return 1;
 }
+static int frames_valid(const MachineRequirementsFrames *frames)
+{
+    if (!frames || !frames->items || !frames->count ||
+        frames->count>SIZE_MAX/sizeof(*frames->items) ||
+        !isfinite(frames->fps) || frames->fps<=0 ||
+        !isfinite(frames->knob_mm_turn) || frames->knob_mm_turn<=0) return 0;
+    for (size_t i=0;i<frames->count;i++) {
+        const MachineRequirements *r=&frames->items[i].demand;
+        double values[]={r->path_m,r->sum_sqrt_m,r->dmax_m,r->no_stop_m_s,
+            r->no_stop_mach,r->accel_m_s2,r->accel_g,r->peak_m_s,r->peak_mach,r->knob_rpm};
+        if (frames->items[i].frame!=i) return 0;
+        for (size_t j=0;j<sizeof(values)/sizeof(*values);j++)
+            if (!isfinite(values[j]) || values[j]<0) return 0;
+        if ((!r->segments && r->path_m!=0) || r->dmax_m>r->path_m ||
+            (r->path_m==0 && (r->sum_sqrt_m!=0 || r->dmax_m!=0))) return 0;
+        MachineRequirements checked=*r;
+        if (!finish(&checked,frames->fps,frames->knob_mm_turn) ||
+            checked.no_stop_m_s!=r->no_stop_m_s || checked.no_stop_mach!=r->no_stop_mach ||
+            checked.accel_m_s2!=r->accel_m_s2 || checked.accel_g!=r->accel_g ||
+            checked.peak_m_s!=r->peak_m_s || checked.peak_mach!=r->peak_mach ||
+            checked.knob_rpm!=r->knob_rpm) return 0;
+    }
+    return 1;
+}
