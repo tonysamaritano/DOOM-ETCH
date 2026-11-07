@@ -115,3 +115,14 @@ int MachineTraceWriteWithRequirements(const char *filename,const MachineStepProg
     if (e) *e=(MachineParseError){0};
     return 1;
 }
+int MachineTraceWrite(const char *filename,const MachineStepProgram *p,const EtchTrace *t,
+                      double seconds,MachineParseError *e)
+{
+    if (!filename || !*filename || !valid(p,t,seconds))
+        return fail(e,"invalid or incomplete trace output");
+    MachineRequirementsFrames frames={0};
+    if (!MachineRequirementsFramesBuild(&frames,p,30,e)) return 0;
+    int ok=MachineTraceWriteWithRequirements(filename,p,t,seconds,&frames,e);
+    MachineRequirementsFramesFree(&frames);
+    return ok;
+}
