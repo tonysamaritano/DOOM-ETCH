@@ -58,7 +58,8 @@ static int calibration(FILE *f,const MachineSettings *s)
         s->acceleration_mm_s2[0],s->acceleration_mm_s2[1],s->width_mm,s->height_mm,
         s->backlash_mm,s->erase_seconds,s->ghost_fraction,s->knob_mm_turn)>0;
 }
-int MachineReport(FILE *f,const MachineStepProgram *p,double seconds,int json)
+static int report(FILE *f,const MachineStepProgram *p,double seconds,int json,
+                  const MachineRequirementsFrames *requirements)
 {
     if (!f || !p || !isfinite(seconds) || seconds<0 ||
         !MachineSettingsValidate(&p->settings,NULL)) return 0;
@@ -67,6 +68,8 @@ int MachineReport(FILE *f,const MachineStepProgram *p,double seconds,int json)
         moves+=p->moves[i].kind==MACHINE_MOVE_DRAW || p->moves[i].kind==MACHINE_MOVE_RAPID;
         erases+=p->moves[i].kind==MACHINE_MOVE_PAUSE;
     }
+    if (requirements && (!MachineRequirementsFramesValid(requirements) ||
+        requirements->count!=erases+1 || requirements->knob_mm_turn!=p->settings.knob_mm_turn)) return 0;
     if (json) {
         fprintf(f,"{\"type\":\"machine-summary\",\"moves\":%zu,\"erases\":%zu,"
             "\"steps_x\":%" PRIu64 ",\"steps_y\":%" PRIu64 ","
@@ -74,12 +77,26 @@ int MachineReport(FILE *f,const MachineStepProgram *p,double seconds,int json)
             "\"simulated_seconds\":%.17g,\"assumed\":true,",moves,erases,
             p->total_steps[0],p->total_steps[1],p->reversals[0],p->reversals[1],seconds);
         if (!calibration(f,&p->settings)) return 0;
+        if (requirements) {
+            fputs(",\"requirements\":",f);
+            if (!MachineRequirementsFramesWrite(f,requirements,1)) return 0;
+        }
         fputs("}\n",f);
     } else {
         fprintf(f,"Completed file: %zu moves, %zu erases, %.17g simulated seconds\n"
             "Steps X/Y: %" PRIu64 "/%" PRIu64 "; reversals X/Y: %" PRIu64 "/%" PRIu64 "\n",
             moves,erases,seconds,p->total_steps[0],p->total_steps[1],p->reversals[0],p->reversals[1]);
         fputs("ASSUMED calibration: ",f); if (!calibration(f,&p->settings)) return 0; fputc('\n',f);
+        if (requirements && !MachineRequirementsFramesWrite(f,requirements,0)) return 0;
     }
     return !ferror(f) && fflush(f)==0;
+}
+int MachineReport(FILE *f,const MachineStepProgram *p,double seconds,int json)
+{
+    return report(f,p,seconds,json,NULL);
+}
+int MachineReportWithRequirements(FILE *f,const MachineStepProgram *p,double seconds,
+                                 int json,const MachineRequirementsFrames *requirements)
+{
+    return requirements && report(f,p,seconds,json,requirements);
 }
