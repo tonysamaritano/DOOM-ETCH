@@ -252,6 +252,30 @@ static void zero_and_clipped_extent(void)
     assert(error.line == 12 && error.message[0]);
 }
 
+static void invalid_frame_storage(void)
+{
+    MachineRequirementsFrames f = {0};
+    FILE *stream = tmpfile();
+    assert(stream);
+    assert(!MachineRequirementsFramesValid(NULL));
+    assert(!MachineRequirementsFramesWrite(stream, &f, 1));
+    f.count = SIZE_MAX;
+    assert(!MachineRequirementsFramesValid(&f));
+    MachineStepProgram empty = fixture(NULL, 0);
+    f.count = 0;
+    assert(MachineRequirementsFramesBuild(&f, &empty, 30, NULL));
+    assert(MachineRequirementsFramesValid(&f));
+    f.items[0].frame = 1;
+    assert(!MachineRequirementsFramesWrite(stream, &f, 1));
+    assert(ftell(stream) == 0);
+    f.items[0].frame = 0;
+    f.fps = INFINITY;
+    assert(!MachineRequirementsFramesWrite(stream, &f, 0));
+    assert(ftell(stream) == 0);
+    MachineRequirementsFramesFree(&f);
+    fclose(stream);
+}
+
 int main(void)
 {
     hand_hundred();
@@ -264,5 +288,6 @@ int main(void)
     strict_fps();
     prevalidated_stream();
     zero_and_clipped_extent();
+    invalid_frame_storage();
     return 0;
 }
