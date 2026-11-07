@@ -93,6 +93,9 @@ current segment, cancels the rest and requests the existing physical shake.
 F8 and +/- do not accelerate this mode; its badge and title identify physical 1×.
 Physical mode rejects `--etch-gpu-rate` and `--etch-gpu-instant` at startup.
 `--etch-time-scale` remains restricted to standalone `--etch-gcode FILE` playback.
+Calibration is assumed: 20 steps/mm, 60 mm/s and 250 mm/s² per axis,
+0.15 mm backlash, 20 mm per knob turn, and a 2.5-second shake retaining 3% of marks.
+The physical clock reports simulated duration under those assumptions.
 
 Each build refreshes an `etch-play/` resource directory beside `doom-metal`, including
 the model, both note textures, required three.js modules and their MIT license.
