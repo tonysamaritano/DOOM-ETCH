@@ -85,9 +85,11 @@ def report_compatibility(runner, fixture, work):
     trace_compatibility(runner, fixture, work, original)
 
 
-def invalid_flags(executable, initial, work):
-    sentinel = work / 'must-not-publish.json'
-    sentinel.write_text('previous trace\n')
+def invalid_flags(executable, initial, work, runner=False):
+    sentinel = work / ('must-not-publish.json' if runner else 'invalid.gcode')
+    sentinel.write_text('previous output\n')
+    if runner:
+        initial = [*initial, '--trace', sentinel]
     bad = ('0', '-1', 'nan', 'inf', '30x', ' 30', '30 ', '0x1p5',
            '1e9999', '1e-9999', '')
     variants = [['--target-fps', value] for value in bad]
@@ -96,7 +98,7 @@ def invalid_flags(executable, initial, work):
         result = invoke(executable, [*initial, *flags], success=False)
         assert '--target-fps' in result.stderr, (flags, result.stderr)
         assert not result.stdout, result.stdout
-        assert sentinel.read_text() == 'previous trace\n'
+        assert sentinel.read_text() == 'previous output\n'
 
 
 def empty_files(runner, work):
@@ -198,7 +200,7 @@ def main():
     report_compatibility(args.runner, fixture, args.work)
     empty_files(args.runner, args.work)
     missing = args.work / 'does-not-exist'
-    invalid_flags(args.runner, [missing], args.work)
+    invalid_flags(args.runner, [missing], args.work, runner=True)
     invalid_flags(args.exporter, [missing, args.work / 'invalid'], args.work)
     if args.wad:
         wad_exports(args, args.work)
