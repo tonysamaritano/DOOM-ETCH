@@ -72,7 +72,8 @@ static void segments(FILE *f,const EtchTrace *t)
     }
     fputs("],\n",f);
 }
-static void document(FILE *f,const MachineStepProgram *p,const EtchTrace *t,double seconds)
+static int document(FILE *f,const MachineStepProgram *p,const EtchTrace *t,double seconds,
+                    const MachineRequirementsFrames *frames)
 {
     fputs("{\"format\":\"doom-etch-trace\",\"version\":1,\n"
         "\"units\":{\"length\":\"mm\",\"time\":\"s\",\"frame\":\"device: origin top-left, +X right, +Y down\"},\n",f);
@@ -84,12 +85,18 @@ static void document(FILE *f,const MachineStepProgram *p,const EtchTrace *t,doub
     for (size_t i=0;i<t->erase_count;i++)
         fprintf(f,"%s[%.17g,%.17g]",i ? "," : "",t->erases[i].t0,t->erases[i].duration);
     fputs("],\n",f); segments(f,t);
-    fputs("\"gcode\":",f); string(f,t->source); fputs("}\n",f);
+    fputs("\"requirements\":",f);
+    if (!MachineRequirementsFramesWrite(f,frames,1)) return 0;
+    fputs(",\n\"gcode\":",f); string(f,t->source); fputs("}\n",f);
+    return !ferror(f);
 }
-int MachineTraceWrite(const char *filename,const MachineStepProgram *p,const EtchTrace *t,
-                      double seconds,MachineParseError *e)
+int MachineTraceWriteWithRequirements(const char *filename,const MachineStepProgram *p,
+    const EtchTrace *t,double seconds,const MachineRequirementsFrames *frames,MachineParseError *e)
 {
     if (!filename || !*filename || !valid(p,t,seconds)) return fail(e,"invalid or incomplete trace output");
+    if (!MachineRequirementsFramesValid(frames) || t->erase_count==SIZE_MAX ||
+        frames->count!=t->erase_count+1 || frames->knob_mm_turn!=p->settings.knob_mm_turn)
+        return fail(e,"invalid trace frame requirements");
     size_t length=strlen(filename);
     if (length>SIZE_MAX-12) return fail(e,"trace output filename too long");
     char *temporary=malloc(length+12);
@@ -99,8 +106,7 @@ int MachineTraceWrite(const char *filename,const MachineStepProgram *p,const Etc
     if (fd<0) { free(temporary); return fail(e,"cannot create trace output"); }
     FILE *stream=fdopen(fd,"wb");
     if (!stream) { close(fd); unlink(temporary); free(temporary); return fail(e,"cannot open trace output"); }
-    document(stream,p,t,seconds);
-    int ok=!ferror(stream);
+    int ok=document(stream,p,t,seconds,frames) && !ferror(stream);
     if (fclose(stream)) ok=0;
     if (ok && rename(temporary,filename)) ok=0;
     if (!ok) unlink(temporary);
