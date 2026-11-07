@@ -501,10 +501,11 @@ static void DrawPhysicalRig(BOOL active,double seconds)
             @"cursor_mm":@[@(status.cursor_mm.x),@(status.cursor_mm.y)],
             @"motor_mm":@[@(status.motor_mm.x),@(status.motor_mm.y)],
             @"travel_mm":@[@(MOTION_WIDTH_MM),@(MOTION_HEIGHT_MM)],
-            @"knob_mm_turn":@(MACHINE_ASSUMED_KNOB_MM_TURN),@"physical_seconds":@(MachineLiveSeconds(live))};
+            @"knob_mm_turn":@(MACHINE_ASSUMED_KNOB_MM_TURN),@"physical_seconds":@(MachineLiveSeconds(live)),
+            @"assumed":@YES};
         [playView publishIndices:EtchDeviceInk(MachineLiveDevice(live)) palette:palette metadata:metadata];
     }
-    window.title=[NSString stringWithFormat:@"doom-etch · physical 1× · %.3f s · %@ · F7 erase · F9 pause",
+    window.title=[NSString stringWithFormat:@"doom-etch · physical 1× · Assumed calibration · %.3f s · %@ · F7 erase · F9 pause",
         MachineLiveSeconds(live),MachineLivePaused(live) ? @"paused" : @"unscaled motors"];
 }
 static void FinishRig(void)
