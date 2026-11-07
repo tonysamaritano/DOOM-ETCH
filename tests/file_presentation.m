@@ -4,8 +4,8 @@
 /* These guards make accidental window/event use fail rather than open UI. */
 NSWindow *I_MetalFileOpen(void) { assert(0); return nil; }
 BOOL I_MetalFileClosed(void) { assert(0); return YES; }
-void I_MetalFileDraw(const unsigned char *ink, double fade)
-{ (void)ink; (void)fade; assert(0); }
+void I_MetalFileDraw(EtchGPUStrokes ghost, EtchGPUStrokes current, double clock)
+{ (void)ghost; (void)current; (void)clock; assert(0); }
 unsigned I_MetalPresentedFrames(void) { assert(0); return 0; }
 void I_ShutdownGraphics(void) { assert(0); }
 int DoomKeyForEvent(NSEvent *event) { (void)event; assert(0); return 0; }
@@ -80,6 +80,42 @@ static void replay_and_completed_shake(void)
     MachinePlaybackDestroy(p.play);
 }
 
+/* Strokes come from the traced stylus path, not the 320x200 verification grid. */
+static void traced_strokes(void)
+{
+    MachineSettings s; MachineSettingsDefault(&s);
+    MachineParseOptions options = {{0, 127.6}};
+    MachineProgram p = {0}; MachineStepProgram steps = {0}; MachineParseError e = {0};
+    assert(MachineGCodeParse(&p, "F3600\nG1 X100 Y127.6\nG1 X100 Y27.6\nM0\nG1 X0 Y27.6\nM2",
+        &options, &e));
+    assert(MachineSteppersCompile(&steps, &p, &s, &e));
+    EtchTrace *trace = calloc(1, sizeof(*trace)); assert(trace);
+    MachinePlayback *play = MachinePlaybackCreateTraced(&steps, trace, &e); assert(play);
+    MachineProgramFree(&p); MachineStepProgramFree(&steps);
+    Presentation pr = {.play = play, .trace = trace, .ink_level = 1, .rate = 1};
+    EtchGPUStrokes ghost, current;
+    assert(build_strokes(&pr, &ghost, &current) && current.count >= 2 && !ghost.count);
+    const MotionTimedSegment *first = current.segments;
+    assert(fabsf(first->ends[0]) < 1e-6f && fabsf(first->ends[3]) < 1e-6f);
+    assert(fabsf(first->ends[2] - (float)(100 / 170.15)) < 1e-6f);  /* Normalized, +Y down. */
+    assert(first->timing[1] > first->timing[0]);
+    assert(current.opacity == 1 && current.blur == 0);
+    FILE *quiet = fopen("/dev/null", "w"); assert(quiet);
+    int saved = dup(STDOUT_FILENO); dup2(fileno(quiet), STDOUT_FILENO);
+    while (!MachinePlaybackDone(pr.play)) assert(advance(&pr, .5));
+    fflush(stdout); dup2(saved, STDOUT_FILENO); close(saved); fclose(quiet);
+    assert(build_strokes(&pr, &ghost, &current));
+    assert(ghost.count == 2 && current.count >= 1);  /* M0 split the two frames. */
+    assert(fabsf(ghost.opacity - .03f) < 1e-6f && ghost.blur > 1);
+    assert(current.opacity == 1);
+    assert(control(&pr, KEY_F7) && advance(&pr, 2.5) && pr.shaken);
+    assert(build_strokes(&pr, &ghost, &current));
+    assert(fabsf(current.opacity - .03f) < 1e-6f);  /* Shaken to a ghost. */
+    assert(control(&pr, KEY_F6) && pr.trace && pr.ink_level == 1);
+    assert(build_strokes(&pr, &ghost, &current) && current.count && !ghost.count);
+    MachinePlaybackDestroy(pr.play); free_trace(pr.trace); free(pr.strokes);
+}
+
 int main(void)
 {
     @autoreleasepool {
@@ -90,6 +126,7 @@ int main(void)
         fflush(stdout); assert(ftell(captured) == 0);
         assert(dup2(saved, STDOUT_FILENO) >= 0); close(saved); fclose(captured);
         replay_and_completed_shake();
+        traced_strokes();
     }
     puts("Actual file presentation controls passed without UI");
     return 0;

@@ -496,6 +496,43 @@ BOOL EtchGPUDraw(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingS
     return YES;
 }
 
+static EtchGPUPath *EtchGPUStrokePath(id<MTLDevice> gpu, EtchGPUStrokes strokes)
+{
+    EtchGPUPath *path = [EtchGPUPath new];
+    if (strokes.count && strokes.segments && strokes.count <= gpu.maxBufferLength / sizeof(*strokes.segments))
+        path.buffer = [gpu newBufferWithBytes:strokes.segments
+            length:strokes.count * sizeof(*strokes.segments) options:MTLResourceStorageModeShared];
+    path.count = path.buffer ? strokes.count : 0;
+    return path;
+}
+
+int EtchGPUDrawStrokes(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingScale,
+    EtchGPUStrokes ghost, EtchGPUStrokes current, double clock)
+{
+    if (!queue || !layer || !isfinite(clock) || !isfinite(backingScale) || backingScale <= 0) return -1;
+    @autoreleasepool {
+        if (!linePipeline) {
+            device = queue.device;
+            if (!EtchGPUPipelines()) return -1;
+        }
+        id<CAMetalDrawable> drawable = [layer nextDrawable];
+        if (!drawable) return 0;
+        EtchGPUFrame *frame = [EtchGPUFrame new];
+        frame.ghost = EtchGPUStrokePath(queue.device, ghost);
+        frame.current = EtchGPUStrokePath(queue.device, current);
+        frame.ghostTime = frame.currentTime = clock;
+        frame.ghostOpacity = ghost.opacity; frame.ghostBlur = ghost.blur;
+        frame.currentOpacity = current.opacity; frame.currentBlur = current.blur;
+        id<MTLCommandBuffer> command = [queue commandBuffer];
+        if (!command || !EtchGPUEncode(command, drawable.texture, frame,
+                backgroundPipeline, linePipeline, backingScale)) return -1;
+        [command presentDrawable:drawable];
+        [command commit];
+        [command waitUntilCompleted];
+        return command.status == MTLCommandBufferStatusCompleted ? 1 : -1;
+    }
+}
+
 NSString *EtchGPUStatus(void)
 {
     static NSString *cached = @"1× · timed";

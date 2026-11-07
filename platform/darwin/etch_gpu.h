@@ -3,6 +3,14 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 #include "r_etch.h"
+#include "timeline.h"
+
+/* Caller-owned timed strokes for one layer; normalized ends, times in seconds. */
+typedef struct {
+    const MotionTimedSegment *segments;
+    size_t count;
+    float opacity, blur;
+} EtchGPUStrokes;
 
 void EtchGPUInit(id<MTLDevice> device, double visual_speed_mm_s);
 void EtchGPUShutdown(void);
@@ -25,4 +33,8 @@ unsigned EtchGPUUploadCount(void);
 const char *EtchGPUError(void);
 /* Bounded offscreen display readback. Completion owns immutable packed BGRA
  * pixels and runs off-main after render admission is released; nil on failure. */
+/* Synchronous draw of G-code playback strokes with the same line shader.
+ * Returns 1 when presented, 0 when no drawable was ready, -1 on failure. */
+int EtchGPUDrawStrokes(id<MTLCommandQueue> queue, CAMetalLayer *layer, double backingScale,
+    EtchGPUStrokes ghost, EtchGPUStrokes current, double clock);
 BOOL EtchGPUReadPixels(id<MTLCommandQueue> queue, void (^completion)(NSData *pixels));

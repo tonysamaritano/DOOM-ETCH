@@ -458,14 +458,18 @@ NSWindow *I_MetalFileOpen(void)
     return window;
 }
 BOOL I_MetalFileClosed(void) { return fileClosed; }
-void I_MetalFileDraw(const unsigned char *ink, double fade)
+// G-code playback draws the simulated stylus strokes as lines, like --etch-gpu.
+void I_MetalFileDraw(EtchGPUStrokes ghost, EtchGPUStrokes current, double clock)
 {
-    int shades[] = {235, (int)(35 + 200 * fade), (int)(180 + 55 * fade)};
-    for (unsigned i = 0; i < 256; i++) {
-        for (unsigned c = 0; c < 3; c++) colors[i * 4 + c] = (byte)shades[i < 3 ? i : 0];
-        colors[i * 4 + 3] = 255;
+    if (!window || !window.isVisible || window.isMiniaturized) return;
+    @autoreleasepool {
+        NSSize size = [window.contentView convertRectToBacking:window.contentView.bounds].size;
+        if (size.width < 1 || size.height < 1) return;
+        layer.drawableSize = size;
+        int drawn = EtchGPUDrawStrokes(queue, layer, window.backingScaleFactor, ghost, current, clock);
+        if (drawn < 0) I_Error("Metal G-code drawing failed");
+        if (drawn) presentedFrames++;
     }
-    FinishUpdate(ink);
 }
 
 static void PublishPhysicalCapture(BOOL active)

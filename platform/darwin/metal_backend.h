@@ -5,5 +5,6 @@ unsigned I_MetalPresentedFrames(void);
 #import <AppKit/AppKit.h>
 NSWindow *I_MetalFileOpen(void);
 BOOL I_MetalFileClosed(void);
-void I_MetalFileDraw(const unsigned char *ink, double fade);
+#import "etch_gpu.h"
+void I_MetalFileDraw(EtchGPUStrokes ghost, EtchGPUStrokes current, double clock);
 #endif
