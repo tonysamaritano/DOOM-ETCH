@@ -144,3 +144,6 @@ class CaptureProtocol(unittest.TestCase):
         self.assertEqual(path.read_bytes(), b'old output')
         self.assertEqual(sorted(p.name for p in self.frames.iterdir()), ['00000.jpg'])
         self.assertEqual(self.frame(token, 0)[0], 200)
+
+if __name__ == '__main__':
+    unittest.main()
