@@ -11,14 +11,20 @@ static int source_alias(const char *input,const char *output)
 int main(int argc,char **argv)
 {
     if (argc<2 || argv[1][0]=='-') {
-        fputs("Usage: etch-gcode-run FILE [--settings k=v ...] [--machine-readable] [--trace out.json]\n",stderr);
+        fputs("Usage: etch-gcode-run FILE [--settings k=v ...] [--machine-readable] [--trace out.json] [--target-fps N]\n",stderr);
         return 2;
     }
     const char **settings=calloc((size_t)argc,sizeof(*settings));
     if (!settings) return 1;
     size_t count=0; int json=0; const char *invalid=NULL,*tracefile=NULL;
+    double fps=30; int requested_fps=0;
     for (int i=2;i<argc;i++) {
         if (!strcmp(argv[i],"--machine-readable")) json=1;
+        else if (!strcmp(argv[i],"--target-fps")) {
+            if (requested_fps || i+1==argc || !MachineRequirementsParseFPS(argv[i+1],&fps))
+                invalid="--target-fps";
+            else { requested_fps=1; i++; }
+        }
         else if (!strcmp(argv[i],"--trace")) {
             if (tracefile || i+1==argc || !*argv[i+1] || !strncmp(argv[i+1],"--",2)) invalid="--trace";
             else tracefile=argv[++i];
