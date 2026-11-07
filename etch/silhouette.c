@@ -314,23 +314,57 @@ static int uncovered_lines(SilLines *result, MotionSegment s, const Interval *in
     return at >= 1 || SilLineAdd(result, along(s, at), s.b);
 }
 
+static SilRect mask_bounds(const SilRects *mask)
+{
+    SilRect box = mask->data[0];
+    for (size_t j = 1; j < mask->count; j++) {
+        SilRect r = mask->data[j];
+        box = (SilRect){fmin(box.x0, r.x0), fmin(box.y0, r.y0), fmax(box.x1, r.x1), fmax(box.y1, r.y1)};
+    }
+    return box;
+}
+static int touches(MotionSegment s, SilRect r)
+{
+    return !(fmax(s.a.x, s.b.x) < r.x0 || fmin(s.a.x, s.b.x) > r.x1
+        || fmax(s.a.y, s.b.y) < r.y0 || fmin(s.a.y, s.b.y) > r.y1);
+}
+
+/* Every patch is composited over the scene so far. Only lines near the patch
+ * can change, so lines before the first one near it stay where they are and
+ * the rest are tested against the mask only when they touch its bounds. */
 int SilComposite(SilLines *scene, const SilRects *mask, const SilLines *outline)
 {
     if (!lines_valid(scene) || !rectangles_valid(mask) || !lines_valid(outline)) return 0;
+    size_t first = scene->count;
+    SilRect box = {0};
+    if (mask->count) {
+        box = mask_bounds(mask);
+        for (size_t i = 0; i < scene->count; i++)
+            if (touches(scene->data[i], box)) { first = i; break; }
+    }
     Interval *intervals = mask->count ? malloc(mask->count * sizeof(*intervals)) : NULL;
     if (mask->count && !intervals) return 0;
-    SilLines result = {0};
-    for (size_t i = 0; i < scene->count; i++) {
+    SilLines tail = {0};
+    for (size_t i = first; i < scene->count; i++) {
         MotionSegment segment = scene->data[i];
-        size_t count = covered_intervals(segment, mask, intervals);
-        if (!uncovered_lines(&result, segment, intervals, count)) goto fail;
+        size_t count = touches(segment, box) ? covered_intervals(segment, mask, intervals) : 0;
+        if (!uncovered_lines(&tail, segment, intervals, count)) goto fail;
     }
     for (size_t i = 0; i < outline->count; i++)
-        if (!SilLineAdd(&result, outline->data[i].a, outline->data[i].b)) goto fail;
-    free(intervals); SilLinesFree(scene); *scene = result;
+        if (!SilLineAdd(&tail, outline->data[i].a, outline->data[i].b)) goto fail;
+    size_t total = first + tail.count;
+    if (total > MAX_ITEMS) goto fail;
+    if (total > scene->capacity) {
+        MotionSegment *grown = realloc(scene->data, total * sizeof(*grown));
+        if (!grown) goto fail;
+        scene->data = grown; scene->capacity = total;
+    }
+    if (tail.count) memcpy(scene->data + first, tail.data, tail.count * sizeof(*tail.data));
+    scene->count = total;
+    free(intervals); SilLinesFree(&tail);
     return 1;
 fail:
-    free(intervals); SilLinesFree(&result);
+    free(intervals); SilLinesFree(&tail);
     return 0;
 }
 
