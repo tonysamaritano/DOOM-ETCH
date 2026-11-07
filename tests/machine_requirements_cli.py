@@ -187,6 +187,25 @@ def check_export_report(text, records, fps):
             close(float(value), r[key])
 
 
+def failed_publication(args, fixture, work):
+    trace = work / 'preserved.json'
+    for fps in ('1e308', '1e-300'):
+        trace.write_text('prior trace\n')
+        result = invoke(args.runner, [fixture, '--machine-readable', '--trace',
+                        trace, '--target-fps', fps], success=False)
+        assert not result.stdout
+        assert trace.read_text() == 'prior trace\n'
+        assert not list(work.glob('preserved.json.tmp.*'))
+    if args.wad:
+        prefix = work / 'preserved-export'
+        output = prefix.with_suffix('.gcode')
+        output.write_text('prior commands\n')
+        invoke(args.exporter, [args.wad, prefix, '--target-fps', '1e308'],
+               success=False)
+        assert output.read_text() == 'prior commands\n'
+        assert not list(work.glob('preserved-export.gcode.*'))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--runner', type=Path, required=True)
@@ -205,6 +224,7 @@ def main():
             previous = invoke(args.baseline_runner, [fixture, *flags]).stdout
             assert current == previous  # Exact pre-beat stdout bytes/text.
     empty_files(args.runner, args.work)
+    failed_publication(args, fixture, args.work)
     missing = args.work / 'does-not-exist'
     invalid_flags(args.runner, [missing], args.work, runner=True)
     invalid_flags(args.exporter, [missing, args.work / 'invalid'], args.work)
