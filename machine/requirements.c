@@ -183,3 +183,41 @@ static int frames_valid(const MachineRequirementsFrames *frames)
     }
     return 1;
 }
+static void json_frame(FILE *f,const MachineRequirementsFrames *frames,size_t i)
+{
+    const MachineRequirements *r=&frames->items[i].demand;
+    fprintf(f,"%s{\"type\":\"machine-requirements\",\"frame\":%zu,\"target_fps\":%.17g,"
+        "\"geometry\":\"commanded-step-grid\",\"budget\":\"drawing-only-one-frame\","
+        "\"segments\":%zu,\"path_m\":%.17g,\"sum_sqrt_m\":%.17g,\"dmax_m\":%.17g,"
+        "\"no_stop_m_s\":%.17g,\"no_stop_mach\":%.17g,\"accel_m_s2\":%.17g,"
+        "\"accel_g\":%.17g,\"peak_m_s\":%.17g,\"peak_mach\":%.17g,\"knob_rpm\":%.17g,",
+        i ? "," : "",i,frames->fps,r->segments,r->path_m,r->sum_sqrt_m,r->dmax_m,
+        r->no_stop_m_s,r->no_stop_mach,r->accel_m_s2,r->accel_g,r->peak_m_s,r->peak_mach,r->knob_rpm);
+    fprintf(f,"\"assumptions\":{\"sound_speed_m_s\":%.17g,\"gravity_m_s2\":%.17g,"
+        "\"knob_mm_turn\":%.17g,\"knob_rpm\":\"path-speed-equivalent\"},"
+        "\"exclusions\":[\"backlash\",\"shake\",\"jerk\"]}",
+        ASSUMED_SOUND_M_S,STANDARD_GRAVITY_M_S2,frames->knob_mm_turn);
+}
+static void plain_frame(FILE *f,const MachineRequirementsFrames *frames,size_t i)
+{
+    const MachineRequirements *r=&frames->items[i].demand;
+    fprintf(f,"Frame %zu requirements at %.17g fps (commanded step grid, drawing-only):\n"
+        "  %zu moves, %.17g m; no-stop %.17g m/s (Mach %.17g)\n"
+        "  Stop-at-every-vertex %.17g m/s^2 (%.17g g); peak %.17g m/s (Mach %.17g)\n"
+        "  Assumed path-speed-equivalent knob RPM: %.17g (%.17g mm/turn)\n",
+        i,frames->fps,r->segments,r->path_m,r->no_stop_m_s,r->no_stop_mach,
+        r->accel_m_s2,r->accel_g,r->peak_m_s,r->peak_mach,r->knob_rpm,frames->knob_mm_turn);
+    fprintf(f,"  Assumed sound speed %.17g m/s; standard gravity %.17g m/s^2.\n"
+        "  Excludes backlash, shake and jerk.\n",ASSUMED_SOUND_M_S,STANDARD_GRAVITY_M_S2);
+}
+int MachineRequirementsFramesWrite(FILE *f,const MachineRequirementsFrames *frames,int json)
+{
+    if (!f || !frames_valid(frames)) return 0;
+    if (json) fputc('[',f);
+    for (size_t i=0;i<frames->count;i++) {
+        if (json) json_frame(f,frames,i);
+        else plain_frame(f,frames,i);
+    }
+    if (json) fputc(']',f);
+    return !ferror(f);
+}
