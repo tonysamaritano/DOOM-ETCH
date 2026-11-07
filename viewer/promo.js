@@ -119,3 +119,13 @@ export function drawPitchOverlay(ctx,state,layout) {
   ctx.fillRect(0,fine.top,w,fine.height);
   drawMeasured(ctx,fine);ctx.restore();
 }
+
+export function createPitch(trace,adapter) {
+  const context=pitchContext(trace);
+  return {context,renderAt(t) {
+    const state=buildPitchState(context,t),[width,height]=adapter.size();
+    const layout=layoutPitch(state,width,height,adapter.measure);
+    const camera=adapter.paint(state,layout);
+    return {...state,layout,camera};
+  }};
+}
