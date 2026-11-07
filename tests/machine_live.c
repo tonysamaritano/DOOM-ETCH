@@ -45,6 +45,14 @@ static void cadence(double dt)
         expected+=EtchDeviceGetStatus(direct).remaining_s+settings.erase_seconds;
         unsigned ticks=0;
         while (!MachineLiveNeedsPath(live)) {
+            if (ticks==5 || ticks==7) {
+                double clock=MachineLiveSeconds(live);
+                MachineLivePause(live,ticks==5);
+                assert(MachineLiveTick(live,1000,ticks==5));
+                compare_devices(MachineLiveDevice(live),direct);
+                assert(MachineLiveSeconds(live)==clock);
+                MachineLivePause(live,0);
+            }
             EtchStatus before=EtchDeviceGetStatus(direct);
             assert(MachineLiveTick(live,dt,1));
             if (before.drawing && dt>=before.remaining_s) {
