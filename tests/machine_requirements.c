@@ -234,6 +234,24 @@ static void prevalidated_stream(void)
     MachineRequirementsFramesFree(&frames);
 }
 
+static void zero_and_clipped_extent(void)
+{
+    MachineStep zero = {{0, 0}, 0, MACHINE_MOVE_RAPID, 12};
+    MachineStepProgram p = fixture(&zero, 1);
+    MachineRequirements r = calculate(&p, 0, 1, DBL_MAX);
+    assert(r.segments == 1 && r.path_m == 0 && r.accel_m_s2 == 0);
+    r = calculate(&p, 0, 1, DBL_MIN);
+    assert(r.no_stop_m_s == 0 && r.peak_m_s == 0);
+    p.settings.width_mm = nextafter(.2, 0);
+    zero.target_steps[0] = 3; /* Last reachable .15 mm grid point. */
+    near(calculate(&p, 0, 1, 30).path_m, .00015);
+    zero.target_steps[0] = 4; /* .20 lies outside the custom extent. */
+    rejected(&p, 0, 1, 30);
+    MachineParseError error = {0};
+    assert(!MachineRequirementsCalculate(&p, 0, 1, 30, &r, &error));
+    assert(error.line == 12 && error.message[0]);
+}
+
 int main(void)
 {
     hand_hundred();
@@ -245,5 +263,6 @@ int main(void)
     invalid_programs();
     strict_fps();
     prevalidated_stream();
+    zero_and_clipped_extent();
     return 0;
 }
