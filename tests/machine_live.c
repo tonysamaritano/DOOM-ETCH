@@ -32,8 +32,37 @@ static void finish(MachineLive *live,EtchDevice *direct)
     step(live,direct,20); // Idle surplus must not enter the physical clock.
     assert(MachineLiveNeedsPath(live) && EtchDeviceReady(direct));
 }
+static void cadence(double dt)
+{
+    MachineSettings settings;MachineSettingsDefault(&settings);
+    MotionPoint start={10,20};
+    MachineLive *live=MachineLiveCreate(&settings,start);assert(live);
+    EtchDevice *direct=EtchCreate(MachineSettingsConfig(&settings),start);assert(direct);
+    MotionPoint routes[2][2]={{{10,20},{110,20}},{{110,20},{10,20}}};
+    double expected=0;
+    for (unsigned scene=0;scene<2;scene++) {
+        submit(live,direct,routes[scene],2);
+        expected+=EtchDeviceGetStatus(direct).remaining_s+settings.erase_seconds;
+        unsigned ticks=0;
+        while (!MachineLiveNeedsPath(live)) {
+            EtchStatus before=EtchDeviceGetStatus(direct);
+            assert(MachineLiveTick(live,dt,1));
+            if (before.drawing && dt>=before.remaining_s) {
+                assert(EtchDeviceTick(direct,before.remaining_s));
+                if (EtchDeviceReady(direct)) assert(EtchDeviceRequestErase(direct));
+                assert(EtchDeviceTick(direct,dt-before.remaining_s));
+            } else assert(EtchDeviceTick(direct,dt));
+            compare_devices(MachineLiveDevice(live),direct);
+            assert(++ticks<1000);
+        }
+        assert(EtchDeviceReady(direct));
+        machine_near(MachineLiveSeconds(live),expected);
+    }
+    MachineLiveDestroy(live);EtchDestroy(direct);
+}
 int main(void)
 {
+    cadence(1.0/35);cadence(1.0/60);
     MachineSettings settings;MachineSettingsDefault(&settings);
     MotionPoint start={10,20};
     MachineLive *live=MachineLiveCreate(&settings,start);assert(live);
