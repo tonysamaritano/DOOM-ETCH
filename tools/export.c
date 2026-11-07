@@ -93,11 +93,12 @@ static int WriteFrameSVG(const char *prefix, unsigned frame, const MotionPath *p
     return WriteMotionOutput(filename, "svg", path);
 }
 
-static int ExportFrames(const char *prefix, unsigned frames)
+static int ExportFrames(const char *prefix, unsigned frames,double target_fps)
 {
     MotionOutput program = {0};
     if (!MotionOutputOpen(&program, prefix, "gcode")) return 0;
     MotionPath path = {0};
+    MachineRequirementsFrames requirements={0};
     MotionPoint cursor_mm = {0, 0};
     int success = 0;
     for (unsigned frame = 0; frame < frames; frame++) {
@@ -108,10 +109,15 @@ static int ExportFrames(const char *prefix, unsigned frames)
         if (!MotionQuantizePoint(&path, path.points[path.count - 1], &cursor_mm)) goto done;
         ReportMotion(&path);
     }
+    if (target_fps && !CommandRequirements(program.stream,target_fps,&requirements)) goto done;
     success = 1;
 done:
     MotionFree(&path);
-    return MotionOutputClose(&program, success);
+    success=MotionOutputClose(&program,success);
+    if (success && target_fps)
+        success=MachineRequirementsFramesWrite(stdout,&requirements,0) && fflush(stdout)==0;
+    MachineRequirementsFramesFree(&requirements);
+    return success;
 }
 
 int main(int argc, char **argv)
@@ -174,7 +180,7 @@ int main(int argc, char **argv)
         G_Ticker();
         ++gametic;
     }
-    int success = ExportFrames(argv[2], frames);
+    int success = ExportFrames(argv[2], frames,0);
     R_EtchResetSprites();
     if (!success) I_Error("Cannot export completed frames to %s", argv[2]);
     return 0;
