@@ -32,9 +32,11 @@ export function decodeFrame(buffer) {
   const palette=paletteBytes?new Uint8Array(buffer,offset+pixelBytes,paletteBytes):null;
   return {metadata,pixels,palette};
 }
-export function frameRGBA(frame) {
+// Reuses `into` when it has the right size, so playback avoids a new
+// 1.7 MB array on every frame.
+export function frameRGBA(frame,into) {
   const {metadata:m,pixels,palette}=frame;
-  const rgba=new Uint8Array(m.width*m.height*4);
+  const rgba=into?.length===m.width*m.height*4?into:new Uint8Array(m.width*m.height*4);
   if(m.kind==='bgra') {
     for(let i=0;i<rgba.length;i+=4) {
       rgba[i]=pixels[i+2];rgba[i+1]=pixels[i+1];rgba[i+2]=pixels[i];rgba[i+3]=pixels[i+3];

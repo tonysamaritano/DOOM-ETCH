@@ -21,6 +21,6 @@ export function buildScreen(screen,area) {
   screen.traverse(node=>{if(node.isMesh)node.material=material;});
   return {material,set(frame){
     const texture=frame.metadata.kind==='bgra'?ink:indexed;
-    texture.image.data=frameRGBA(frame);texture.needsUpdate=true;material.uniforms.ink.value=texture;
+    texture.image.data=frameRGBA(frame,texture.image.data);texture.needsUpdate=true;material.uniforms.ink.value=texture;
   }};
 }
