@@ -169,3 +169,41 @@ static void invalid_ranges_and_numbers(void)
     p.settings.knob_mm_turn = NAN;
     rejected(&p, 0, 1, 30);
 }
+
+static void invalid_programs(void)
+{
+    MachineStep move = {{2000, 0}, 60, MACHINE_MOVE_DRAW, 41};
+    MachineStepProgram p = fixture(&move, 1);
+    const int64_t bad[] = {-1, INT64_MAX, INT64_MIN, 3404};
+    for (size_t i = 0; i < sizeof(bad) / sizeof(*bad); ++i) {
+        move.target_steps[0] = bad[i];
+        rejected(&p, 0, 0, 30); /* Validate even outside selected range. */
+    }
+    move.target_steps[0] = 2000;
+    move.kind = (MachineMoveKind)99;
+    rejected(&p, 0, 1, 30);
+    move.kind = MACHINE_MOVE_DRAW;
+    move.feed_mm_s = NAN;
+    rejected(&p, 0, 1, 30);
+    move.feed_mm_s = 60;
+    p.start_steps[0] = -1;
+    rejected(&p, 0, 1, 30);
+    p.start_steps[0] = 0;
+    p.settings.steps_per_mm[1] = INFINITY;
+    rejected(&p, 0, 1, 30);
+}
+
+static void strict_fps(void)
+{
+    const char *bad[] = {"", "0", "-1", "nan", "inf", " 30", "30 ",
+        "30x", "0x1p5", "1e9999", "1e-9999", ".", "--30", "30\n"};
+    for (size_t i = 0; i < sizeof(bad) / sizeof(*bad); ++i) {
+        double value = 17;
+        assert(!MachineRequirementsParseFPS(bad[i], &value) && value == 17);
+    }
+    double value = 0;
+    assert(MachineRequirementsParseFPS("+3.5e1", &value) && value == 35);
+    assert(MachineRequirementsParseFPS(".5", &value) && value == .5);
+    assert(!MachineRequirementsParseFPS(NULL, &value));
+    assert(!MachineRequirementsParseFPS("30", NULL));
+}
