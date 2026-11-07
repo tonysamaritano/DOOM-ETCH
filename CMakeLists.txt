@@ -215,6 +215,9 @@ target_link_libraries(etch-export PRIVATE etch-controller)
 if(BUILD_TESTING)
     add_executable(gcode-step-counter-test tests/gcode_steps.c)
     target_compile_options(gcode-step-counter-test PRIVATE -UNDEBUG)
+    add_executable(playback-ticks-test tests/playback_ticks.c)
+    target_link_libraries(playback-ticks-test PRIVATE etch-controller)
+    target_compile_options(playback-ticks-test PRIVATE -UNDEBUG)
     add_test(NAME machine-gcode-runner COMMAND "${CMAKE_COMMAND}"
         "-DRUNNER=$<TARGET_FILE:etch-gcode-run>"
         "-DEXPORTER=$<TARGET_FILE:etch-export>" "-DGAME=$<TARGET_FILE:doom-metal>"
@@ -226,6 +229,7 @@ if(BUILD_TESTING AND DOOM_TEST_WAD_DIRECTORY
     add_test(NAME machine-gcode-e1m1 COMMAND "${CMAKE_COMMAND}"
         "-DEXPORTER=$<TARGET_FILE:etch-export>" "-DRUNNER=$<TARGET_FILE:etch-gcode-run>"
         "-DCOUNTER=$<TARGET_FILE:gcode-step-counter-test>"
+        "-DTICKS=$<TARGET_FILE:playback-ticks-test>"
         "-DWAD=${DOOM_TEST_WAD_DIRECTORY}/doom1.wad"
         "-DPREFIX=${CMAKE_CURRENT_BINARY_DIR}/e1m1-00"
         -P "${PROJECT_SOURCE_DIR}/tests/gcode_e1m1.cmake")

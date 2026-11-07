@@ -245,7 +245,10 @@ int EtchDeviceTick(EtchDevice *d,double seconds)
     while (d->status.drawing) {
         Segment *s=&d->segments[d->index];
         double left=s->duration-d->segment_time;
-        int complete=seconds>=left || (seconds>0 && left-seconds<=1e-12*s->duration);
+        /* Callers measure time left on the absolute clock, which is coarser than
+         * a short segment's local time, so reaching its finish there completes it. */
+        int complete=seconds>=left || (seconds>0 && (left-seconds<=1e-12*s->duration
+            || s->begin+d->segment_time+seconds>=s->finish));
         double used=complete ? left : seconds;
         d->segment_time=complete ? s->duration : d->segment_time+used;
         seconds=fmax(0,seconds-used);
