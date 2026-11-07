@@ -149,8 +149,12 @@ static void title(Presentation *p,NSWindow *window)
     NSString *state=p->paused ? @"paused" : p->shaking ? @"presentation shake" :
         p->interrupted ? @"stopped" : MachinePlaybackDone(p->play) ? @"file completed" : @"playing";
     NSString *interrupted=p->interrupted ? @" · file interrupted · F6 to replay" : @"";
-    window.title=[NSString stringWithFormat:@"doom-etch · %.3g× · %.3f physical s · %@%@ · F6 replay · F7 shake · F9 pause",
-        p->rate,MachinePlaybackSeconds(p->play),state,interrupted];
+    char rate[32];
+    EtchVisualRateText(p->rate,rate,sizeof(rate));
+    NSString *text=[NSString stringWithFormat:@"doom-etch · %@ · %.3f physical s · %@%@ · F6 replay · F7 shake · F9 pause",
+        @(rate),MachinePlaybackSeconds(p->play),state,interrupted];
+    /* Setting an unchanged title still makes AppKit lay out the title bar. */
+    if (![window.title isEqualToString:text]) window.title=text;
 }
 static int present(MachinePlayback *play,const FileOptions *o)
 {

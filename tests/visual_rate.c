@@ -1,6 +1,7 @@
 #include "rate.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 int main(void)
 {
@@ -19,6 +20,11 @@ int main(void)
     assert(EtchVisualRateKey(rate, '-') == rate);
     assert(EtchVisualRateKey(1024, '+') == 1024);
     assert(EtchVisualRateKey(1000, 'x') == 1000);
+    char text[32];
+    EtchVisualRateText(1000, text, sizeof(text)); assert(!strcmp(text, "1000×"));
+    EtchVisualRateText(1, text, sizeof(text)); assert(!strcmp(text, "1×"));
+    EtchVisualRateText(.25, text, sizeof(text)); assert(!strcmp(text, "1/4×"));
+    EtchVisualRateText(1.5, text, sizeof(text)); assert(!strcmp(text, "1.5×"));
     puts("Shared visual rate: exact bounds and key aliases passed");
     return 0;
 }

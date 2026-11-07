@@ -504,7 +504,9 @@ NSString *EtchGPUStatus(void)
     double rate = drawRate;
     NSString *mode = paused ? @"paused" : instant ? @"instant" : erasing ? @"erasing" : @"timed";
     os_unfair_lock_unlock(&stateLock);
-    cached = [NSString stringWithFormat:@"%.3g× · %@", rate, mode];
+    char text[32];
+    EtchVisualRateText(rate, text, sizeof(text));
+    cached = [NSString stringWithFormat:@"%@ · %@", @(text), mode];
     return cached;
 }
 

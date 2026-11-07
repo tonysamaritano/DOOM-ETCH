@@ -387,12 +387,14 @@ static NSString *LayerState(int enabled) { return enabled ? @"on" : @"off"; }
 static void UpdateGPUTitle(void)
 {
     static NSString *patterns[] = {@"horizontal", @"diagonal", @"cross"};
-    window.title = [NSString stringWithFormat:
+    NSString *text = [NSString stringWithFormat:
         @"doom-etch · %@ · F2 %@ · F3 %@ · F4 %@ · F5 %@ · H %@ · G %@ · J %@",
         EtchGPUStatus(), patterns[R_EtchHatchPatternValue()],
         LayerState(R_EtchSpriteTexturesEnabled()), LayerState(R_EtchTexturesEnabled()),
         LayerState(R_EtchSpritesEnabled()), LayerState(R_EtchHUDEnabled()),
         LayerState(R_EtchWeaponEnabled()), LayerState(R_EtchWeaponTexturesEnabled())];
+    // Setting an unchanged title still makes AppKit lay out the title bar.
+    if (![window.title isEqualToString:text]) window.title = text;
 }
 
 static BOOL DrawGPU(void)
@@ -505,8 +507,9 @@ static void DrawPhysicalRig(BOOL active,double seconds)
             @"assumed":@YES};
         [playView publishIndices:EtchDeviceInk(MachineLiveDevice(live)) palette:palette metadata:metadata];
     }
-    window.title=[NSString stringWithFormat:@"doom-etch · physical 1× · Assumed calibration · %.3f s · %@ · F7 erase · F9 pause",
+    NSString *text=[NSString stringWithFormat:@"doom-etch · physical 1× · Assumed calibration · %.3f s · %@ · F7 erase · F9 pause",
         MachineLiveSeconds(live),MachineLivePaused(live) ? @"paused" : @"unscaled motors"];
+    if (![window.title isEqualToString:text]) window.title=text;
 }
 static void FinishRig(void)
 {
