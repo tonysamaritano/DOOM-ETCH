@@ -30,3 +30,33 @@ async function run(options={}) {
   } catch(error) {return {error,requests,times,progress};}
   finally {globalThis.fetch=original;}
 }
+test('capture awaits all 540 exact samples and verified completion',async()=>{
+  const value=await run();assert.equal(value.error,undefined);
+  assert.deepEqual(value.result,{frames:540});assert.equal(value.requests.length,542);
+  assert.deepEqual(value.times,Array.from({length:540},(_,i)=>i/30));
+  assert.deepEqual(value.progress.filter(p=>p.state==='capturing').map(p=>p.completed),
+    Array.from({length:540},(_,i)=>i+1));
+  assert.equal(value.progress.at(-1).state,'done');
+  assert.equal(value.progress.at(-1).completed,540);
+});
+test('HTTP failure never acknowledges or renders a later frame',async()=>{
+  const value=await run({failFrame:7});assert.match(value.error.message,/HTTP 500/);
+  assert.equal(value.times.length,8);assert.equal(value.progress.at(-1).completed,7);
+  assert.equal(value.progress.at(-1).state,'error');
+  assert.ok(!value.requests.some(p=>p.startsWith('/__done')));
+  assert.ok(!value.progress.some(p=>p.state==='done'));
+});
+test('bad encoding, stale acknowledgments and resizing fail closed',async()=>{
+  for(const options of [{blob:null},{blob:new Blob([],{type:'image/jpeg'})},
+    {blob:new Blob(['x'],{type:'image/png'})},{wrongFrame:2},{wrongToken:2},{resize:true}]) {
+    const value=await run(options);assert.ok(value.error);
+    assert.equal(value.progress.at(-1).state,'error');
+    assert.ok(!value.progress.some(p=>p.state==='done'));
+    assert.ok(!value.requests.some(p=>p.startsWith('/__done')));
+  }
+});
+test('incomplete final acknowledgment cannot announce completion',async()=>{
+  const value=await run({doneFrames:539});assert.equal(value.times.length,540);
+  assert.match(value.error.message,/Incomplete/);assert.equal(value.progress.at(-1).state,'error');
+  assert.ok(!value.progress.some(p=>p.state==='done'));
+});
