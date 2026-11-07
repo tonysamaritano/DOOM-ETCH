@@ -31,3 +31,41 @@ def write_fixture(path):
                     'G21\nG90\nG94\nG61\nF3600\nM0\n'
                     'G1 X110 Y117.6\nG1 X110 Y117.6\nM0\nM0\n'
                     'G0 X10 Y117.6\nM0\nM2\n')
+
+
+def check_frames(records, fps):
+    assert [r['frame'] for r in records] == list(range(5))
+    for i, r in enumerate(records):
+        assert r['type'] == 'machine-requirements'
+        assert r['target_fps'] == fps
+        assert r['geometry'] == 'commanded-step-grid'
+        assert r['budget'] == 'drawing-only-one-frame'
+        assert r['segments'] == {1: 2, 3: 1}.get(i, 0)
+        active = i in (1, 3)
+        close(r['path_m'], .1 if active else 0)
+        close(r['no_stop_m_s'], (.1 * fps) if active else 0)
+        close(r['accel_m_s2'], (360 if fps == 30 else 490) if active else 0)
+        close(r['peak_m_s'], (6 if fps == 30 else 7) if active else 0)
+        close(r['knob_rpm'], (9000 if fps == 30 else 10500) if active else 0)
+        assert r['assumptions'] == {'sound_speed_m_s': 343,
+            'gravity_m_s2': 9.80665, 'knob_mm_turn': 20,
+            'knob_rpm': 'path-speed-equivalent'}
+        assert set(r['exclusions']) == {'backlash', 'shake', 'jerk'}
+
+
+def trace_compatibility(runner, fixture, work, original):
+    baseline = None
+    for fps in (None, 30, 35):
+        target = work / f'trace-{fps}.json'
+        options = ['--trace', target]
+        if fps is not None:
+            options += ['--target-fps', fps]
+        raw, record = summary(runner, fixture, *options)
+        trace = json.loads(target.read_text())
+        check_frames(trace.pop('requirements'), fps or 30)
+        if fps is None:
+            assert raw == original
+            baseline = trace
+        else:
+            check_frames(record.pop('requirements'), fps)
+            assert trace == baseline  # Every old field, not just duration.
