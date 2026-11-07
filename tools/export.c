@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include "export_files.h"
+#include "bridge.h"
+#include "requirements.h"
 #include "doomstat.h"
 #include "g_game.h"
 #include "hu_stuff.h"
@@ -51,6 +53,20 @@ static int ParseFrames(const char *text, unsigned *frames)
     if (value < 1 || value > 10000) return 0;
     *frames = value;
     return 1;
+}
+
+static int CommandRequirements(FILE *stream,double fps,MachineRequirementsFrames *out)
+{
+    MachineSettings settings; MachineSettingsDefault(&settings);
+    MachineProgram parsed={0}; MachineStepProgram compiled={0}; MachineParseError error={0};
+    int ok=fflush(stream)==0 && !ferror(stream) && fseek(stream,0,SEEK_SET)==0;
+    if (ok) ok=MachineRead(stream,&settings,&parsed,&error);
+    if (ok) ok=MachineSteppersCompile(&compiled,&parsed,&settings,&error);
+    if (ok) ok=MachineRequirementsFramesBuild(out,&compiled,fps,&error);
+    MachineProgramFree(&parsed); MachineStepProgramFree(&compiled);
+    if (!ok) fprintf(stderr,"Command requirements at line %zu: %s\n",error.line,
+        error.message[0] ? error.message : "cannot read completed temporary G-code");
+    return ok;
 }
 
 static int CaptureFrame(MotionPath *path, MotionPoint cursor_mm)
