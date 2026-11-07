@@ -155,6 +155,39 @@ def handler_for(three):
             if len(data) != length:
                 raise ValueError('Incomplete capture request body')
             return data
+        def do_POST(self):
+            try:
+                route, query = self.capture_query()
+                data = self.capture_body(route == '/__frame')
+                result = {'ok': True, 'cut': 'pitch'}
+                with session.lock:
+                    if route == '/__start':
+                        result['token'] = session.start()
+                    else:
+                        token = query['token']
+                        session.require(token)
+                        result['token'] = token
+                        if route == '/__frame':
+                            raw = query['frame']
+                            if not raw.isascii() or not raw.isdigit() or len(raw) > 3:
+                                raise ValueError('Invalid frame index')
+                            index = int(raw)
+                            if index >= FRAME_COUNT:
+                                raise ValueError('Frame index outside pitch')
+                            session.frame(token, index, data)
+                            result['frame'] = index
+                        else:
+                            session.done(token)
+                            result['frames'] = FRAME_COUNT
+                encoded = json.dumps(result).encode('utf-8')
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(encoded)))
+                self.end_headers()
+                self.wfile.write(encoded)
+            except (ValueError, OSError) as error:
+                self.close_connection = True
+                self.send_error(400, str(error))
         def translate_path(self, raw):
             path = unquote(urlsplit(raw).path)
             prefix = '/vendor/three/'
@@ -176,7 +209,6 @@ def handler_for(three):
     return Handler
 
 if __name__ == '__main__':
-    import json
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8770)
     parser.add_argument('--three', type=Path, default=ROOT / 'viewer/vendor/three')
