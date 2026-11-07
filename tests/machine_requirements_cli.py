@@ -183,3 +183,27 @@ def check_export_report(text, records, fps):
         for value, key in zip(values[3:], ('path_m', 'no_stop_m_s',
                 'no_stop_mach', 'accel_m_s2', 'accel_g', 'peak_m_s', 'peak_mach')):
             close(float(value), r[key])
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--runner', type=Path, required=True)
+    parser.add_argument('--exporter', type=Path, required=True)
+    parser.add_argument('--work', type=Path, required=True)
+    parser.add_argument('--wad', type=Path)
+    args = parser.parse_args()
+    args.work.mkdir(parents=True, exist_ok=True)
+    fixture = args.work / 'frames.gcode'
+    write_fixture(fixture)
+    report_compatibility(args.runner, fixture, args.work)
+    empty_files(args.runner, args.work)
+    missing = args.work / 'does-not-exist'
+    invalid_flags(args.runner, [missing], args.work)
+    invalid_flags(args.exporter, [missing, args.work / 'invalid'], args.work)
+    if args.wad:
+        wad_exports(args, args.work)
+    print('requirements CLI/trace compatibility checks passed')
+
+
+if __name__ == '__main__':
+    main()
