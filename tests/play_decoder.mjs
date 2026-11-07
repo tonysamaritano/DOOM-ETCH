@@ -30,7 +30,7 @@ assert.deepEqual([...second.pixels.slice(-4)],[77,88,99,255]);
 assert.deepEqual(decodeFrame(packet(physical)).metadata,physical);
 for(const change of [{version:2},{sequence:0},{sequence:-1},{sequence:1.5},
   {sequence:Number.MAX_SAFE_INTEGER+1},{kind:'rgba'},{width:321},{height:0},
-  {width:'320'},{mode:'other'},{mode:'visual'},{physical_seconds:0}])
+  {width:'320'},{mode:'other'},{mode:'visual'},{physical_seconds:0},{assumed:true}])
   assert.throws(()=>decodeFrame(packet({...game,...change})),JSON.stringify(change));
 for(const change of [{assumed:undefined},{assumed:false},{assumed:1},
   {cursor_mm:[-1,0]},{cursor_mm:[171,0]},
