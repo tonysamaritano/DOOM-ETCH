@@ -103,7 +103,7 @@ function drawMeasured(ctx,value) {
   ctx.strokeText(value.text,...value.textOffset);ctx.fillText(value.text,...value.textOffset);ctx.restore();
 }
 export function drawPitchOverlay(ctx,state,layout) {
-  const {width:w,height:h}=layout;ctx.clearRect(0,0,w,h);
+  const {width:w,height:h}=layout;
   if(state.shot==='drive'||state.shot==='speed') {
     const speed=state.shot==='speed';
     caption(ctx,speed?'TOP SPEED REQUIRED:':'REFRESH RATE:',w*.5,h*.19,h*.05,w*.9);
