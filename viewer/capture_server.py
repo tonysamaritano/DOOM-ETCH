@@ -79,6 +79,37 @@ class PitchSession:
         if not self.token or token != self.token:
             raise ValueError('Missing or stale capture token')
 
+    def frame(self, token, index, data):
+        self.require(token)
+        if index > self.next_frame:
+            raise ValueError('Frame must be sequential')
+        jpeg_dimensions(data)
+        path = self.directory() / f'{index:05d}.jpg'
+        if index < self.next_frame:
+            if path.is_symlink() or path.read_bytes() != data:
+                raise ValueError('Retry differs from acknowledged frame')
+            return
+        fd, temporary = tempfile.mkstemp(prefix='.pitch-', dir=path.parent)
+        try:
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(data)
+                stream.flush()
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+        self.next_frame += 1
+
+    def done(self, token):
+        self.require(token)
+        if self.next_frame != FRAME_COUNT:
+            raise ValueError('Capture is incomplete')
+        directory = self.directory()
+        for index in range(FRAME_COUNT):
+            path = directory / f'{index:05d}.jpg'
+            if path.is_symlink() or not path.is_file() or not path.stat().st_size:
+                raise ValueError('Capture frame is missing or empty')
+
 def handler_for(three):
     session = PitchSession()
     class Handler(SimpleHTTPRequestHandler):
