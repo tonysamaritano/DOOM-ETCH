@@ -173,6 +173,59 @@ static void failedCopyPreservesOutput(void)
 void MotionWriterTests(void);
 void MotionTimelineTests(void);
 
+/* Many disconnected unit edges on a lattice give lots of equally near choices.
+ * Each connector must reach the nearest vertex that still has an unused edge,
+ * breaking ties by the smallest x and then the smallest y. */
+enum { LW = 64, LH = 48 };
+static unsigned char horizontal[LH + 1][LW], vertical[LH][LW + 1];
+static int liveVertex(int x, int y)
+{
+    return (x < LW && horizontal[y][x]) || (x > 0 && horizontal[y][x - 1])
+        || (y < LH && vertical[y][x]) || (y > 0 && vertical[y - 1][x]);
+}
+static void useEdges(MotionPoint a, MotionPoint b)
+{
+    int x0 = (int)a.x, y0 = (int)a.y, x1 = (int)b.x, y1 = (int)b.y;
+    assert(x0 == x1 || y0 == y1);
+    for (int x = x0 < x1 ? x0 : x1; x < (x0 < x1 ? x1 : x0); ++x) horizontal[y0][x] = 0;
+    for (int y = y0 < y1 ? y0 : y1; y < (y0 < y1 ? y1 : y0); ++y) vertical[y][x0] = 0;
+}
+static void nearestConnectorTies(void)
+{
+    MotionSegment segments[1500];
+    unsigned seed = 12345;
+    memset(horizontal, 0, sizeof(horizontal)); memset(vertical, 0, sizeof(vertical));
+    for (size_t i = 0; i < 1500; ++i) {
+        seed = seed * 1103515245u + 12345u; int x = (int)(seed >> 8) % LW;
+        seed = seed * 1103515245u + 12345u; int y = (int)(seed >> 8) % LH;
+        int across = (seed >> 4) & 1;
+        segments[i] = (MotionSegment){{x, y}, {x + across, y + !across}};
+        if (across) horizontal[y][x] = 1; else vertical[y][x] = 1;
+    }
+    MotionPath path = {0};
+    assert(MotionPlanSegments(&path, segments, 1500, LW + 1, LH + 1, (MotionPoint){0, 0}));
+    size_t connectors = 0, ties = 0;
+    for (size_t i = 1; i < path.count; ++i) {
+        MotionPoint from = path.points[i - 1], to = path.points[i];
+        if (path.kinds[i] == MOTION_OUTLINE) { useEdges(from, to); continue; }
+        double best = HUGE_VAL; int bx = -1, by = -1, equal = 0;
+        for (int x = 0; x <= LW; ++x)
+            for (int y = 0; y <= LH; ++y) {
+                if (!liveVertex(x, y)) continue;
+                double d = (x - from.x) * (x - from.x) + (y - from.y) * (y - from.y);
+                if (d < best) { best = d; bx = x; by = y; equal = 0; }
+                else if (d == best) equal = 1;
+            }
+        assert(bx == (int)to.x && by == (int)to.y);
+        connectors++; ties += equal;
+    }
+    for (int y = 0; y <= LH; ++y)
+        for (int x = 0; x <= LW; ++x) assert(!liveVertex(x, y));
+    assert(connectors > 100 && ties > 50);
+    printf("lattice: %zu connectors, %zu tied choices\n", connectors, ties);
+    MotionFree(&path);
+}
+
 int main(void)
 {
     MotionWriterTests();
@@ -183,5 +236,6 @@ int main(void)
     validation();
     failedPlansPreserveOutput();
     failedCopyPreservesOutput();
+    nearestConnectorTies();
     return 0;
 }

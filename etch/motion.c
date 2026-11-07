@@ -189,16 +189,95 @@ static void append_move(MotionPath *path, MotionPoint point, unsigned char kind)
     path->kinds[path->count++] = kind;
 }
 
-static size_t closest_vertex(const Graph *graph, MotionPoint point)
+/* Buckets of vertex IDs in ascending order, so finding the next stroke checks
+ * a few nearby cells instead of every vertex in the scene. */
+typedef struct {
+    double cell;
+    long columns, rows;
+    size_t *start, *end, *ids;
+} Grid;
+
+static void grid_free(Grid *grid)
 {
-    size_t closest = graph->vertex_count;
-    double best = HUGE_VAL;
-    for (size_t i = 0; i < graph->vertex_count; i++) {
+    free(grid->start);
+    free(grid->end);
+    free(grid->ids);
+}
+
+static long grid_cell(double value, double cell, long cells)
+{
+    long index = (long)(value / cell);
+    return index < 0 ? 0 : index < cells ? index : cells - 1;
+}
+
+static size_t grid_bucket(const Grid *grid, MotionPoint point)
+{
+    return (size_t)(grid_cell(point.y, grid->cell, grid->rows) * grid->columns
+        + grid_cell(point.x, grid->cell, grid->columns));
+}
+
+static int grid_build(Grid *grid, const Graph *graph, unsigned width, unsigned height)
+{
+    /* About two vertices per bucket. */
+    double buckets = graph->vertex_count / 2.0 + 1;
+    grid->cell = fmax(sqrt((double)width * height / buckets), 1e-3);
+    grid->columns = (long)ceil(width / grid->cell) + 1;
+    grid->rows = (long)ceil(height / grid->cell) + 1;
+    size_t cells = (size_t)(grid->columns * grid->rows);
+    grid->start = calloc(cells + 1, sizeof(*grid->start));
+    grid->end = malloc(cells * sizeof(*grid->end));
+    grid->ids = malloc((graph->vertex_count + 1) * sizeof(*grid->ids));
+    if (!grid->start || !grid->end || !grid->ids) return 0;
+    for (size_t i = 0; i < graph->vertex_count; i++)
+        grid->start[grid_bucket(grid, graph->vertices[i].point) + 1]++;
+    for (size_t c = 0; c < cells; c++) grid->start[c + 1] += grid->start[c];
+    memcpy(grid->end, grid->start, cells * sizeof(*grid->end));
+    for (size_t i = 0; i < graph->vertex_count; i++)
+        grid->ids[grid->end[grid_bucket(grid, graph->vertices[i].point)]++] = i;
+    return 1;
+}
+
+/* Scan one bucket and drop vertices with no edges left. Equal distances keep
+ * the lowest vertex ID, which is what a full scan in ID order picks. */
+static void grid_scan(Grid *grid, const Graph *graph, long x, long y, MotionPoint point,
+                      double *best, size_t *closest)
+{
+    if (x < 0 || y < 0 || x >= grid->columns || y >= grid->rows) return;
+    size_t c = (size_t)(y * grid->columns + x), kept = grid->start[c];
+    for (size_t k = grid->start[c]; k < grid->end[c]; k++) {
+        size_t i = grid->ids[k];
         if (!graph->degree[i]) continue;
+        grid->ids[kept++] = i;
         MotionPoint candidate = graph->vertices[i].point;
         double dx = candidate.x - point.x, dy = candidate.y - point.y;
         double distance = dx * dx + dy * dy;
-        if (distance < best) { best = distance; closest = i; }
+        if (distance < *best || (distance == *best && i < *closest)) {
+            *best = distance;
+            *closest = i;
+        }
+    }
+    grid->end[c] = kept;
+}
+
+static size_t closest_vertex(Grid *grid, const Graph *graph, MotionPoint point)
+{
+    size_t closest = graph->vertex_count;
+    double best = HUGE_VAL;
+    long cx = grid_cell(point.x, grid->cell, grid->columns);
+    long cy = grid_cell(point.y, grid->cell, grid->rows);
+    long rings = grid->columns > grid->rows ? grid->columns : grid->rows;
+    for (long r = 0; r <= rings; r++) {
+        /* Any vertex in ring r is at least r - 1 whole cells away. */
+        double reach = r ? (r - 1) * grid->cell : 0;
+        if (closest != graph->vertex_count && reach * reach > best) break;
+        for (long x = cx - r; x <= cx + r; x++) {
+            grid_scan(grid, graph, x, cy - r, point, &best, &closest);
+            if (r) grid_scan(grid, graph, x, cy + r, point, &best, &closest);
+        }
+        for (long y = cy - r + 1; y <= cy + r - 1; y++) {
+            grid_scan(grid, graph, cx - r, y, point, &best, &closest);
+            grid_scan(grid, graph, cx + r, y, point, &best, &closest);
+        }
     }
     return closest;
 }
@@ -239,6 +318,7 @@ int MotionPlanSegments(MotionPath *path, const MotionSegment *segments, size_t c
         if (!in_bounds(segments[i].a, width, height)
             || !in_bounds(segments[i].b, width, height)) return 0;
     Graph graph = {0};
+    Grid grid = {0};
     MotionPath result = {.width = width, .height = height,
         .width_mm = MOTION_WIDTH_MM, .height_mm = MOTION_HEIGHT_MM};
     int success = 0;
@@ -250,8 +330,9 @@ int MotionPlanSegments(MotionPath *path, const MotionSegment *segments, size_t c
     result.kinds = malloc(capacity * sizeof(*result.kinds));
     if (!result.points || !result.kinds) goto done;
     result.points[0] = start; result.kinds[0] = MOTION_START; result.count = 1;
+    if (graph.edge_count && !grid_build(&grid, &graph, width, height)) goto done;
     while (graph.edge_count) {
-        size_t root = closest_vertex(&graph, result.points[result.count - 1]);
+        size_t root = closest_vertex(&grid, &graph, result.points[result.count - 1]);
         if (root == graph.vertex_count) break;
         append_move(&result, graph.vertices[root].point, MOTION_CONNECTOR);
         walk_component(&graph, &result, root);
@@ -261,6 +342,7 @@ int MotionPlanSegments(MotionPath *path, const MotionSegment *segments, size_t c
     result = (MotionPath){0};
     success = 1;
 done:
+    grid_free(&grid);
     graph_free(&graph);
     MotionFree(&result);
     return success;
