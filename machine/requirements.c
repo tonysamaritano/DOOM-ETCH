@@ -66,3 +66,33 @@ static int program_valid(const MachineStepProgram *p,MachineParseError *e)
     }
     return 1;
 }
+static int accumulate(MachineRequirements *r,const MachineSettings *s,
+                      const int64_t from[2],const int64_t to[2])
+{
+    double dx=(to[0]-from[0])/s->steps_per_mm[0]/1000;
+    double dy=(to[1]-from[1])/s->steps_per_mm[1]/1000;
+    double distance=hypot(dx,dy);
+    if (!isfinite(distance) || ((to[0]!=from[0] || to[1]!=from[1]) && distance==0) ||
+        r->segments==SIZE_MAX) return 0;
+    r->segments++;
+    r->path_m+=distance;
+    r->sum_sqrt_m+=sqrt(distance);
+    r->dmax_m=fmax(r->dmax_m,distance);
+    return isfinite(r->path_m) && isfinite(r->sum_sqrt_m);
+}
+static int finish(MachineRequirements *r,double fps,double knob)
+{
+    double scale=2*r->sum_sqrt_m*fps;
+    r->no_stop_m_s=r->path_m*fps;
+    r->no_stop_mach=r->no_stop_m_s/ASSUMED_SOUND_M_S;
+    r->accel_m_s2=scale*scale;
+    r->accel_g=r->accel_m_s2/STANDARD_GRAVITY_M_S2;
+    r->peak_m_s=scale*sqrt(r->dmax_m);
+    r->peak_mach=r->peak_m_s/ASSUMED_SOUND_M_S;
+    r->knob_rpm=r->no_stop_m_s/knob*1000*60;
+    double fields[]={scale,r->no_stop_m_s,r->no_stop_mach,r->accel_m_s2,
+        r->accel_g,r->peak_m_s,r->peak_mach,r->knob_rpm};
+    for (size_t i=0;i<sizeof(fields)/sizeof(*fields);i++)
+        if (!isfinite(fields[i]) || (r->path_m>0 && fields[i]<=0)) return 0;
+    return 1;
+}
