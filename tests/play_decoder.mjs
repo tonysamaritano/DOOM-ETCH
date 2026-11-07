@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {decodeFrame,frameRGBA} from '../platform/darwin/etch_play/decoder.js';
 const game={version:1,sequence:1,kind:'indexed',width:320,height:200,mode:'game'};
 const visual={...game,kind:'bgra',width:768,height:576,mode:'visual'};
-const physical={...game,mode:'physical',cursor_mm:[10,20],motor_mm:[-0.15,130],
+const physical={...game,mode:'physical',assumed:true,cursor_mm:[10,20],motor_mm:[-0.15,130],
   physical_seconds:1.25,knob_mm_turn:20,travel_mm:[170.15,127.6]};
 function packet(meta,body) {
   const json=new TextEncoder().encode(JSON.stringify(meta));
@@ -32,7 +32,8 @@ for(const change of [{version:2},{sequence:0},{sequence:-1},{sequence:1.5},
   {sequence:Number.MAX_SAFE_INTEGER+1},{kind:'rgba'},{width:321},{height:0},
   {width:'320'},{mode:'other'},{mode:'visual'},{physical_seconds:0}])
   assert.throws(()=>decodeFrame(packet({...game,...change})),JSON.stringify(change));
-for(const change of [{cursor_mm:[-1,0]},{cursor_mm:[171,0]},
+for(const change of [{assumed:undefined},{assumed:false},{assumed:1},
+  {cursor_mm:[-1,0]},{cursor_mm:[171,0]},
   {cursor_mm:[0,128]},{cursor_mm:[0]},{motor_mm:[null,0]},
   {travel_mm:[0,127.6]},{travel_mm:[170.15,-1]},
   {physical_seconds:-1},{physical_seconds:null},{physical_seconds:'1'},
