@@ -207,3 +207,43 @@ static void strict_fps(void)
     assert(!MachineRequirementsParseFPS(NULL, &value));
     assert(!MachineRequirementsParseFPS("30", NULL));
 }
+
+static void prevalidated_stream(void)
+{
+    MachineStep moves[] = {{{2000, 0}, 60, MACHINE_MOVE_DRAW, 1},
+        {{0, 0}, 0, MACHINE_MOVE_PAUSE, 2}};
+    MachineStepProgram p = fixture(moves, 2);
+    MachineRequirementsFrames frames = {0};
+    assert(MachineRequirementsFramesBuild(&frames, &p, 30, NULL));
+    FILE *file = tmpfile();
+    assert(file);
+    frames.items[1].demand.peak_m_s = NAN;
+    assert(!MachineRequirementsFramesWrite(file, &frames, 1));
+    assert(ftell(file) == 0);
+    assert(!MachineRequirementsFramesWrite(file, &frames, 0));
+    assert(ftell(file) == 0);
+    frames.items[1].demand.peak_m_s = 0;
+    assert(MachineRequirementsFramesWrite(file, &frames, 1));
+    assert(ftell(file) > 0);
+    rewind(file);
+    assert(fgetc(file) == '[');
+    assert(!fseek(file, -1, SEEK_END) && fgetc(file) == ']');
+    assert(fputc('\n', file) == '\n'); /* Stream remains caller-owned/open. */
+    fclose(file);
+    assert(!MachineRequirementsFramesWrite(NULL, &frames, 1));
+    MachineRequirementsFramesFree(&frames);
+}
+
+int main(void)
+{
+    hand_hundred();
+    corner_sensitivity();
+    cursor_ranges();
+    asymmetric_grid();
+    frame_lifecycle();
+    invalid_ranges_and_numbers();
+    invalid_programs();
+    strict_fps();
+    prevalidated_stream();
+    return 0;
+}
