@@ -284,4 +284,14 @@ if(BUILD_TESTING)
         --runner "$<TARGET_FILE:etch-gcode-run>" --exporter "$<TARGET_FILE:etch-export>"
         --work "${CMAKE_CURRENT_BINARY_DIR}/requirements-cli" ${requirements_wad_args})
     set_tests_properties(machine-requirements-cli PROPERTIES TIMEOUT 90)
+    add_test(NAME pitch-capture-server COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tests/pitch_capture_server.py")
+    set_tests_properties(pitch-capture-server PROPERTIES TIMEOUT 30
+        ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+    if(DOOM_NODE_EXECUTABLE)
+        add_test(NAME viewer-pitch COMMAND "${DOOM_NODE_EXECUTABLE}" --test
+            "${PROJECT_SOURCE_DIR}/tests/pitch.mjs"
+            "${PROJECT_SOURCE_DIR}/tests/pitch_capture.mjs")
+        set_tests_properties(viewer-pitch PROPERTIES TIMEOUT 45)
+    endif()
 endif()
