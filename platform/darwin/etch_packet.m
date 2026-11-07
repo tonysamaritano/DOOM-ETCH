@@ -24,6 +24,9 @@ static BOOL valid(NSData *pixels,NSDictionary *m)
     if (!(bgra || indexed) || [m[@"width"] doubleValue]!=(bgra ? 768 : 320) ||
         [m[@"height"] doubleValue]!=(bgra ? 576 : 200) || pixels.length!=(bgra ? 768*576*4 : 64000+1024)) return NO;
     if ([mode isEqualToString:@"physical"]) {
+        NSNumber *assumed=m[@"assumed"];
+        if (![assumed isKindOfClass:NSNumber.class] ||
+            CFGetTypeID((__bridge CFTypeRef)assumed)!=CFBooleanGetTypeID() || !assumed.boolValue) return NO;
         if (!pair(m[@"cursor_mm"],NO) || !pair(m[@"motor_mm"],NO) || !pair(m[@"travel_mm"],YES) ||
             !numeric(m[@"physical_seconds"]) ||
             !numeric(m[@"knob_mm_turn"])) return NO;
@@ -36,7 +39,7 @@ static BOOL valid(NSData *pixels,NSDictionary *m)
     } else if (!([mode isEqualToString:@"visual"] && bgra) &&
                !([mode isEqualToString:@"game"] && indexed)) return NO;
     if (![mode isEqualToString:@"physical"])
-        for (NSString *key in @[@"cursor_mm",@"motor_mm",@"travel_mm",@"physical_seconds",@"knob_mm_turn"])
+        for (NSString *key in @[@"cursor_mm",@"motor_mm",@"travel_mm",@"physical_seconds",@"knob_mm_turn",@"assumed"])
             if (m[key]) return NO;
     return YES;
 }
