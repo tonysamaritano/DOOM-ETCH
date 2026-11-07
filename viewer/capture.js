@@ -26,12 +26,17 @@ async function request(path, token, frame, body) {
 function jpeg(canvas) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('JPEG encoding timed out')), 30000);
-    canvas.toBlob(blob => {
+    try {
+      canvas.toBlob(blob => {
+        clearTimeout(timeout);
+        if (!blob || blob.type !== 'image/jpeg' || !blob.size) {
+          reject(new Error('JPEG encoding failed'));
+        } else resolve(blob);
+      }, 'image/jpeg', .94);
+    } catch (error) {
       clearTimeout(timeout);
-      if (!blob || blob.type !== 'image/jpeg' || !blob.size) {
-        reject(new Error('JPEG encoding failed'));
-      } else resolve(blob);
-    }, 'image/jpeg', .94);
+      reject(error);
+    }
   });
 }
 // Caller has loaded assets/fonts and yielded the sole render pump to capture.
