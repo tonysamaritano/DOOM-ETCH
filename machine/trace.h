@@ -2,6 +2,7 @@
 #ifndef DOOM_MACHINE_TRACE_H
 #define DOOM_MACHINE_TRACE_H
 #include "steppers.h"
+#include "requirements.h"
 typedef struct {
     double t0,duration,ramp,peak,accel,slack,length;
     double x0,y0,ux,uy,motor_x0,motor_y0;
@@ -35,4 +36,8 @@ int EtchTraceRecordErase(EtchTrace *,double duration);
 /* Requires completed playback and matching clocks. Atomic file publication. */
 int MachineTraceWrite(const char *filename,const MachineStepProgram *,const EtchTrace *,
                       double seconds,MachineParseError *);
+/* Borrow a FramesBuild result for this same program; no physics is recomputed.
+ * Validate collection/count/calibration before atomic publication. */
+int MachineTraceWriteWithRequirements(const char *filename,const MachineStepProgram *,
+    const EtchTrace *,double seconds,const MachineRequirementsFrames *,MachineParseError *);
 #endif
