@@ -125,8 +125,13 @@ static void frame_lifecycle(void)
         near(frames.items[i].demand.path_m, i == 1 || i == 3 ? .1 : 0);
     }
     MachineRequirementsFrame *old = frames.items;
+    MachineRequirementsFrame saved[5];
+    memcpy(saved, frames.items, sizeof(saved));
     assert(!MachineRequirementsFramesBuild(&frames, &p, NAN, &error));
     assert(frames.items == old && frames.count == 5 && frames.fps == 30);
+    assert(!MachineRequirementsFramesBuild(&frames, &p, DBL_MAX, &error));
+    assert(frames.items == old && frames.count == 5 && frames.fps == 30);
+    assert(!memcmp(saved, frames.items, sizeof(saved)));
     p.count = 0;
     p.moves = NULL;
     assert(MachineRequirementsFramesBuild(&frames, &p, 35, &error));
