@@ -104,3 +104,34 @@ static void asymmetric_grid(void)
     near(r.accel_m_s2, 3600 * sqrt(1300.0) / 1000);
     near(r.knob_rpm, sqrt(1300.0) * 180);
 }
+
+static void frame_lifecycle(void)
+{
+    MachineStep moves[] = {{{0, 0}, 0, MACHINE_MOVE_PAUSE, 1},
+        {{2000, 0}, 60, MACHINE_MOVE_DRAW, 2},
+        {{0, 0}, 0, MACHINE_MOVE_PAUSE, 3},
+        {{0, 0}, 0, MACHINE_MOVE_PAUSE, 4},
+        {{0, 0}, 0, MACHINE_MOVE_RAPID, 5},
+        {{0, 0}, 0, MACHINE_MOVE_PAUSE, 6},
+        {{0, 0}, 0, MACHINE_MOVE_END, 7}};
+    MachineStepProgram p = fixture(moves, 7);
+    MachineRequirementsFrames frames = {0};
+    MachineParseError error = {0};
+    assert(MachineRequirementsFramesBuild(&frames, &p, 30, &error));
+    assert(frames.count == 5 && frames.fps == 30 && frames.knob_mm_turn == 20);
+    for (size_t i = 0; i < frames.count; ++i) {
+        assert(frames.items[i].frame == i);
+        assert(frames.items[i].demand.segments == (i == 1 || i == 3));
+        near(frames.items[i].demand.path_m, i == 1 || i == 3 ? .1 : 0);
+    }
+    MachineRequirementsFrame *old = frames.items;
+    assert(!MachineRequirementsFramesBuild(&frames, &p, NAN, &error));
+    assert(frames.items == old && frames.count == 5 && frames.fps == 30);
+    p.count = 0;
+    p.moves = NULL;
+    assert(MachineRequirementsFramesBuild(&frames, &p, 35, &error));
+    assert(frames.count == 1 && !frames.items[0].demand.segments);
+    MachineRequirementsFramesFree(&frames);
+    assert(!frames.items && !frames.count && !frames.fps && !frames.knob_mm_turn);
+    MachineRequirementsFramesFree(&frames);
+}
