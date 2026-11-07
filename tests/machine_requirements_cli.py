@@ -143,3 +143,43 @@ def check_command_demands(records, frames, fps):
         close(record['accel_m_s2'], (2 * roots * fps) ** 2)
         close(record['peak_m_s'], 2 * roots * fps * math.sqrt(largest))
         close(record['knob_rpm'], length * fps * 3000)
+
+
+def wad_exports(args, work):
+    baseline = None
+    for fps in (None, 30, 35):
+        prefix = work / f'wad-{fps}'
+        command = [args.wad, prefix, '--frames', 2]
+        if fps is not None:
+            command += ['--target-fps', fps]
+        result = invoke(args.exporter, command)
+        gcode = prefix.with_suffix('.gcode')
+        artifacts = [gcode, prefix.with_suffix('.svg'),
+                     Path(str(prefix) + '-frame001.svg')]
+        content = [p.read_bytes() for p in artifacts]
+        paths = [line for line in result.stdout.splitlines() if line.startswith('PATH ')]
+        if fps is None:
+            baseline = content, paths
+            assert 'requirements' not in result.stdout
+        else:
+            assert (content, paths) == baseline
+            _, report = summary(args.runner, gcode, '--target-fps', fps)
+            check_command_demands(report['requirements'], scan_commands(gcode), fps)
+            check_export_report(result.stdout, report['requirements'], fps)
+
+
+def check_export_report(text, records, fps):
+    import re
+    pattern = (r'Frame (\d+) requirements at ([\d.e+\-]+) fps[^\n]*\n'
+               r'\s*(\d+) moves, ([\d.e+\-]+) m; no-stop ([\d.e+\-]+) m/s '
+               r'\(Mach ([\d.e+\-]+)\)\n\s*Stop-at-every-vertex '
+               r'([\d.e+\-]+) m/s\^2 \(([\d.e+\-]+) g\); peak '
+               r'([\d.e+\-]+) m/s \(Mach ([\d.e+\-]+)\)')
+    matches = re.findall(pattern, text)
+    assert len(matches) == len(records), text
+    for values, r in zip(matches, records):
+        assert int(values[0]) == r['frame'] and float(values[1]) == fps
+        assert int(values[2]) == r['segments']
+        for value, key in zip(values[3:], ('path_m', 'no_stop_m_s',
+                'no_stop_mach', 'accel_m_s2', 'accel_g', 'peak_m_s', 'peak_mach')):
+            close(float(value), r[key])
