@@ -2,6 +2,7 @@
 #ifndef DOOM_MACHINE_RUN_H
 #define DOOM_MACHINE_RUN_H
 #include "playback.h"
+#include "requirements.h"
 /* Load a file, then apply explicit calibration assignments transactionally. */
 MachinePlayback *MachineLoad(const char *filename,const char *const *assignments,
                              size_t count,MachineParseError *error);
@@ -10,4 +11,7 @@ MachinePlayback *MachineLoadTraced(const char *filename,const char *const *assig
 int MachineRun(MachinePlayback *playback);
 /* Full-file physical results only; callers must establish actual completion. */
 int MachineReport(FILE *stream,const MachineStepProgram *program,double seconds,int json);
+/* Borrow a collection built for this program; keep the default report unchanged. */
+int MachineReportWithRequirements(FILE *,const MachineStepProgram *,double seconds,
+                                 int json,const MachineRequirementsFrames *);
 #endif
