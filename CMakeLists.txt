@@ -272,3 +272,16 @@ endif()
 
 include(tests/viewer_trace.cmake)
 include(cmake/Play.cmake)
+
+if(BUILD_TESTING)
+    find_package(Python3 COMPONENTS Interpreter REQUIRED)
+    set(requirements_wad_args)
+    if(DOOM_TEST_WAD_DIRECTORY AND EXISTS "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+        list(APPEND requirements_wad_args --wad "${DOOM_TEST_WAD_DIRECTORY}/doom1.wad")
+    endif()
+    add_test(NAME machine-requirements-cli COMMAND "${Python3_EXECUTABLE}"
+        "${PROJECT_SOURCE_DIR}/tests/machine_requirements_cli.py"
+        --runner "$<TARGET_FILE:etch-gcode-run>" --exporter "$<TARGET_FILE:etch-export>"
+        --work "${CMAKE_CURRENT_BINARY_DIR}/requirements-cli" ${requirements_wad_args})
+    set_tests_properties(machine-requirements-cli PROPERTIES TIMEOUT 90)
+endif()
