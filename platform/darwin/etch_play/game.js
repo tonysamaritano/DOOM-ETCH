@@ -39,11 +39,11 @@ async function poll() {
       const motion=rig.apply(frame);rig.render();
       if(failed||stopped)return;
       Object.assign(evidence,{state:'presenting',sequence:m.sequence,mode:m.mode,kind:m.kind,
-        width:m.width,height:m.height,physical_seconds:m.physical_seconds??null,
+        width:m.width,height:m.height,assumed:m.assumed??null,physical_seconds:m.physical_seconds??null,
         cursor_mm:m.cursor_mm??null,motor_mm:m.motor_mm??null,travel_mm:m.travel_mm??null,
         motion,canvas:{width:renderer.domElement.width,height:renderer.domElement.height},scene:rig.evidence()});
       badge.hidden=m.mode!=='physical';
-      badge.textContent=m.mode==='physical'?'Physical · 1× · '+m.physical_seconds.toFixed(3)+' s':'';
+      badge.textContent=m.mode==='physical'?'Physical · 1× · Assumed calibration · '+m.physical_seconds.toFixed(3)+' s':'';
       status.hidden=true;publish();bridge.postMessage({type:'presented',sequence:m.sequence});
     }
     animation=requestAnimationFrame(()=>poll().catch(fail));
