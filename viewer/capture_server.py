@@ -115,6 +115,46 @@ def handler_for(three):
     class Handler(SimpleHTTPRequestHandler):
         extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
                           '.js': 'text/javascript', '.glb': 'model/gltf-binary'}
+        def capture_query(self):
+            host = self.headers.get('Host', '')
+            allowed = {f'127.0.0.1:{self.server.server_port}',
+                       f'localhost:{self.server.server_port}'}
+            if self.client_address[0] not in ('127.0.0.1', '::1') or host not in allowed:
+                raise ValueError('Capture requires loopback host')
+            origin = self.headers.get('Origin')
+            if origin is not None and origin != f'http://{host}':
+                raise ValueError('Capture requires same origin')
+            if self.headers.get('Sec-Fetch-Site') == 'cross-site':
+                raise ValueError('Cross-site capture is forbidden')
+            url = urlsplit(self.path)
+            if url.path not in ('/__start', '/__frame', '/__done') or url.fragment:
+                raise ValueError('Unknown capture route')
+            query = parse_qs(url.query, keep_blank_values=True, strict_parsing=True)
+            expected = {'cut'} if url.path == '/__start' else {'cut', 'token'}
+            if url.path == '/__frame':
+                expected.add('frame')
+            if set(query) != expected or any(len(v) != 1 for v in query.values()):
+                raise ValueError('Invalid capture query')
+            values = {key: value[0] for key, value in query.items()}
+            if values['cut'] != 'pitch':
+                raise ValueError('Unknown capture cut')
+            return url.path, values
+        def capture_body(self, frame):
+            lengths = self.headers.get_all('Content-Length', [])
+            if len(lengths) != 1 or not lengths[0].isascii() or not lengths[0].isdigit():
+                raise ValueError('Missing or invalid content length')
+            length = int(lengths[0])
+            if self.headers.get('Transfer-Encoding') or length > MAX_JPEG_BYTES:
+                raise ValueError('Capture body is too large or chunked')
+            if frame and self.headers.get('Content-Type', '').lower() != 'image/jpeg':
+                raise ValueError('Expected image/jpeg')
+            if not frame and length:
+                raise ValueError('Unexpected capture request body')
+            self.connection.settimeout(30)
+            data = self.rfile.read(length)
+            if len(data) != length:
+                raise ValueError('Incomplete capture request body')
+            return data
         def translate_path(self, raw):
             path = unquote(urlsplit(raw).path)
             prefix = '/vendor/three/'
