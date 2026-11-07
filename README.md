@@ -131,3 +131,34 @@ Backlash, shake and jerk are excluded from this drawing-demand calculation.
 A 100 mm straight line at 30 fps requires 3 m/s without stops, or 360 m/s²
 and 6 m/s peak with stops, equivalent to 9,000 knob rpm at 20 mm per turn.
 Nonfinite rates and unrepresentable positive demands fail with a diagnostic.
+
+## Render the eighteen-second pitch
+
+Generate the current E1M1 physical trace, then serve the viewer with a complete
+local three.js 0.163.0 package (including its `build/` and `examples/jsm/` folders):
+
+```sh
+tools/rig_frame.sh
+python3.12 viewer/capture_server.py --three /path/to/three-0.163.0
+```
+
+Open `http://127.0.0.1:8770/viewer/index.html?promo=pitch` for the looping cut.
+Add `&promoAt=16.5` to hold a moment; values from 0 through 18 are video seconds.
+The pitch requires one completed, nonempty frame with its actual 30 fps requirements.
+It uses the trace's assumed calibration and physical time. The drive close-up samples
+a recorded interval at 1×; the other shots show the completed drawing.
+
+Open `http://127.0.0.1:8770/viewer/index.html?promo=pitch&capture` to write exactly
+540 JPEGs at 1920×1080, sampling video times 0 through 539/30. Starting a capture
+replaces only its numbered `00000.jpg` through `00539.jpg` files; unrelated files
+remain. Each frame must be acknowledged before the next is rendered. Capture errors
+appear in the viewer; a failed run cannot report completion. Then encode:
+
+```sh
+ffmpeg -framerate 30 -i build/promo/pitch/frames/%05d.jpg -c:v libx264 -pix_fmt yuv420p -crf 16 build/promo/pitch/etch-pitch.mp4
+```
+
+The server binds to loopback and accepts only the pitch capture route. Its JPEG
+checks validate headers and dimensions; decoding all frames during encoding is
+the image-data check. The finished pitch keeps the toy assembled and the drawing
+visible, with a shared price/burst tilt, a pulse and the hardware-not-built fine print.
