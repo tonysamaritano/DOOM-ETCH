@@ -75,7 +75,11 @@ static void validation(void)
     m[@"mode"]=@"physical";m[@"cursor_mm"]=@[@10,@20];
     m[@"motor_mm"]=@[@(-.15),@130];m[@"travel_mm"]=@[@170.15,@127.6];
     m[@"physical_seconds"]=@1.25;m[@"knob_mm_turn"]=@20;
+    assert(!EtchPlayPacket(data,m,1));
+    m[@"assumed"]=@YES;
     assert(EtchPlayPacket(data,m,1));
+    m[@"assumed"]=@1;assert(!EtchPlayPacket(data,m,1));
+    m[@"assumed"]=@YES;
     m[@"motor_mm"]=@[@YES,@0];assert(!EtchPlayPacket(data,m,1));
     m[@"motor_mm"]=@[@0,@0];m[@"physical_seconds"]=@YES;
     assert(!EtchPlayPacket(data,m,1));
