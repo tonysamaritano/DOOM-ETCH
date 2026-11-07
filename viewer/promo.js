@@ -35,3 +35,35 @@ export function buildPitchState(context,t) {
     commitment:'10,000 subscribers and I build it.',commitment_alpha:shot===5?span(local,1,1.4):0,
     fine_alpha:shot===5?span(local,.6,.8):0};
 }
+
+const dealFont=size=>`italic 900 ${size}px "Arial Black",Impact,"Helvetica Neue",sans-serif`;
+function measured(text,size,measure,font=dealFont) {
+  const metrics=measure(text,font(size));
+  if(!Number.isFinite(metrics.width)||metrics.width<=0)throw Error('Cannot measure pitch text');
+  return {text,font:font(size),width:metrics.width,
+    height:(metrics.actualBoundingBoxAscent??size*.8)+(metrics.actualBoundingBoxDescent??size*.2)};
+}
+function bounds(cx,cy,rx,ry,angle) {
+  const x=Math.abs(rx*Math.cos(angle))+Math.abs(ry*Math.sin(angle));
+  const y=Math.abs(rx*Math.sin(angle))+Math.abs(ry*Math.cos(angle));
+  return {left:cx-x,right:cx+x,top:cy-y,bottom:cy+y};
+}
+export function layoutPitch(state,width,height,measure) {
+  if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)
+    throw new RangeError('Invalid pitch viewport');
+  let size=Math.min(height*.085,width*.11),price=measured(state.price.text,size,measure);
+  size*=Math.min(1,width*.39/price.width,height*.1/price.height);
+  price=measured(state.price.text,size,measure);
+  const cx=width*.5,cy=height*.22,rx=price.width*.85/.78,ry=price.height*1.35/.78;
+  const scale=state.price.pop,pulse=state.price.pulse;
+  const polygon=Array.from({length:44},(_,i)=>{
+    const angle=i*Math.PI/22,inner=i%2?.78:1;
+    return [Math.cos(angle)*rx*inner*pulse,Math.sin(angle)*ry*inner*pulse];
+  });
+  const textBounds=bounds(cx,cy,price.width*.5*scale,price.height*.5*scale,state.price.tilt);
+  return {width,height,price:{...price,center:[cx,cy],tilt:state.price.tilt,scale,pulse,
+    rx,ry,polygon,textBounds,burstBounds:bounds(cx,cy,rx*pulse*scale,ry*pulse*scale,state.price.tilt)},
+    commitment:{text:state.commitment,center:[cx,height*.855],alpha:state.commitment_alpha},
+    fine:{text:'Device not built yet. Assumed calibration. Simulated results. More screens? Faster drawing? Let’s find out.',
+      top:height*.925,height:height*.075,alpha:state.fine_alpha}};
+}
