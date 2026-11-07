@@ -1,4 +1,4 @@
-const physicalFields=['cursor_mm','motor_mm','physical_seconds','knob_mm_turn','travel_mm'];
+const physicalFields=['assumed','cursor_mm','motor_mm','physical_seconds','knob_mm_turn','travel_mm'];
 function pair(value,positive=false) {
   return Array.isArray(value)&&value.length===2&&value.every(x=>Number.isFinite(x)&&(!positive||x>0));
 }
@@ -11,7 +11,7 @@ function metadataValid(m) {
     throw Error('Invalid packed pixel dimensions or kind');
   if((m.mode==='game'&&!indexed)||(m.mode==='visual'&&!bgra))throw Error('Frame kind does not match mode');
   if(m.mode==='physical') {
-    if(!pair(m.cursor_mm)||!pair(m.motor_mm)||!pair(m.travel_mm,true)||
+    if(m.assumed!==true||!pair(m.cursor_mm)||!pair(m.motor_mm)||!pair(m.travel_mm,true)||
       !Number.isFinite(m.physical_seconds)||m.physical_seconds<0||
       !Number.isFinite(m.knob_mm_turn)||m.knob_mm_turn<=0)throw Error('Invalid physical frame state');
     if(m.cursor_mm.some((x,i)=>x<0||x>m.travel_mm[i]))throw Error('Cursor outside physical travel');
