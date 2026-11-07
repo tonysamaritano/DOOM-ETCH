@@ -71,3 +71,37 @@ class CaptureProtocol(unittest.TestCase):
         status, body = self.done(token)
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)['frames'], 540)
+
+    def test_retries_restart_and_unrelated_files(self):
+        token = self.start()
+        self.assertEqual(self.frame(token, 1)[0], 400)
+        self.assertEqual(self.frame(token, 0)[0], 200)
+        self.assertEqual(self.frame(token, 0)[0], 200)
+        changed = JPEG[:-2] + b'changed' + JPEG[-2:]
+        self.assertEqual(self.frame(token, 0, changed)[0], 400)
+        self.assertEqual((self.frames / '00000.jpg').read_bytes(), JPEG)
+        for name in ('notes.txt', '00540.jpg', 'other.jpg'):
+            (self.frames / name).write_bytes(b'keep')
+        new_token = self.start()
+        self.assertNotEqual(new_token, token)
+        self.assertFalse((self.frames / '00000.jpg').exists())
+        self.assertEqual(sorted(p.name for p in self.frames.iterdir()), ['00540.jpg', 'notes.txt', 'other.jpg'])
+        self.assertTrue(all(p.read_bytes() == b'keep' for p in self.frames.iterdir()))
+        self.assertEqual(self.frame(token, 0)[0], 400)
+        self.assertEqual(self.done(token)[0], 400)
+        self.assertEqual(self.frame(new_token, 0)[0], 200)
+
+    def test_rejected_routes_queries_and_origins(self):
+        token = self.start()
+        paths = ['/__start?cut=film', '/__start?cut=../pitch', '/__start?cut=pitch&cut=pitch',
+                 '/__start?cut=pitch&extra=1', '/__frame?cut=pitch&frame=0',
+                 '/__frame?cut=pitch&token=wrong&frame=0', '/../../__start?cut=pitch']
+        paths += [f'/__frame?cut=pitch&token={token}&frame={value}' for value in ('-1', '540', '1.0', '', '../0')]
+        for path in paths:
+            with self.subTest(path=path):
+                self.assertEqual(self.post(path)[0], 400)
+        for headers in ({'Host': 'evil.example'}, {'Origin': 'http://evil.example'},
+                        {'Sec-Fetch-Site': 'cross-site'}):
+            self.assertEqual(self.frame(token, 0, headers=headers)[0], 400)
+        origin = f'http://127.0.0.1:{self.server.server_port}'
+        self.assertEqual(self.frame(token, 0, headers={'Origin': origin})[0], 200)
