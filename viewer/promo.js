@@ -13,6 +13,11 @@ export function pitchContext(trace) {
     throw Error('Pitch needs a completed single-frame trace with frame 0 requirements at 30 fps');
   for(const key of ['path_m','no_stop_m_s','no_stop_mach','accel_g','peak_mach','knob_rpm'])
     if(!Number.isFinite(metric[key])||metric[key]<=0)throw Error('Invalid pitch metric: '+key);
+  const assumptions=metric.assumptions;
+  if(trace.settings?.assumed!==true||!Number.isFinite(trace.settings.knob_mm_turn)||trace.settings.knob_mm_turn<=0||
+    !assumptions||assumptions.sound_speed_m_s!==343||assumptions.gravity_m_s2!==9.80665||
+    assumptions.knob_mm_turn!==trace.settings.knob_mm_turn||assumptions.knob_rpm!=='path-speed-equivalent')
+    throw Error('Pitch requires matching assumed physical calibration and demand assumptions');
   let interval=null;
   for(let i=0;i<trace.segments.length;i+=15) {
     const a=trace.segments.slice(i,i+15);
