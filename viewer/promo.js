@@ -96,6 +96,12 @@ function caption(ctx,text,x,y,size,maxWidth,color='#fff9df') {
   ctx.strokeStyle='#352823';ctx.lineWidth=Math.max(2,size*.065);ctx.fillStyle=color;
   ctx.strokeText(text,x,y);ctx.fillText(text,x,y);ctx.restore();
 }
+function drawMeasured(ctx,value) {
+  ctx.save();ctx.translate(...value.center);ctx.font=value.font;
+  ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.lineJoin='round';
+  ctx.strokeStyle='#352823';ctx.lineWidth=2;ctx.fillStyle='#fff9df';
+  ctx.strokeText(value.text,...value.textOffset);ctx.fillText(value.text,...value.textOffset);ctx.restore();
+}
 export function drawPitchOverlay(ctx,state,layout) {
   const {width:w,height:h}=layout;ctx.clearRect(0,0,w,h);
   if(state.shot==='drive'||state.shot==='speed') {
@@ -108,8 +114,8 @@ export function drawPitchOverlay(ctx,state,layout) {
   if(state.shot!=='price')return;
   drawPrice(ctx,layout.price);
   ctx.save();ctx.globalAlpha=layout.commitment.alpha;
-  caption(ctx,layout.commitment.text,...layout.commitment.center,h*.043,w*.94);ctx.restore();
+  drawMeasured(ctx,layout.commitment);ctx.restore();
   const fine=layout.fine;ctx.save();ctx.globalAlpha=fine.alpha;ctx.fillStyle='#292421';
   ctx.fillRect(0,fine.top,w,fine.height);
-  caption(ctx,fine.text,w*.5,fine.top+fine.height*.5,h*.018,w*.94);ctx.restore();
+  drawMeasured(ctx,fine);ctx.restore();
 }
