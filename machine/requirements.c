@@ -120,3 +120,42 @@ void MachineRequirementsFramesFree(MachineRequirementsFrames *frames)
 {
     if (frames) { free(frames->items); *frames=(MachineRequirementsFrames){0}; }
 }
+static int build_frames(MachineRequirementsFrames *frames,const MachineStepProgram *p,
+                        MachineParseError *e)
+{
+    int64_t cursor[2]={p->start_steps[0],p->start_steps[1]};
+    size_t frame=0;
+    for (size_t i=0;i<p->count;i++) {
+        const MachineStep *m=&p->moves[i];
+        if (m->kind==MACHINE_MOVE_PAUSE) { frame++; continue; }
+        if (m->kind==MACHINE_MOVE_END) continue;
+        if (!accumulate(&frames->items[frame].demand,&p->settings,cursor,m->target_steps))
+            return fail(e,m->line,"commanded distance overflow or underflow");
+        cursor[0]=m->target_steps[0]; cursor[1]=m->target_steps[1];
+    }
+    for (size_t i=0;i<frames->count;i++) {
+        frames->items[i].frame=i;
+        if (!finish(&frames->items[i].demand,frames->fps,frames->knob_mm_turn))
+            return fail(e,0,"drawing demand overflow or underflow");
+    }
+    return 1;
+}
+int MachineRequirementsFramesBuild(MachineRequirementsFrames *out,
+    const MachineStepProgram *p,double fps,MachineParseError *e)
+{
+    if (!out || !isfinite(fps) || fps<=0) return fail(e,0,"invalid frame rate or output");
+    if (!program_valid(p,e)) return 0;
+    size_t count=1;
+    for (size_t i=0;i<p->count;i++) if (p->moves[i].kind==MACHINE_MOVE_PAUSE) {
+        if (count==SIZE_MAX) return fail(e,0,"frame count overflow");
+        count++;
+    }
+    if (count>SIZE_MAX/sizeof(MachineRequirementsFrame)) return fail(e,0,"frame allocation overflow");
+    MachineRequirementsFrames next={.count=count,.fps=fps,.knob_mm_turn=p->settings.knob_mm_turn};
+    next.items=calloc(count,sizeof(*next.items));
+    if (!next.items) return fail(e,0,"cannot allocate requirements frames");
+    if (!build_frames(&next,p,e)) { MachineRequirementsFramesFree(&next); return 0; }
+    MachineRequirementsFramesFree(out); *out=next;
+    if (e) *e=(MachineParseError){0};
+    return 1;
+}
