@@ -107,3 +107,39 @@ def empty_files(runner, work):
         assert len(report['requirements']) == 1
         r = report['requirements'][0]
         assert r['frame'] == 0 and not r['segments'] and not r['path_m']
+
+
+def scan_commands(path):
+    frames, distances, cursor = [], [], None
+    for line in path.read_text().splitlines():
+        words = line.split()
+        if words[:2] == [';', 'ETCH_START']:
+            cursor = tuple(map(float, words[2:4]))
+        if words and words[0] in ('G0', 'G1'):
+            assert cursor is not None
+            axes = {word[0]: float(word[1:]) for word in words[1:]}
+            target = axes.get('X', cursor[0]), axes.get('Y', cursor[1])
+            distances.append(math.hypot(target[0] - cursor[0],
+                                        target[1] - cursor[1]) / 1000)
+            cursor = target
+        if words and words[0] == 'M0':
+            frames.append(distances)
+            distances = []
+    frames.append(distances)
+    return frames
+
+
+def check_command_demands(records, frames, fps):
+    assert len(records) == len(frames)
+    for frame, (record, distances) in enumerate(zip(records, frames)):
+        length = math.fsum(distances)
+        roots = math.fsum(map(math.sqrt, distances))
+        largest = max(distances, default=0)
+        assert record['frame'] == frame and record['segments'] == len(distances)
+        close(record['path_m'], length)
+        close(record['sum_sqrt_m'], roots)
+        close(record['dmax_m'], largest)
+        close(record['no_stop_m_s'], length * fps)
+        close(record['accel_m_s2'], (2 * roots * fps) ** 2)
+        close(record['peak_m_s'], 2 * roots * fps * math.sqrt(largest))
+        close(record['knob_rpm'], length * fps * 3000)
