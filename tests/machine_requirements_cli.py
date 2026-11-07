@@ -27,7 +27,7 @@ def close(actual, expected):
 
 
 def write_fixture(path):
-    path.write_text('; ETCH_SIZE 170.15 127.6\n; ETCH_START 10 117.6\n'
+    path.write_text('; ETCH_SIZE X170.15 Y127.6\n; ETCH_START X10 Y117.6\n'
                     'G21\nG90\nG94\nG61\nF3600\nM0\n'
                     'G1 X110 Y117.6\nG1 X110 Y117.6\nM0\nM0\n'
                     'G0 X10 Y117.6\nM0\nM2\n')
@@ -116,7 +116,7 @@ def scan_commands(path):
     for line in path.read_text().splitlines():
         words = line.split()
         if words[:2] == [';', 'ETCH_START']:
-            cursor = tuple(map(float, words[2:4]))
+            cursor = tuple(float(word[1:]) for word in words[2:4])
         if words and words[0] in ('G0', 'G1'):
             assert cursor is not None
             axes = {word[0]: float(word[1:]) for word in words[1:]}
