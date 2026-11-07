@@ -159,7 +159,7 @@ int MachineRequirementsFramesBuild(MachineRequirementsFrames *out,
     if (e) *e=(MachineParseError){0};
     return 1;
 }
-static int frames_valid(const MachineRequirementsFrames *frames)
+int MachineRequirementsFramesValid(const MachineRequirementsFrames *frames)
 {
     if (!frames || !frames->items || !frames->count ||
         frames->count>SIZE_MAX/sizeof(*frames->items) ||
@@ -212,7 +212,7 @@ static void plain_frame(FILE *f,const MachineRequirementsFrames *frames,size_t i
 }
 int MachineRequirementsFramesWrite(FILE *f,const MachineRequirementsFrames *frames,int json)
 {
-    if (!f || !frames_valid(frames)) return 0;
+    if (!f || !MachineRequirementsFramesValid(frames)) return 0;
     if (json) fputc('[',f);
     for (size_t i=0;i<frames->count;i++) {
         if (json) json_frame(f,frames,i);
