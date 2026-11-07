@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {buildStore} from './store.js';
-import {buildCamera} from './camera.js';
+import {buildCamera,rigBounds} from './camera.js';
+import {createPitch,drawPitchOverlay,pitchOptions} from './promo.js';
+import {startCapture} from './capture.js';
 import {validateTrace,sampleTrace} from './trace.js';
 import {buildInk} from './ink.js';
 import {buildDrives} from './drives.js';
@@ -56,3 +58,20 @@ function animate(now) {
   evidence.camera=optics.optics();optics.composer.render();publish();
 }
 loadRig().then(loadDrawing).catch(fail);requestAnimationFrame(animate);
+
+function pitchAnchors(rig) {
+  rig.model.updateMatrixWorld(true);
+  const box=rigBounds(rig.model),corners=[];
+  for(const x of [box.min.x,box.max.x])for(const y of [box.min.y,box.max.y])
+    for(const z of [box.min.z,box.max.z])corners.push(new THREE.Vector3(x,y,z));
+  const w=rig.area.userData.width_mm/1000,h=rig.area.userData.height_mm/1000;
+  const screen=[];
+  for(const x of [0,w])for(const y of [0,-h])screen.push(rig.area.localToWorld(new THREE.Vector3(x,y,0)));
+  const center=rig.area.localToWorld(new THREE.Vector3(w/2,-h/2,0));
+  const drive=rig.model.getObjectByName('MotorX').getWorldPosition(new THREE.Vector3())
+    .lerp(rig.model.getObjectByName('KnobX').getWorldPosition(new THREE.Vector3()),.35);
+  return {corners,screen,center,drive,rig:box.getCenter(new THREE.Vector3()),
+    normal:new THREE.Vector3(0,0,1).transformDirection(rig.area.matrixWorld),
+    up:new THREE.Vector3(0,1,0).transformDirection(rig.area.matrixWorld),
+    side:new THREE.Vector3(1,0,0).transformDirection(rig.area.matrixWorld)};
+}
