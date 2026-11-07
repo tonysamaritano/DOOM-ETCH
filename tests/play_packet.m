@@ -72,6 +72,8 @@ static void validation(void)
     m[@"physical_seconds"]=@0;
     assert(!EtchPlayPacket(data,m,1)); // A game image must not claim physical state.
     [m removeObjectForKey:@"physical_seconds"];
+    m[@"assumed"]=@YES;assert(!EtchPlayPacket(data,m,1));
+    [m removeObjectForKey:@"assumed"];
     m[@"mode"]=@"physical";m[@"cursor_mm"]=@[@10,@20];
     m[@"motor_mm"]=@[@(-.15),@130];m[@"travel_mm"]=@[@170.15,@127.6];
     m[@"physical_seconds"]=@1.25;m[@"knob_mm_turn"]=@20;
