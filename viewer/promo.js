@@ -129,3 +129,19 @@ export function createPitch(trace,adapter) {
     return {...state,layout,camera};
   }};
 }
+
+export function pitchOptions(search) {
+  const query=new URLSearchParams(search);
+  if(!query.has('promo'))return null;
+  if(query.getAll('promo').length!==1||query.get('promo')!=='pitch')throw Error('Only promo=pitch is supported');
+  for(const key of ['promoAt','capture'])if(query.getAll(key).length>1)throw Error('Duplicate '+key);
+  const text=query.get('promoAt');let at=null;
+  if(text!==null) {
+    if(!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text))throw Error('promoAt must be a video time in 0..18');
+    at=Number(text);
+    if(!Number.isFinite(at)||at<0||at>18)throw Error('promoAt must be a video time in 0..18');
+  }
+  if(query.has('capture')&&query.get('capture')!=='')throw Error('Use capture without a value');
+  if(query.has('capture')&&at!==null)throw Error('Capture cannot hold promoAt');
+  return {at,capture:query.has('capture')};
+}
