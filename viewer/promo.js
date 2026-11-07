@@ -45,6 +45,11 @@ function measured(text,size,measure,font=dealFont) {
   return {text,font:font(size),width:Math.max(metrics.width,left+right),height:ascent+descent,
     textOffset:[(left-right)/2,(ascent-descent)/2]};
 }
+function fitText(text,size,maxWidth,measure,font=dealFont) {
+  let value=measured(text,size,measure,font);
+  if(value.width>maxWidth)value=measured(text,size*maxWidth/value.width,measure,font);
+  return value;
+}
 function bounds(cx,cy,rx,ry,angle) {
   const x=Math.abs(rx*Math.cos(angle))+Math.abs(ry*Math.sin(angle));
   const y=Math.abs(rx*Math.sin(angle))+Math.abs(ry*Math.cos(angle));
@@ -63,11 +68,15 @@ export function layoutPitch(state,width,height,measure) {
     return [Math.cos(angle)*rx*inner*pulse,Math.sin(angle)*ry*inner*pulse];
   });
   const textBounds=bounds(cx,cy,price.width*.5*scale,price.height*.5*scale,state.price.tilt);
+  const commitment=fitText(state.commitment,height*.043,width*.9,measure);
+  const fine=fitText('Device not built yet. Assumed calibration. Simulated results. More screens? Faster drawing? Let’s find out.',
+    height*.018,width*.94,measure,size=>`500 ${size}px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif`);
+  commitment.center=[cx,height*.855];fine.center=[cx,height*.9625];
+  for(const value of [commitment,fine])value.bounds=bounds(...value.center,value.width/2,value.height/2,0);
   return {width,height,price:{...price,center:[cx,cy],tilt:state.price.tilt,scale,pulse,
     rx,ry,polygon,textBounds,burstBounds:bounds(cx,cy,rx*pulse*scale,ry*pulse*scale,state.price.tilt)},
-    commitment:{text:state.commitment,center:[cx,height*.855],alpha:state.commitment_alpha},
-    fine:{text:'Device not built yet. Assumed calibration. Simulated results. More screens? Faster drawing? Let’s find out.',
-      top:height*.925,height:height*.075,alpha:state.fine_alpha}};
+    commitment:{...commitment,alpha:state.commitment_alpha},
+    fine:{...fine,top:height*.925,height:height*.075,alpha:state.fine_alpha}};
 }
 
 function drawPrice(ctx,price) {
