@@ -96,3 +96,27 @@ static int finish(MachineRequirements *r,double fps,double knob)
         if (!isfinite(fields[i]) || (r->path_m>0 && fields[i]<=0)) return 0;
     return 1;
 }
+int MachineRequirementsCalculate(const MachineStepProgram *p,size_t begin,size_t end,
+    double fps,MachineRequirements *out,MachineParseError *e)
+{
+    if (!out || !isfinite(fps) || fps<=0 || !p || begin>end || end>p->count)
+        return fail(e,0,"invalid requirements range or frame rate");
+    if (!program_valid(p,e)) return 0;
+    MachineRequirements next={0};
+    int64_t cursor[2]={p->start_steps[0],p->start_steps[1]};
+    for (size_t i=0;i<end;i++) {
+        const MachineStep *m=&p->moves[i];
+        if (m->kind>=MACHINE_MOVE_PAUSE) continue;
+        if (i>=begin && !accumulate(&next,&p->settings,cursor,m->target_steps))
+            return fail(e,m->line,"commanded distance overflow or underflow");
+        cursor[0]=m->target_steps[0]; cursor[1]=m->target_steps[1];
+    }
+    if (!finish(&next,fps,p->settings.knob_mm_turn))
+        return fail(e,0,"drawing demand overflow or underflow");
+    *out=next; if (e) *e=(MachineParseError){0};
+    return 1;
+}
+void MachineRequirementsFramesFree(MachineRequirementsFrames *frames)
+{
+    if (frames) { free(frames->items); *frames=(MachineRequirementsFrames){0}; }
+}
