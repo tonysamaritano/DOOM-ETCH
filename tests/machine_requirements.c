@@ -135,3 +135,37 @@ static void frame_lifecycle(void)
     assert(!frames.items && !frames.count && !frames.fps && !frames.knob_mm_turn);
     MachineRequirementsFramesFree(&frames);
 }
+
+static void rejected(MachineStepProgram *p, size_t begin, size_t end, double fps)
+{
+    MachineRequirements r, before;
+    memset(&r, 0x35, sizeof(r));
+    memcpy(&before, &r, sizeof(r));
+    MachineParseError error = {0};
+    assert(!MachineRequirementsCalculate(p, begin, end, fps, &r, &error));
+    assert(!memcmp(&r, &before, sizeof(r)));
+    assert(error.message[0]);
+}
+
+static void invalid_ranges_and_numbers(void)
+{
+    MachineStep move = {{2000, 0}, 60, MACHINE_MOVE_DRAW, 41};
+    MachineStepProgram p = fixture(&move, 1);
+    const double bad[] = {0, -1, NAN, INFINITY, DBL_MAX, DBL_MIN};
+    for (size_t i = 0; i < sizeof(bad) / sizeof(*bad); ++i)
+        rejected(&p, 0, 1, bad[i]);
+    rejected(&p, 1, 0, 30);
+    rejected(&p, 0, 2, 30);
+    rejected(NULL, 0, 0, 30);
+    assert(!MachineRequirementsCalculate(&p, 0, 1, 30, NULL, NULL));
+    p.moves = NULL;
+    rejected(&p, 0, 0, 30);
+    p.moves = &move;
+    p.count = SIZE_MAX;
+    rejected(&p, 0, 0, 30);
+    p.count = 1;
+    p.settings.knob_mm_turn = DBL_MIN;
+    rejected(&p, 0, 1, 30);
+    p.settings.knob_mm_turn = NAN;
+    rejected(&p, 0, 1, 30);
+}
