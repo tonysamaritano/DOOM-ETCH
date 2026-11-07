@@ -69,3 +69,38 @@ export function layoutPitch(state,width,height,measure) {
     fine:{text:'Device not built yet. Assumed calibration. Simulated results. More screens? Faster drawing? Let’s find out.',
       top:height*.925,height:height*.075,alpha:state.fine_alpha}};
 }
+
+function drawPrice(ctx,price) {
+  if(price.scale<=0)return;
+  ctx.save();ctx.translate(...price.center);ctx.rotate(price.tilt);ctx.scale(price.scale,price.scale);
+  ctx.beginPath();price.polygon.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();
+  ctx.fillStyle='#ffe65c';ctx.strokeStyle='#292421';ctx.lineWidth=3;ctx.fill();ctx.stroke();
+  ctx.font=price.font;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillStyle='#bd292b';ctx.strokeStyle='#fff9df';ctx.lineWidth=3;
+  ctx.strokeText(price.text,...price.textOffset);ctx.fillText(price.text,...price.textOffset);ctx.restore();
+}
+function caption(ctx,text,x,y,size,maxWidth,color='#fff9df') {
+  ctx.save();ctx.font=dealFont(size);
+  const width=ctx.measureText(text).width;
+  if(width>maxWidth)ctx.font=dealFont(size*maxWidth/width);
+  ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+  ctx.strokeStyle='#352823';ctx.lineWidth=Math.max(2,size*.065);ctx.fillStyle=color;
+  ctx.strokeText(text,x,y);ctx.fillText(text,x,y);ctx.restore();
+}
+export function drawPitchOverlay(ctx,state,layout) {
+  const {width:w,height:h}=layout;ctx.clearRect(0,0,w,h);
+  if(state.shot==='drive'||state.shot==='speed') {
+    const speed=state.shot==='speed';
+    caption(ctx,speed?'TOP SPEED REQUIRED:':'REFRESH RATE:',w*.5,h*.19,h*.05,w*.9);
+    caption(ctx,speed?`MACH ${state.metric.no_stop_mach.toFixed(2)}`:
+      `1 FRAME / ${state.minutes.toFixed(1)} MIN`,w*.5,h*.29,h*.085,w*.9,'#ffe65c');
+    caption(ctx,speed?'No stops · 30 frames per second':'Actual simulated physical time',w*.5,h*.37,h*.023,w*.9);
+  }
+  if(state.shot!=='price')return;
+  drawPrice(ctx,layout.price);
+  ctx.save();ctx.globalAlpha=layout.commitment.alpha;
+  caption(ctx,layout.commitment.text,...layout.commitment.center,h*.043,w*.94);ctx.restore();
+  const fine=layout.fine;ctx.save();ctx.globalAlpha=fine.alpha;ctx.fillStyle='#292421';
+  ctx.fillRect(0,fine.top,w,fine.height);
+  caption(ctx,fine.text,w*.5,fine.top+fine.height*.5,h*.018,w*.94);ctx.restore();
+}
