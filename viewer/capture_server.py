@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only localhost viewer server; Python is outside the drawing path."""
+"""Local viewer and pitch capture server; Python is outside the drawing path."""
 import argparse
 import json
 import os
