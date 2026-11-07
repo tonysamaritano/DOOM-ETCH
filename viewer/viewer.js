@@ -75,3 +75,25 @@ function pitchAnchors(rig) {
     up:new THREE.Vector3(0,1,0).transformDirection(rig.area.matrixWorld),
     side:new THREE.Vector3(1,0,0).transformDirection(rig.area.matrixWorld)};
 }
+function pitchCamera(state,a,width,height) {
+  const p=state.progress,detail=['bezel','screen','drive'].includes(state.shot);
+  let target=detail?a.center.clone():a.rig.clone(),points=detail?a.screen:a.corners;
+  let back=a.normal.clone().addScaledVector(a.up,-.7).normalize(),lens=45;
+  if(state.shot==='bezel'){target.addScaledVector(a.up,.02);back.addScaledVector(a.side,.2-.4*p).normalize();lens=65;}
+  if(state.shot==='screen'){target.addScaledVector(a.up,-.012*p);lens=60;}
+  if(state.shot==='drive'){target.lerp(a.drive,.35);points=[...a.screen,a.drive];back.addScaledVector(a.side,-.2+.4*p).normalize();lens=65;}
+  if(!detail)back=new THREE.Vector3(.34,-.48,.25).normalize()
+    .applyAxisAngle(new THREE.Vector3(0,0,1),state.shot==='price'?.05:-.3+.5*p);
+  const projection=new THREE.PerspectiveCamera(35,width/height);projection.setFocalLength(lens);
+  const right=new THREE.Vector3().crossVectors(new THREE.Vector3(0,0,1),back).normalize();
+  const up=new THREE.Vector3().crossVectors(back,right).normalize();
+  const tan=Math.tan(THREE.MathUtils.degToRad(projection.fov/2));let distance=.25;
+  for(const point of points) {
+    const v=point.clone().sub(target),depth=v.dot(back);
+    distance=Math.max(distance,depth+1.16*Math.abs(v.dot(right))/(tan*projection.aspect),
+      depth+1.16*Math.abs(v.dot(up))/tan);
+  }
+  if(state.shot==='price')distance*=1.1-.04*p;
+  return {position:target.clone().addScaledVector(back,distance).toArray(),target:target.toArray(),
+    lens_mm:lens,aperture_f:5.6,focus_m:distance};
+}
