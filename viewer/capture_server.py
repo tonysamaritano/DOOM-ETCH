@@ -2,6 +2,10 @@
 """Read-only localhost viewer server; Python is outside the drawing path."""
 import argparse
 import json
+import os
+import secrets
+import tempfile
+import threading
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -44,7 +48,39 @@ def jpeg_dimensions(data):
         offset += length
     raise ValueError('Missing JPEG scan header')
 
+class PitchSession:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.token = None
+        self.next_frame = 0
+
+    def directory(self):
+        root = ROOT.resolve()
+        directory = root / 'build/promo/pitch/frames'
+        if not directory.resolve().is_relative_to(root):
+            raise ValueError('Capture directory escapes repository')
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
+
+    def start(self):
+        self.token = None
+        self.next_frame = 0
+        directory = self.directory()
+        for frame in range(FRAME_COUNT):
+            path = directory / f'{frame:05d}.jpg'
+            if path.is_symlink() or path.is_file():
+                path.unlink()
+            elif path.exists():
+                raise ValueError('Owned frame path is not a file')
+        self.token = secrets.token_urlsafe(24)
+        return self.token
+
+    def require(self, token):
+        if not self.token or token != self.token:
+            raise ValueError('Missing or stale capture token')
+
 def handler_for(three):
+    session = PitchSession()
     class Handler(SimpleHTTPRequestHandler):
         extensions_map = {**SimpleHTTPRequestHandler.extensions_map,
                           '.js': 'text/javascript', '.glb': 'model/gltf-binary'}
