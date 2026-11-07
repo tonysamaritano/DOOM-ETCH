@@ -105,3 +105,42 @@ class CaptureProtocol(unittest.TestCase):
             self.assertEqual(self.frame(token, 0, headers=headers)[0], 400)
         origin = f'http://127.0.0.1:{self.server.server_port}'
         self.assertEqual(self.frame(token, 0, headers={'Origin': origin})[0], 200)
+
+    def test_rejected_bodies_and_jpeg_headers(self):
+        token = self.start()
+        wrong_size = bytearray(JPEG)
+        wrong_size[10] = 0x81
+        malformed = [b'', b'not jpeg', JPEG[:-2], bytes(wrong_size),
+                     JPEG[:4] + b'\xff\xff' + JPEG[6:], JPEG.replace(b'\xff\xda', b'\xff\xd9')]
+        for body in malformed:
+            with self.subTest(body=body):
+                self.assertEqual(self.frame(token, 0, body)[0], 400)
+        for headers in ({'Content-Type': 'image/png'}, {'Content-Length': '-1'},
+                        {'Content-Length': str(capture.MAX_JPEG_BYTES + 1)},
+                        {'Transfer-Encoding': 'chunked'}):
+            self.assertEqual(self.frame(token, 0, headers=headers)[0], 400)
+        self.assertEqual(self.post('/__start?cut=pitch', b'unexpected')[0], 400)
+        self.assertEqual(list(self.frames.iterdir()), [])
+
+    def test_incomplete_missing_and_empty_completion(self):
+        token = self.start()
+        self.assertEqual(self.done(token)[0], 400)
+        for index in range(540):
+            self.assertEqual(self.frame(token, index)[0], 200)
+        last = self.frames / '00539.jpg'
+        last.unlink()
+        self.assertEqual(self.done(token)[0], 400)
+        last.write_bytes(b'')
+        self.assertEqual(self.done(token)[0], 400)
+        last.write_bytes(JPEG)
+        self.assertEqual(self.done(token)[0], 200)
+
+    def test_atomic_replace_failure_keeps_old_file(self):
+        token = self.start()
+        path = self.frames / '00000.jpg'
+        path.write_bytes(b'old output')
+        with patch.object(capture.os, 'replace', side_effect=OSError('injected replace failure')):
+            self.assertEqual(self.frame(token, 0)[0], 400)
+        self.assertEqual(path.read_bytes(), b'old output')
+        self.assertEqual(sorted(p.name for p in self.frames.iterdir()), ['00000.jpg'])
+        self.assertEqual(self.frame(token, 0)[0], 200)
