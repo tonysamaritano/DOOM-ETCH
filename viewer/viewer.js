@@ -97,3 +97,25 @@ function pitchCamera(state,a,width,height) {
   return {position:target.clone().addScaledVector(back,distance).toArray(),target:target.toArray(),
     lens_mm:lens,aperture_f:5.6,focus_m:distance};
 }
+function buildPitch(rig) {
+  const anchors=pitchAnchors(rig),canvas=document.createElement('canvas');
+  canvas.id='promo-canvas';canvas.setAttribute('aria-label','Eighteen-second machine pitch');stage.append(canvas);
+  const ctx=canvas.getContext('2d');if(!ctx)throw Error('Pitch needs a 2D composition canvas');
+  let fixed=null,last=0;
+  const pitch=createPitch(runtime.trace,{
+    size:()=>fixed??[Math.max(1,stage.clientWidth),Math.max(1,stage.clientHeight)],
+    measure(text,font){ctx.font=font;ctx.textAlign='center';ctx.textBaseline='alphabetic';return ctx.measureText(text);},
+    paint(state,layout) {
+      const {width,height}=layout;
+      if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+      drawPhysical(state.physical_time);
+      const camera=optics.script(pitchCamera(state,anchors,width,height),width,height);
+      optics.composer.render();ctx.drawImage(renderer.domElement,0,0,width,height);
+      drawPitchOverlay(ctx,state,layout);last=state.video_time;
+      evidence.camera=camera;evidence.promo={...state,layout,render_size:[width,height]};publish();return camera;
+    }
+  });
+  return {canvas,renderAt:pitch.renderAt,setSize(width,height) {
+    fixed=[width,height];pitch.renderAt(last);
+  }};
+}
