@@ -115,8 +115,8 @@ Request drawing demands at a target frame rate alongside the physical result:
 ./build/test/etch-gcode-run /tmp/e1m1.gcode --target-fps 35
 ```
 
-Both tools print these demands only with `--target-fps`. Default stdout retains its
-physical report. Trace JSON always includes a `requirements` array at the requested
+Both tools print these demands only with `--target-fps`. Their existing default
+output stays unchanged. Trace JSON always includes a `requirements` array at the requested
 fps, or 30 fps when omitted. Frame IDs start at zero and preserve empty M0 frames.
 Each frame gets its own drawing-only 1/fps budget, retaining its starting cursor.
 Target fps affects reporting only; commands, step counts and physical clocks retain
