@@ -19,7 +19,7 @@ def jpeg_dimensions(data):
     """Validate bounded JPEG headers, not full entropy/image decoding."""
     if len(data) < 4 or data[:2] != b'\xff\xd8' or data[-2:] != b'\xff\xd9':
         raise ValueError('Expected complete JPEG envelope')
-    offset, dimensions = 2, None
+    offset, dimensions, components = 2, None, 0
     while offset < len(data) - 2:
         if data[offset] != 255:
             raise ValueError('Invalid JPEG marker')
@@ -39,9 +39,15 @@ def jpeg_dimensions(data):
         if marker in (192, 193, 194):
             if length < 8 or dimensions is not None:
                 raise ValueError('Invalid JPEG frame header')
+            components = data[offset+7]
+            if data[offset+2] != 8 or components not in (1, 3, 4) or length != 8 + 3*components:
+                raise ValueError('Invalid JPEG component header')
             dimensions = (int.from_bytes(data[offset+5:offset+7], 'big'),
                           int.from_bytes(data[offset+3:offset+5], 'big'))
         if marker == 218:
+            if length < 6 or data[offset+2] not in range(1, components+1) or \
+                    length != 6 + 2*data[offset+2]:
+                raise ValueError('Invalid JPEG scan header')
             if dimensions != (1920, 1080):
                 raise ValueError('JPEG must be 1920x1080')
             return dimensions
@@ -81,6 +87,8 @@ class PitchSession:
 
     def frame(self, token, index, data):
         self.require(token)
+        if not isinstance(index, int) or isinstance(index, bool) or not 0 <= index < FRAME_COUNT:
+            raise ValueError('Frame index outside pitch')
         if index > self.next_frame:
             raise ValueError('Frame must be sequential')
         jpeg_dimensions(data)
