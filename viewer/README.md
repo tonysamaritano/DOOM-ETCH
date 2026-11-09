@@ -1,28 +1,37 @@
 # Trace viewer
 
-Start the read-only local server from the repository:
+First follow the [root README's build instructions](../README.md#quick-start-build-and-play)
+and place your shareware `doom1.wad` in the ignored `test-data/` directory.
+The viewer needs **Python 3.9+** (standard library only) and a WebGL-capable browser.
+It has only been tested on Apple Silicon macOS, like the native app.
+
+From the repository root, generate the trace and start the local server:
 
 ```sh
+tools/rig_frame.sh
 python3 viewer/capture_server.py
 ```
+
+The script exports E1M1, runs the controller and writes `build/viewer/e1m1.json`.
+Keep the server running and open [the trace viewer](http://127.0.0.1:8770/viewer/index.html),
+then press Play. Stop the server with Control-C.
 
 The required browser modules from three.js **0.163.0** and its MIT license are
 vendored in `viewer/vendor/three/`. This is a browser module subset, not an npm
 development installation. The import map uses those local files by default;
 `--three /absolute/package/path` can override them with the same version.
-No bundler, HDRI or remote textures are used.
-Build the test preset and put shareware `doom1.wad` in ignored `test-data/`, then run:
+No npm install, bundler, HDRI or remote textures are needed. Node.js is only used
+by the optional automated JavaScript tests.
 
-```sh
-tools/rig_frame.sh
-```
+The viewer defaults to the complete generated frame. Use
+`?trace=/build/viewer/another.json` to select another trace served from this repository,
+or `?t=SECONDS` to hold an exact physical moment in the default drawing
+(`&t=SECONDS` after another query). Play advances at real **1×**, with pause,
+restart and seek. There is no rate control. Camera lens, aperture and focus
+change the rendered optics; Reset camera restores framing.
 
-The script exports E1M1, runs the controller and writes `build/viewer/e1m1.json`.
-Open its printed URL and press Play. The viewer defaults to this complete frame.
-Use `?trace=/path/to/trace.json` to select another drawing, or `?t=SECONDS` to hold
-an exact physical moment in the default drawing (`&t=SECONDS` after another query).
-Play advances at real **1×**, with pause, restart and seek. There is no rate control.
-Camera lens, aperture and focus change the rendered optics; Reset camera restores framing.
+For promo playback, frame capture and FFmpeg encoding, see
+[Render the eighteen-second pitch](../README.md#render-the-eighteen-second-pitch).
 
 Trace coordinates and calibration remain physical millimetres and seconds.
 The model's visible `DrawArea` is 178.4 × 127.6 mm. Logical 170.15 × 127.6 mm travel

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" width="1620" height="972" viewBox="0 0 1620 972">
+  <title>DOOM ETCH — overlapping wordmark</title>
+  <desc>Editable vector reconstruction of the approved concept. White lettering with transparent separation around ETCH. Hide the Presentation background layer for transparent export.</desc>
+  <defs>
+    <mask id="etch-knockout" maskUnits="userSpaceOnUse" x="0" y="0" width="1620" height="972" style="mask-type:luminance">
+      <rect width="1620" height="972" fill="white"/>
+      <path d="M 427,572 H 599 L 585,530 L 670,579 H 807 V 598 L 839,579 H 951 L 1037,530 L 1022,572 H 1197 L 1184,651 V 900 H 426 Z" fill="black"/>
+      <path d="M 444,587 H 611 L 627,641 H 518 V 665 H 600 V 726 H 518 V 751 H 634 V 813 H 493 L 451,863 V 638 Z M 612,563 L 664,594 H 802 V 641 H 737 V 815 L 704,863 L 672,817 V 655 H 643 Z M 844,594 H 955 L 1009,563 L 975,657 H 892 V 750 H 975 V 812 H 837 L 814,789 V 621 Z M 1004,587 H 1067 V 664 H 1107 V 587 H 1179 L 1168,651 V 865 L 1109,817 V 725 H 1067 V 814 L 1005,839 Z" fill="black" stroke="black" stroke-width="30" stroke-linejoin="miter"/>
+    </mask>
+  </defs>
+  <sodipodi:namedview id="namedview" pagecolor="#151515" inkscape:document-units="px"/>
+  <g inkscape:groupmode="layer" inkscape:label="Presentation background — hide for transparency" id="background" sodipodi:insensitive="true">
+    <rect width="1620" height="972" fill="#101010"/>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="DOOM" id="doom-layer">
+    <g mask="url(#etch-knockout)">
+      <path id="doom" inkscape:label="DOOM silhouette" fill="#fff" transform="translate(131 136) scale(.81) translate(-7.1328025 -565.73124)" d="m 1476.3012,1327.8121 -0.2917,-292.4969 -46.7662,163.4072 -46.7058,-162.6616 -0.2827,222.0343 -152.4945,-114.3724 11.559,-8.6664 -0.5292,-569.30683 144.9467,0.3774 43.4492,152.19623 43.5126,-152.40042 214.4342,0.69673 -70.3645,52.57665 -0.1246,814.42954 z M 78.328958,619.06163 7.1328025,565.73124 l 401.3006875,0.54398 45.93055,35.08717 0.0378,533.50351 12.16772,8.8133 -388.148567,291.252 z m 235.518822,416.21877 -0.15295,-307.89242 -10.75764,-8.78449 -83.44785,0.40375 -0.18291,387.17176 z m 152.39799,82.7814 -0.0717,-516.75483 47.07325,-35.27648 281.69722,-0.0156 46.98005,35.42167 0.17344,597.96244 -133.22444,100.1999 z m 223.12917,-399.76328 -71.04792,0.49268 -11.09868,8.52709 0.15885,308.10291 93.32018,69.9936 0.24947,-377.92826 z m 164.80854,481.66028 -0.34116,-598.79687 46.91876,-35.23879 282.06992,0.26967 47.2183,35.27898 -0.3246,515.55821 -241.33557,182.4526 z m 234.65122,-164.742 -0.03,-308.02638 -11.8726,-9.07298 -70.9365,0.23276 -11.40484,8.78228 0.70414,377.32652 z"/>
+    </g>
+  </g>
+  <g inkscape:groupmode="layer" inkscape:label="ETCH — individual letters" id="etch-layer" fill="#fff">
+    <path id="etch-e" inkscape:label="E" d="M 444,587 H 611 L 627,641 H 518 V 665 H 600 V 726 H 518 V 751 H 634 V 813 H 493 L 451,863 V 638 Z"/>
+    <path id="etch-t" inkscape:label="T" d="M 612,563 L 664,594 H 802 V 641 H 737 V 815 L 704,863 L 672,817 V 655 H 643 Z"/>
+    <path id="etch-c" inkscape:label="C" d="M 844,594 H 955 L 1009,563 L 975,657 H 892 V 750 H 975 V 812 H 837 L 814,789 V 621 Z"/>
+    <path id="etch-h" inkscape:label="H" d="M 1004,587 H 1067 V 664 H 1107 V 587 H 1179 L 1168,651 V 865 L 1109,817 V 725 H 1067 V 814 L 1005,839 Z"/>
+  </g>
+</svg>
