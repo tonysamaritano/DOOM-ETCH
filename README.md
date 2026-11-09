@@ -96,7 +96,7 @@ commands. Each preset has its own build directory; configure the WAD path for
 each one. Coverage runs write `.profraw` files under `build/coverage/`.
 
 Verification environment (2026-11-08): macOS **26.6.2 / arm64**, Apple Clang
-**21.0.0**, CMake **4.2.3**, Python **3.14.3** for CTest / **3.11.5** for the viewer,
+**21.0.0**, CMake **4.2.3**, Python **3.14.3** for CTest / **3.9.6** for the viewer,
 and Node.js **25.6.0**. Other platforms and older macOS versions have not been tested.
 
 ## Run a G-code frame
